@@ -1,0 +1,352 @@
+import { v } from "convex/values";
+import { mutation, query } from "./_generated/server";
+
+export const list = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("tournaments").collect();
+  },
+});
+
+export const get = query({
+  args: { id: v.id("tournaments") },
+  handler: async (ctx, { id }) => {
+    return await ctx.db.get(id);
+  },
+});
+
+export const getActive = query({
+  args: {},
+  handler: async (ctx) => {
+    const tournaments = await ctx.db
+      .query("tournaments")
+      .withIndex("by_status", (q) => q.eq("status", "in_progress"))
+      .collect();
+    return tournaments[0] || null;
+  },
+});
+
+export const create = mutation({
+  args: {
+    name: v.string(),
+    date: v.string(),
+  },
+  handler: async (ctx, { name, date }) => {
+    return await ctx.db.insert("tournaments", {
+      name,
+      date,
+      status: "setup",
+      hanteiConfig: { round1: "M-M", round2: "K-M" },
+      timerOptions: [60, 120, 180, 240, 300],
+      defaultTimerDuration: 180,
+      createdAt: Date.now(),
+    });
+  },
+});
+
+export const update = mutation({
+  args: {
+    id: v.id("tournaments"),
+    name: v.optional(v.string()),
+    date: v.optional(v.string()),
+    timerOptions: v.optional(v.array(v.number())),
+    defaultTimerDuration: v.optional(v.number()),
+  },
+  handler: async (ctx, { id, ...updates }) => {
+    const filteredUpdates = Object.fromEntries(
+      Object.entries(updates).filter(([_, v]) => v !== undefined)
+    );
+    await ctx.db.patch(id, filteredUpdates);
+  },
+});
+
+export const start = mutation({
+  args: { id: v.id("tournaments") },
+  handler: async (ctx, { id }) => {
+    await ctx.db.patch(id, { status: "in_progress" });
+  },
+});
+
+export const complete = mutation({
+  args: { id: v.id("tournaments") },
+  handler: async (ctx, { id }) => {
+    await ctx.db.patch(id, { status: "completed" });
+  },
+});
+
+export const remove = mutation({
+  args: { id: v.id("tournaments") },
+  handler: async (ctx, { id }) => {
+    // Delete all matches for this tournament
+    const matches = await ctx.db
+      .query("matches")
+      .withIndex("by_tournament", (q) => q.eq("tournamentId", id))
+      .collect();
+    for (const match of matches) {
+      await ctx.db.delete(match._id);
+    }
+    
+    // Delete all participants for this tournament
+    const participants = await ctx.db
+      .query("participants")
+      .withIndex("by_tournament", (q) => q.eq("tournamentId", id))
+      .collect();
+    for (const participant of participants) {
+      await ctx.db.delete(participant._id);
+    }
+    
+    // Delete the tournament
+    await ctx.db.delete(id);
+    
+    return { 
+      deletedMatches: matches.length, 
+      deletedParticipants: participants.length 
+    };
+  },
+});
+
+export const generateMatches = mutation({
+  args: {
+    tournamentId: v.id("tournaments"),
+  },
+  handler: async (ctx, { tournamentId }) => {
+    const tournament = await ctx.db.get(tournamentId);
+    if (!tournament) throw new Error("Tournament not found");
+    
+    const participants = await ctx.db
+      .query("participants")
+      .withIndex("by_tournament", (q) => q.eq("tournamentId", tournamentId))
+      .collect();
+    
+    const byGroup = new Map<string, typeof participants>();
+    for (const p of participants) {
+      const list = byGroup.get(p.groupId) || [];
+      list.push(p);
+      byGroup.set(p.groupId, list);
+    }
+    
+    const groups = await ctx.db.query("groups").withIndex("by_order").collect();
+    let orderIndex = 0;
+    const now = Date.now();
+    
+    // Sort groups: hantei first (Court B), then regular (Court A)
+    const sortedGroupIds: string[] = [];
+    const hanteiGroups = groups.filter(g => byGroup.has(g.groupId) && g.isHantei);
+    const regularGroups = groups.filter(g => byGroup.has(g.groupId) && !g.isHantei);
+    
+    // Interleave: hantei first (Court B), then regular (Court A)
+    const maxLen = Math.max(hanteiGroups.length, regularGroups.length);
+    for (let i = 0; i < maxLen; i++) {
+      if (i < hanteiGroups.length) sortedGroupIds.push(hanteiGroups[i].groupId);
+      if (i < regularGroups.length) sortedGroupIds.push(regularGroups[i].groupId);
+    }
+    
+    for (let groupIdx = 0; groupIdx < sortedGroupIds.length; groupIdx++) {
+      const groupId = sortedGroupIds[groupIdx];
+      const groupParticipants = byGroup.get(groupId);
+      if (!groupParticipants || groupParticipants.length < 2) continue;
+      
+      const group = groups.find(g => g.groupId === groupId);
+      const isHantei = group?.isHantei || false;
+      const court = groupIdx % 2 === 0 ? "B" : "A";
+      
+      const playerIds = groupParticipants.map(p => p.memberId);
+      
+      // Generate round-robin matches with rest optimization
+      const matchPairs = generateRoundRobinWithRest(playerIds);
+      
+      for (const pair of matchPairs) {
+        await ctx.db.insert("matches", {
+          tournamentId,
+          groupId,
+          player1Id: pair[0],
+          player2Id: pair[1],
+          court: court as "A" | "B",
+          status: "pending",
+          player1Score: [],
+          player2Score: [],
+          player1Hansoku: 0,
+          player2Hansoku: 0,
+          matchType: isHantei ? "hantei" : "sanbon",
+          timerDuration: isHantei ? 0 : tournament.defaultTimerDuration,
+          round: 1,
+          orderIndex: orderIndex++,
+          updatedAt: now,
+        });
+      }
+    }
+    
+    return { matchCount: orderIndex };
+  },
+});
+
+// Generate round-robin with rest optimization
+function generateRoundRobinWithRest(playerIds: string[]): [string, string][] {
+  if (playerIds.length < 2) return [];
+  
+  const players = [...playerIds];
+  if (players.length % 2 !== 0) {
+    players.push("BYE");
+  }
+  
+  const n = players.length;
+  const rounds: [string, string][][] = [];
+  
+  // Standard round-robin generation
+  for (let round = 0; round < n - 1; round++) {
+    const roundMatches: [string, string][] = [];
+    for (let i = 0; i < n / 2; i++) {
+      const p1 = players[i];
+      const p2 = players[n - 1 - i];
+      if (p1 !== "BYE" && p2 !== "BYE") {
+        roundMatches.push([p1, p2]);
+      }
+    }
+    rounds.push(roundMatches);
+    const last = players.pop()!;
+    players.splice(1, 0, last);
+  }
+  
+  // Flatten and reorder for rest optimization
+  const allMatches: [string, string][] = [];
+  const lastPlayed: Map<string, number> = new Map();
+  const flatMatches = rounds.flat();
+  const used = new Set<number>();
+  
+  while (allMatches.length < flatMatches.length) {
+    let bestIdx = -1;
+    let bestScore = -Infinity;
+    
+    for (let i = 0; i < flatMatches.length; i++) {
+      if (used.has(i)) continue;
+      
+      const [p1, p2] = flatMatches[i];
+      const p1Last = lastPlayed.get(p1) ?? -2;
+      const p2Last = lastPlayed.get(p2) ?? -2;
+      const matchIdx = allMatches.length;
+      
+      // Score based on rest time (higher is better)
+      const restScore = Math.min(matchIdx - p1Last, matchIdx - p2Last);
+      
+      if (restScore > bestScore) {
+        bestScore = restScore;
+        bestIdx = i;
+      }
+    }
+    
+    if (bestIdx === -1) break;
+    
+    const [p1, p2] = flatMatches[bestIdx];
+    allMatches.push([p1, p2]);
+    lastPlayed.set(p1, allMatches.length - 1);
+    lastPlayed.set(p2, allMatches.length - 1);
+    used.add(bestIdx);
+  }
+  
+  return allMatches;
+}
+
+export const refreshParticipants = mutation({
+  args: { tournamentId: v.id("tournaments") },
+  handler: async (ctx, { tournamentId }) => {
+    const tournament = await ctx.db.get(tournamentId);
+    if (!tournament) throw new Error("Tournament not found");
+    
+    const participants = await ctx.db
+      .query("participants")
+      .withIndex("by_tournament", (q) => q.eq("tournamentId", tournamentId))
+      .collect();
+    
+    const existingMatches = await ctx.db
+      .query("matches")
+      .withIndex("by_tournament", (q) => q.eq("tournamentId", tournamentId))
+      .collect();
+    
+    const byGroup = new Map<string, typeof participants>();
+    for (const p of participants) {
+      const list = byGroup.get(p.groupId) || [];
+      list.push(p);
+      byGroup.set(p.groupId, list);
+    }
+    
+    const groups = await ctx.db.query("groups").withIndex("by_order").collect();
+    let addedCount = 0;
+    const maxOrderIndex = existingMatches.length > 0 ? Math.max(...existingMatches.map(m => m.orderIndex)) : -1;
+    let orderIndex = maxOrderIndex + 1;
+    const now = Date.now();
+    
+    for (const [groupId, groupParticipants] of byGroup) {
+      const group = groups.find(g => g.groupId === groupId);
+      const isHantei = group?.isHantei || false;
+      const groupIdx = groups.findIndex(g => g.groupId === groupId);
+      const court = groupIdx % 2 === 0 ? "B" : "A";
+      const playerIds = groupParticipants.map(p => p.memberId);
+      
+      const existingPairs = new Set(
+        existingMatches
+          .filter(m => m.groupId === groupId)
+          .map(m => `${m.player1Id}-${m.player2Id}`)
+      );
+      
+      for (let i = 0; i < playerIds.length; i++) {
+        for (let j = i + 1; j < playerIds.length; j++) {
+          const p1 = playerIds[i];
+          const p2 = playerIds[j];
+          const key1 = `${p1}-${p2}`;
+          const key2 = `${p2}-${p1}`;
+          
+          if (!existingPairs.has(key1) && !existingPairs.has(key2)) {
+            await ctx.db.insert("matches", {
+              tournamentId,
+              groupId,
+              player1Id: p1,
+              player2Id: p2,
+              court: court as "A" | "B",
+              status: "pending",
+              player1Score: [],
+              player2Score: [],
+              player1Hansoku: 0,
+              player2Hansoku: 0,
+              matchType: isHantei ? "hantei" : "sanbon",
+              timerDuration: isHantei ? 0 : tournament.defaultTimerDuration,
+              round: 1,
+              orderIndex: orderIndex++,
+              updatedAt: now,
+            });
+            addedCount++;
+          }
+        }
+      }
+    }
+    
+    return { addedCount };
+  },
+});
+
+export const reset = mutation({
+  args: { tournamentId: v.id("tournaments") },
+  handler: async (ctx, { tournamentId }) => {
+    const matches = await ctx.db
+      .query("matches")
+      .withIndex("by_tournament", (q) => q.eq("tournamentId", tournamentId))
+      .collect();
+    
+    const now = Date.now();
+    for (const match of matches) {
+      await ctx.db.patch(match._id, {
+        status: "pending",
+        player1Score: [],
+        player2Score: [],
+        player1Hansoku: 0,
+        player2Hansoku: 0,
+        winner: undefined,
+        timerStartedAt: undefined,
+        timerPausedAt: undefined,
+        actualDuration: undefined,
+        updatedAt: now,
+      });
+    }
+    
+    return { resetCount: matches.length };
+  },
+});

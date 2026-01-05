@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 40" width="32" height="40">
+  <rect width="32" height="40" rx="2" fill="#c41e3a"/>
+  <text x="16" y="16" font-family="serif" font-size="10" fill="#f5e6d3" text-anchor="middle" font-weight="bold">剣</text>
+  <text x="16" y="32" font-family="serif" font-size="10" fill="#f5e6d3" text-anchor="middle" font-weight="bold">道</text>
+</svg>
