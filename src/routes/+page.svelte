@@ -12,7 +12,7 @@
 <div class="landing">
   <main class="container">
     <div class="logo-section">
-      <img src="/shiaijo-logo.png" alt="試合場 Shiaijo" class="logo" />
+      <img src="/shiaijologo.png" alt="試合場 Shiaijo" class="logo" />
     </div>
     
     <div class="portal-grid">
