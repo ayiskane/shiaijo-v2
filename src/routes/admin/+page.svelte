@@ -138,6 +138,24 @@
     return map;
   });
   
+  // Local overrides for optimistic UI updates
+  let localCourtOverrides = $state(new Map<string, 'A' | 'B' | 'A+B'>());
+  
+  // Get effective court (local override takes precedence)
+  function getEffectiveCourt(groupId: string): 'A' | 'B' | 'A+B' {
+    return localCourtOverrides.get(groupId) || groupCourtMap.get(groupId) || 'A';
+  }
+  
+  // Clear local override when real data syncs
+  $effect(() => {
+    for (const [groupId, localCourt] of localCourtOverrides) {
+      const realCourt = groupCourtMap.get(groupId);
+      if (realCourt === localCourt) {
+        localCourtOverrides = new Map([...localCourtOverrides].filter(([id]) => id !== groupId));
+      }
+    }
+  });
+  
   // Separate bogu and hantei groups
   let boguGroups = $derived(groupOrder.filter(gId => {
     const g = groups.find(gr => gr.groupId === gId);
@@ -397,6 +415,8 @@
   
   async function setGroupCourt(groupId: string, court: 'A' | 'B' | 'A+B') {
     if (!selectedTournament) return;
+    // Optimistic update - set local override immediately
+    localCourtOverrides = new Map(localCourtOverrides).set(groupId, court);
     try {
       await client.mutation(api.matches.setGroupCourt, { 
         tournamentId: selectedTournament._id, 
@@ -404,7 +424,11 @@
         court 
       });
       toast.success(`${getGroupName(groupId)} → Court ${court}`);
-    } catch (e) { toast.error('Failed to set court'); }
+    } catch (e) { 
+      // Revert optimistic update on error
+      localCourtOverrides = new Map([...localCourtOverrides].filter(([id]) => id !== groupId));
+      toast.error('Failed to set court'); 
+    }
   }
   
   async function applyBoguSettings() {
@@ -713,7 +737,7 @@
                         <div class="rounded-lg border border-border overflow-hidden" use:autoAnimate>
                           {#each groupOrder as groupId, idx (groupId)}
                             {@const group = getGroupById(groupId)}
-                            {@const court = groupCourtMap.get(groupId) || 'A'}
+                            {@const court = getEffectiveCourt(groupId)}
                             {@const groupMatches = matches.filter(m => m.groupId === groupId)}
                             {@const completedCount = groupMatches.filter(m => m.status === 'completed').length}
                             
@@ -941,7 +965,7 @@
                     {@const group = getGroupById(groupId)}
                     {@const groupMatches = matches.filter(m => m.groupId === groupId)}
                     {@const completedCount = groupMatches.filter(m => m.status === 'completed').length}
-                    {@const court = groupCourtMap.get(groupId) || 'A'}
+                    {@const court = getEffectiveCourt(groupId)}
                     {@const isCollapsed = collapsedGroups.has(groupId)}
                     
                     <div class={cn(
