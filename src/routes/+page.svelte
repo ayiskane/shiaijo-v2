@@ -83,7 +83,7 @@
     --border-hover: rgba(255,255,255,0.12);
     --divider: rgba(255,255,255,0.04);
     --shadow: 0 20px 50px rgba(0,0,0,0.35);
-    --font-jp: 'SicYubi-HyojunGakushu', 'Shiaijo JP', serif;
+    --font-jp: 'SicYubi-HyojunGakushu', 'SicYubi-FudeGyosho', serif;
   }
 
   .landing {
@@ -374,3 +374,4 @@
   .staff-row .portal-card:nth-child(2) { animation-delay: 0.15s; }
   .staff-row .portal-card:nth-child(3) { animation-delay: 0.2s; }
 </style>
+
