@@ -99,7 +99,7 @@
     { id: 'K', label: 'Kote', short: 'K' },
     { id: 'D', label: 'Do', short: 'D' },
     { id: 'KM', label: 'Kote-Men', short: 'KM' },
-    { id: 'MK', label: 'Men-Kaeshi-Do', short: 'MKD' },
+    { id: 'MKD', label: 'Men-Kaeshi-Do', short: 'MKD' },
   ];
   
   let hanteiRound1 = $state<string[]>(['K', 'M']); // 2 combos for round 1
@@ -126,6 +126,17 @@
   
   let progressPercent = $derived(matches.length > 0 ? Math.round((completedMatches.length / matches.length) * 100) : 0);
   let isComplete = $derived(matches.length > 0 && completedMatches.length === matches.length);
+  
+  // Build a reactive map of group courts from matches
+  let groupCourtMap = $derived(() => {
+    const map = new Map<string, 'A' | 'B' | 'A+B'>();
+    for (const match of matches) {
+      if (!map.has(match.groupId)) {
+        map.set(match.groupId, match.court as 'A' | 'B' | 'A+B');
+      }
+    }
+    return map;
+  });
   
   // Separate bogu and hantei groups
   let boguGroups = $derived(groupOrder.filter(gId => {
@@ -239,11 +250,6 @@
   
   function resetMassMembers() {
     massMembers = Array(5).fill(null).map(() => ({ firstName: '', lastName: '', groupId: '' }));
-  }
-  
-  function getCourtForGroup(groupId: string): 'A' | 'B' | 'A+B' {
-    const match = matches.find(m => m.groupId === groupId);
-    return (match?.court as 'A' | 'B' | 'A+B') || 'A';
   }
   
   // CRUD Operations
@@ -476,29 +482,11 @@
     draggedGroupId = null;
     dragOverGroupId = null;
   }
-  
-  function moveGroupUp(groupId: string) {
-    const idx = groupOrder.indexOf(groupId);
-    if (idx > 0) {
-      const newOrder = [...groupOrder];
-      [newOrder[idx - 1], newOrder[idx]] = [newOrder[idx], newOrder[idx - 1]];
-      groupOrder = newOrder;
-    }
-  }
-  
-  function moveGroupDown(groupId: string) {
-    const idx = groupOrder.indexOf(groupId);
-    if (idx < groupOrder.length - 1) {
-      const newOrder = [...groupOrder];
-      [newOrder[idx], newOrder[idx + 1]] = [newOrder[idx + 1], newOrder[idx]];
-      groupOrder = newOrder;
-    }
-  }
 </script>
 
 <svelte:head><title>Admin - 試合場 Shiaijo</title></svelte:head>
 
-<div class="flex min-h-screen bg-background">
+<div class="flex min-h-screen bg-background overflow-x-hidden">
   <!-- Desktop Sidebar -->
   <aside class={cn("hidden md:flex flex-col fixed inset-y-0 left-0 z-20 border-r border-sidebar-border bg-sidebar transition-all duration-300", sidebarCollapsed ? "w-[72px]" : "w-52")}>
     <div class="flex h-16 items-center gap-3 border-b border-sidebar-border px-4">
@@ -567,22 +555,22 @@
   {/if}
   
   <!-- Main Content -->
-  <main class={cn("flex-1 pt-14 transition-all duration-300 md:pt-0", sidebarCollapsed ? "md:ml-[72px]" : "md:ml-52")}>
-    <div class="p-6">
+  <main class={cn("flex-1 pt-14 transition-all duration-300 md:pt-0 w-full min-w-0 overflow-x-hidden", sidebarCollapsed ? "md:ml-[72px]" : "md:ml-52")}>
+    <div class="p-4 sm:p-6 max-w-full overflow-x-hidden">
       {#if loading}
         <div class="space-y-4"><Skeleton class="h-8 w-48" /><div class="grid gap-4 md:grid-cols-3"><Skeleton class="h-24" /><Skeleton class="h-24" /><Skeleton class="h-24" /></div></div>
       
       {:else if activeTab === 'dashboard'}
         <h1 class="mb-6 text-2xl font-bold">Dashboard</h1>
-        <div class="mb-6 grid gap-4 md:grid-cols-3">
-          <div class="rounded-xl border border-border bg-card p-4"><div class="text-3xl font-bold text-primary">{members.length}</div><div class="text-sm text-muted-foreground">Members</div></div>
-          <div class="rounded-xl border border-border bg-card p-4"><div class="text-3xl font-bold text-blue-400">{groups.length}</div><div class="text-sm text-muted-foreground">Groups</div></div>
-          <div class="rounded-xl border border-border bg-card p-4"><div class="text-3xl font-bold text-green-400">{tournaments.length}</div><div class="text-sm text-muted-foreground">Tournaments</div></div>
+        <div class="mb-6 grid gap-4 grid-cols-2 md:grid-cols-3">
+          <div class="rounded-xl border border-border bg-card p-4"><div class="text-2xl sm:text-3xl font-bold text-primary">{members.length}</div><div class="text-xs sm:text-sm text-muted-foreground">Members</div></div>
+          <div class="rounded-xl border border-border bg-card p-4"><div class="text-2xl sm:text-3xl font-bold text-blue-400">{groups.length}</div><div class="text-xs sm:text-sm text-muted-foreground">Groups</div></div>
+          <div class="rounded-xl border border-border bg-card p-4 col-span-2 md:col-span-1"><div class="text-2xl sm:text-3xl font-bold text-green-400">{tournaments.length}</div><div class="text-xs sm:text-sm text-muted-foreground">Tournaments</div></div>
         </div>
         {#if activeTournament}
           <div class="rounded-xl border border-green-500/50 bg-green-900/20 p-4">
-            <div class="mb-2 flex items-center gap-2"><span class="h-2 w-2 animate-pulse rounded-full bg-green-500"></span><h3 class="font-bold text-green-400">Live: {activeTournament.name}</h3></div>
-            <div class="flex flex-wrap gap-4 text-sm text-muted-foreground"><span>📅 {activeTournament.date}</span><span>⚔️ {completedMatches.length}/{matches.length} matches</span><span>👥 {participants.length} participants</span></div>
+            <div class="mb-2 flex items-center gap-2"><span class="h-2 w-2 animate-pulse rounded-full bg-green-500"></span><h3 class="font-bold text-green-400 truncate">Live: {activeTournament.name}</h3></div>
+            <div class="flex flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground"><span>📅 {activeTournament.date}</span><span>⚔️ {completedMatches.length}/{matches.length}</span><span>👥 {participants.length}</span></div>
             <div class="mt-3">
               <Progress value={progressPercent} class="h-2" />
               <p class="mt-1 text-xs text-muted-foreground">{progressPercent}% complete</p>
@@ -592,9 +580,9 @@
       
       {:else if activeTab === 'tournament'}
         <!-- TOURNAMENT TAB -->
-        <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <h1 class="text-2xl font-bold">Tournament</h1>
-          <Button onclick={() => showCreateTournament = true}><Plus class="mr-2 h-4 w-4" /> New Tournament</Button>
+          <Button onclick={() => showCreateTournament = true} class="w-full sm:w-auto"><Plus class="mr-2 h-4 w-4" /> New Tournament</Button>
         </div>
         
         {#if tournaments.length === 0}
@@ -611,10 +599,10 @@
             <select 
               value={selectedTournamentId} 
               onchange={(e) => selectedTournamentId = (e.target as HTMLSelectElement).value} 
-              class="w-full rounded-lg border border-input bg-card px-4 py-2 md:w-auto"
+              class="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm truncate"
             >
               {#each tournaments as t}
-                <option value={t._id}>{t.name} ({t.date}) - {t.status}</option>
+                <option value={t._id}>{t.name} - {t.status}</option>
               {/each}
             </select>
           </div>
@@ -623,71 +611,73 @@
             <!-- Tournament Header Card -->
             <Card.Root class="mb-4">
               <Card.Header class="pb-3">
-                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <Card.Title class="text-xl">{selectedTournament.name}</Card.Title>
-                    <Card.Description>📅 {selectedTournament.date}</Card.Description>
+                <div class="flex flex-col gap-2">
+                  <div class="flex items-start justify-between gap-2">
+                    <div class="min-w-0 flex-1">
+                      <Card.Title class="text-lg sm:text-xl truncate">{selectedTournament.name}</Card.Title>
+                      <Card.Description class="text-xs sm:text-sm">📅 {selectedTournament.date}</Card.Description>
+                    </div>
+                    <Badge class={cn(
+                      "text-xs sm:text-sm px-2 sm:px-3 py-1 shrink-0",
+                      selectedTournament.status === 'in_progress' ? (isComplete ? "bg-emerald-600" : "bg-amber-500") :
+                      selectedTournament.status === 'setup' ? "bg-yellow-600" : "bg-blue-600"
+                    )}>
+                      {selectedTournament.status === 'setup' ? 'Setup' : 
+                       selectedTournament.status === 'in_progress' ? (isComplete ? 'Done' : 'Live') : 
+                       'Completed'}
+                    </Badge>
                   </div>
-                  <Badge class={cn(
-                    "text-sm px-3 py-1",
-                    selectedTournament.status === 'in_progress' ? (isComplete ? "bg-emerald-600" : "bg-amber-500") :
-                    selectedTournament.status === 'setup' ? "bg-yellow-600" : "bg-blue-600"
-                  )}>
-                    {selectedTournament.status === 'setup' ? 'Setup' : 
-                     selectedTournament.status === 'in_progress' ? (isComplete ? 'Complete!' : 'In Progress') : 
-                     'Completed'}
-                  </Badge>
                 </div>
               </Card.Header>
               <Card.Content class="space-y-4">
                 <!-- Progress Bar -->
-                <div class="flex items-center gap-4">
-                  <div class="flex-1">
+                <div class="flex items-center gap-3">
+                  <div class="flex-1 min-w-0">
                     <Progress value={progressPercent} class={cn("h-2", isComplete ? "bg-emerald-900/30" : "")} />
                   </div>
-                  <span class="text-sm text-muted-foreground">
-                    {completedMatches.length}/{matches.length} <span class="hidden sm:inline">Matches</span>
+                  <span class="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
+                    {completedMatches.length}/{matches.length}
                   </span>
                 </div>
                 
                 <!-- Stats Grid -->
-                <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  <div class="rounded-lg bg-muted/50 p-3 text-center">
-                    <div class="text-2xl font-bold text-primary">{participants.length}</div>
-                    <div class="text-xs text-muted-foreground">Participants</div>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div class="rounded-lg bg-muted/50 p-2 sm:p-3 text-center">
+                    <div class="text-xl sm:text-2xl font-bold text-primary">{participants.length}</div>
+                    <div class="text-[10px] sm:text-xs text-muted-foreground">Participants</div>
                   </div>
-                  <div class="rounded-lg bg-muted/50 p-3 text-center">
-                    <div class="text-2xl font-bold text-blue-400">{matches.length}</div>
-                    <div class="text-xs text-muted-foreground">Total Matches</div>
+                  <div class="rounded-lg bg-muted/50 p-2 sm:p-3 text-center">
+                    <div class="text-xl sm:text-2xl font-bold text-blue-400">{matches.length}</div>
+                    <div class="text-[10px] sm:text-xs text-muted-foreground">Matches</div>
                   </div>
-                  <div class="rounded-lg bg-amber-900/20 border border-amber-700/30 p-3 text-center">
-                    <div class="text-2xl font-bold text-amber-400">{courtAMatches.length}</div>
-                    <div class="text-xs text-muted-foreground">Court A</div>
+                  <div class="rounded-lg bg-amber-900/20 border border-amber-700/30 p-2 sm:p-3 text-center">
+                    <div class="text-xl sm:text-2xl font-bold text-amber-400">{courtAMatches.length}</div>
+                    <div class="text-[10px] sm:text-xs text-muted-foreground">Court A</div>
                   </div>
-                  <div class="rounded-lg bg-sky-900/20 border border-sky-700/30 p-3 text-center">
-                    <div class="text-2xl font-bold text-sky-400">{courtBMatches.length}</div>
-                    <div class="text-xs text-muted-foreground">Court B</div>
+                  <div class="rounded-lg bg-sky-900/20 border border-sky-700/30 p-2 sm:p-3 text-center">
+                    <div class="text-xl sm:text-2xl font-bold text-sky-400">{courtBMatches.length}</div>
+                    <div class="text-[10px] sm:text-xs text-muted-foreground">Court B</div>
                   </div>
                 </div>
                 
                 <!-- Action Buttons -->
                 <div class="flex flex-wrap gap-2">
                   {#if selectedTournament.status === 'setup'}
-                    <Button onclick={addAllParticipants} variant="secondary">
-                      <UserPlus class="mr-2 h-4 w-4" /> Add All Members
+                    <Button onclick={addAllParticipants} variant="secondary" size="sm" class="text-xs sm:text-sm">
+                      <UserPlus class="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" /> Add Members
                     </Button>
-                    <Button onclick={generateMatches} variant="secondary">
-                      <Trophy class="mr-2 h-4 w-4" /> Generate Matches
+                    <Button onclick={generateMatches} variant="secondary" size="sm" class="text-xs sm:text-sm">
+                      <Trophy class="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" /> Generate
                     </Button>
                     {#if matches.length > 0}
-                      <Button onclick={startTournament} class="bg-emerald-600 hover:bg-emerald-700">
-                        <Play class="mr-2 h-4 w-4" /> Start Tournament
+                      <Button onclick={startTournament} size="sm" class="bg-emerald-600 hover:bg-emerald-700 text-xs sm:text-sm">
+                        <Play class="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" /> Start
                       </Button>
                     {/if}
                   {/if}
                   {#if selectedTournament.status === 'in_progress' && isComplete}
-                    <Button onclick={completeTournament} class="bg-orange-600 hover:bg-orange-700">
-                      <Archive class="mr-2 h-4 w-4" /> Archive & Complete
+                    <Button onclick={completeTournament} size="sm" class="bg-orange-600 hover:bg-orange-700 text-xs sm:text-sm">
+                      <Archive class="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" /> Archive
                     </Button>
                   {/if}
                 </div>
@@ -715,15 +705,15 @@
                     <div class="space-y-3">
                       <h4 class="text-sm font-semibold text-foreground flex items-center gap-2">
                         <GripVertical class="h-4 w-4 text-muted-foreground" />
-                        Group Order & Court Assignments
+                        Group Order & Courts
                       </h4>
-                      <p class="text-xs text-muted-foreground">Drag groups to reorder. Assign courts for each group.</p>
+                      <p class="text-xs text-muted-foreground">Drag to reorder. Tap court to change.</p>
                       
                       {#if groupOrder.length > 0}
                         <div class="rounded-lg border border-border overflow-hidden" use:autoAnimate>
                           {#each groupOrder as groupId, idx (groupId)}
                             {@const group = getGroupById(groupId)}
-                            {@const court = getCourtForGroup(groupId)}
+                            {@const court = groupCourtMap().get(groupId) || 'A'}
                             {@const groupMatches = matches.filter(m => m.groupId === groupId)}
                             {@const completedCount = groupMatches.filter(m => m.status === 'completed').length}
                             
@@ -735,51 +725,52 @@
                               ondrop={(e) => handleDrop(e, groupId)}
                               ondragend={handleDragEnd}
                               class={cn(
-                                "flex items-center gap-3 px-3 py-2.5 border-b border-border last:border-b-0 transition-all",
+                                "flex items-center gap-2 px-2 sm:px-3 py-2 border-b border-border last:border-b-0 transition-all",
                                 draggedGroupId === groupId && "opacity-50 bg-muted/50",
-                                dragOverGroupId === groupId && "bg-primary/10 border-primary",
-                                "hover:bg-muted/30"
+                                dragOverGroupId === groupId && "bg-primary/10 border-primary"
                               )}
                             >
                               <!-- Drag Handle -->
-                              <button class="cursor-grab text-muted-foreground hover:text-foreground active:cursor-grabbing touch-none">
+                              <button class="cursor-grab text-muted-foreground hover:text-foreground active:cursor-grabbing touch-none shrink-0">
                                 <GripVertical class="h-4 w-4" />
                               </button>
                               
                               <!-- Order Number -->
-                              <span class="w-6 text-center text-xs font-mono text-muted-foreground">{idx + 1}</span>
+                              <span class="w-5 text-center text-xs font-mono text-muted-foreground shrink-0">{idx + 1}</span>
                               
                               <!-- Group Name -->
-                              <span class="flex-1 font-medium text-sm">
-                                {group?.name || groupId}
+                              <div class="flex-1 min-w-0 flex items-center gap-1">
+                                <span class="font-medium text-sm truncate">
+                                  {group?.name || groupId}
+                                </span>
                                 {#if group?.isHantei}
-                                  <Badge variant="outline" class="ml-2 text-[10px] border-orange-500 text-orange-400">Hantei</Badge>
+                                  <Badge variant="outline" class="text-[8px] sm:text-[10px] border-orange-500 text-orange-400 shrink-0 px-1">H</Badge>
                                 {/if}
-                              </span>
+                              </div>
                               
                               <!-- Match Count -->
-                              <span class="text-xs text-muted-foreground">{completedCount}/{groupMatches.length}</span>
+                              <span class="text-[10px] sm:text-xs text-muted-foreground shrink-0">{completedCount}/{groupMatches.length}</span>
                               
-                              <!-- Court Assignment -->
-                              <div class="flex rounded-md border border-input overflow-hidden">
+                              <!-- Court Assignment - Compact -->
+                              <div class="flex rounded-md border border-input overflow-hidden shrink-0">
                                 <button
                                   onclick={() => setGroupCourt(groupId, 'A')}
                                   class={cn(
-                                    "px-2.5 py-1 text-xs font-bold transition-colors",
+                                    "px-2 py-1 text-[10px] sm:text-xs font-bold transition-colors",
                                     court === 'A' ? "bg-amber-500 text-black" : "bg-background text-muted-foreground hover:bg-muted"
                                   )}
                                 >A</button>
                                 <button
                                   onclick={() => setGroupCourt(groupId, 'A+B')}
                                   class={cn(
-                                    "px-2.5 py-1 text-xs font-bold transition-colors border-x border-input",
+                                    "px-1.5 sm:px-2 py-1 text-[10px] sm:text-xs font-bold transition-colors border-x border-input",
                                     court === 'A+B' ? "bg-emerald-500 text-white" : "bg-background text-muted-foreground hover:bg-muted"
                                   )}
-                                >A+B</button>
+                                >+</button>
                                 <button
                                   onclick={() => setGroupCourt(groupId, 'B')}
                                   class={cn(
-                                    "px-2.5 py-1 text-xs font-bold transition-colors",
+                                    "px-2 py-1 text-[10px] sm:text-xs font-bold transition-colors",
                                     court === 'B' ? "bg-sky-500 text-white" : "bg-background text-muted-foreground hover:bg-muted"
                                   )}
                                 >B</button>
@@ -788,7 +779,7 @@
                           {/each}
                         </div>
                       {:else}
-                        <p class="text-sm text-muted-foreground py-4 text-center">No groups with matches yet. Generate matches first.</p>
+                        <p class="text-sm text-muted-foreground py-4 text-center">No groups yet. Generate matches first.</p>
                       {/if}
                     </div>
                     
@@ -801,16 +792,16 @@
                         Bogu Matches
                       </h4>
                       
-                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div class="space-y-3">
                         <!-- Timer Options -->
                         <div class="space-y-2">
-                          <Label class="text-xs text-muted-foreground">Timer Duration</Label>
+                          <Label class="text-xs text-muted-foreground">Timer</Label>
                           <div class="flex gap-2">
                             {#each TIMER_OPTIONS as secs}
                               <button
                                 onclick={() => boguTimerDuration = secs}
                                 class={cn(
-                                  "flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all border",
+                                  "flex-1 px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all border",
                                   boguTimerDuration === secs 
                                     ? "bg-blue-600 text-white border-blue-600" 
                                     : "bg-background text-muted-foreground border-input hover:bg-muted"
@@ -829,32 +820,32 @@
                             <button
                               onclick={() => boguMatchType = 'sanbon'}
                               class={cn(
-                                "flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all border",
+                                "flex-1 px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all border",
                                 boguMatchType === 'sanbon' 
                                   ? "bg-blue-600 text-white border-blue-600" 
                                   : "bg-background text-muted-foreground border-input hover:bg-muted"
                               )}
                             >
-                              Sanbon (3本)
+                              Sanbon
                             </button>
                             <button
                               onclick={() => boguMatchType = 'ippon'}
                               class={cn(
-                                "flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all border",
+                                "flex-1 px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all border",
                                 boguMatchType === 'ippon' 
                                   ? "bg-blue-600 text-white border-blue-600" 
                                   : "bg-background text-muted-foreground border-input hover:bg-muted"
                               )}
                             >
-                              Ippon (1本)
+                              Ippon
                             </button>
                           </div>
                         </div>
+                        
+                        <Button onclick={applyBoguSettings} variant="secondary" size="sm" class="w-full sm:w-auto">
+                          <Check class="mr-2 h-4 w-4" /> Apply to Bogu
+                        </Button>
                       </div>
-                      
-                      <Button onclick={applyBoguSettings} variant="secondary" size="sm" class="mt-2">
-                        <Check class="mr-2 h-4 w-4" /> Apply to All Bogu Groups
-                      </Button>
                     </div>
                     
                     <Separator />
@@ -863,15 +854,15 @@
                     <div class="space-y-3">
                       <h4 class="text-sm font-semibold text-foreground flex items-center gap-2">
                         <Users class="h-4 w-4 text-orange-400" />
-                        Non-Bogu Matches (Hantei)
+                        Non-Bogu (Hantei)
                       </h4>
-                      <p class="text-xs text-muted-foreground">Configure kihon-waza combinations for each round.</p>
+                      <p class="text-xs text-muted-foreground">Kihon-waza for each round.</p>
                       
-                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div class="space-y-3">
                         <!-- Round 1: 2 combos -->
                         <div class="space-y-2">
                           <Label class="text-xs text-muted-foreground">Round 1 (2 waza)</Label>
-                          <div class="flex gap-2">
+                          <div class="grid grid-cols-2 gap-2">
                             {#each [0, 1] as i}
                               <select
                                 value={hanteiRound1[i] || ''}
@@ -880,21 +871,20 @@
                                   newVal[i] = (e.target as HTMLSelectElement).value;
                                   hanteiRound1 = newVal;
                                 }}
-                                class="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                                class="w-full rounded-lg border border-input bg-background px-2 sm:px-3 py-2 text-xs sm:text-sm"
                               >
                                 {#each KIHON_WAZA_OPTIONS as opt}
-                                  <option value={opt.id}>{opt.label}</option>
+                                  <option value={opt.id}>{opt.short}</option>
                                 {/each}
                               </select>
                             {/each}
                           </div>
-                          <p class="text-[10px] text-muted-foreground font-mono">{hanteiRound1.join(' → ')}</p>
                         </div>
                         
                         <!-- Round 2: 3 combos -->
                         <div class="space-y-2">
                           <Label class="text-xs text-muted-foreground">Round 2 (3 waza)</Label>
-                          <div class="flex gap-2">
+                          <div class="grid grid-cols-3 gap-2">
                             {#each [0, 1, 2] as i}
                               <select
                                 value={hanteiRound2[i] || ''}
@@ -903,21 +893,20 @@
                                   newVal[i] = (e.target as HTMLSelectElement).value;
                                   hanteiRound2 = newVal;
                                 }}
-                                class="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                                class="w-full rounded-lg border border-input bg-background px-2 sm:px-3 py-2 text-xs sm:text-sm"
                               >
                                 {#each KIHON_WAZA_OPTIONS as opt}
-                                  <option value={opt.id}>{opt.label}</option>
+                                  <option value={opt.id}>{opt.short}</option>
                                 {/each}
                               </select>
                             {/each}
                           </div>
-                          <p class="text-[10px] text-muted-foreground font-mono">{hanteiRound2.join(' → ')}</p>
                         </div>
+                        
+                        <Button onclick={applyHanteiSettings} variant="secondary" size="sm" class="w-full sm:w-auto">
+                          <Check class="mr-2 h-4 w-4" /> Apply Hantei
+                        </Button>
                       </div>
-                      
-                      <Button onclick={applyHanteiSettings} variant="secondary" size="sm" class="mt-2">
-                        <Check class="mr-2 h-4 w-4" /> Apply Hantei Settings
-                      </Button>
                     </div>
                     
                     <Separator />
@@ -925,15 +914,15 @@
                     <!-- 4. ACTIONS -->
                     <div class="space-y-3">
                       <h4 class="text-sm font-semibold text-foreground">Actions</h4>
-                      <div class="flex flex-wrap gap-2">
-                        <Button onclick={refreshParticipants} variant="outline" size="sm">
+                      <div class="flex flex-col sm:flex-row flex-wrap gap-2">
+                        <Button onclick={refreshParticipants} variant="outline" size="sm" class="w-full sm:w-auto justify-center">
                           <RefreshCw class="mr-2 h-4 w-4" /> Update Participants
                         </Button>
-                        <Button onclick={resetTournament} variant="outline" size="sm" class="border-amber-700/60 text-amber-400 hover:bg-amber-900/20">
+                        <Button onclick={resetTournament} variant="outline" size="sm" class="w-full sm:w-auto justify-center border-amber-700/60 text-amber-400 hover:bg-amber-900/20">
                           <RotateCcw class="mr-2 h-4 w-4" /> Reset Scores
                         </Button>
-                        <Button onclick={() => showDeleteConfirm = true} variant="outline" size="sm" class="border-red-700/60 text-red-400 hover:bg-red-900/20">
-                          <Trash2 class="mr-2 h-4 w-4" /> Delete Tournament
+                        <Button onclick={() => showDeleteConfirm = true} variant="outline" size="sm" class="w-full sm:w-auto justify-center border-red-700/60 text-red-400 hover:bg-red-900/20">
+                          <Trash2 class="mr-2 h-4 w-4" /> Delete
                         </Button>
                       </div>
                     </div>
@@ -943,7 +932,7 @@
               </Card.Root>
             </Collapsible.Root>
             
-            <!-- Match Queue Display (simplified - just shows matches per group) -->
+            <!-- Match Queue Display -->
             {#if groupOrder.length > 0 && matches.length > 0}
               <div class="space-y-3">
                 <h3 class="text-sm font-semibold text-muted-foreground">Match Queue</h3>
@@ -952,7 +941,7 @@
                     {@const group = getGroupById(groupId)}
                     {@const groupMatches = matches.filter(m => m.groupId === groupId)}
                     {@const completedCount = groupMatches.filter(m => m.status === 'completed').length}
-                    {@const court = getCourtForGroup(groupId)}
+                    {@const court = groupCourtMap().get(groupId) || 'A'}
                     {@const isCollapsed = collapsedGroups.has(groupId)}
                     
                     <div class={cn(
@@ -966,20 +955,20 @@
                         onclick={() => toggleGroupCollapse(groupId)}
                         class="w-full flex items-center gap-2 p-3 hover:bg-muted/30 transition-colors"
                       >
-                        <ChevronDown class={cn("h-4 w-4 text-muted-foreground transition-transform", isCollapsed && "-rotate-90")} />
+                        <ChevronDown class={cn("h-4 w-4 text-muted-foreground transition-transform shrink-0", isCollapsed && "-rotate-90")} />
                         <Badge class={cn(
-                          "text-[10px] font-bold",
+                          "text-[10px] font-bold shrink-0",
                           court === 'A' ? "bg-amber-500 text-black" :
                           court === 'B' ? "bg-sky-500 text-white" :
                           "bg-emerald-500 text-white"
                         )}>
                           {court === 'A+B' ? 'A+B' : court}
                         </Badge>
-                        <span class="font-medium flex-1 text-left">{group?.name || groupId}</span>
+                        <span class="font-medium flex-1 text-left truncate min-w-0">{group?.name || groupId}</span>
                         {#if group?.isHantei}
-                          <Badge variant="outline" class="text-[10px] border-orange-500 text-orange-400">Hantei</Badge>
+                          <Badge variant="outline" class="text-[10px] border-orange-500 text-orange-400 shrink-0">H</Badge>
                         {/if}
-                        <span class="text-xs text-muted-foreground">{completedCount}/{groupMatches.length}</span>
+                        <span class="text-xs text-muted-foreground shrink-0">{completedCount}/{groupMatches.length}</span>
                       </button>
                       
                       <!-- Match List -->
@@ -995,20 +984,20 @@
                               match.status === 'completed' ? "bg-muted/30" : 
                               match.status === 'in_progress' ? "bg-amber-500/10" : ""
                             )}>
-                              <span class="w-6 text-xs text-muted-foreground text-center">{idx + 1}</span>
-                              <span class={cn("flex-1 truncate", isWinner1 && "text-green-400 font-semibold")}>
+                              <span class="w-5 text-xs text-muted-foreground text-center shrink-0">{idx + 1}</span>
+                              <span class={cn("flex-1 truncate min-w-0 text-xs sm:text-sm", isWinner1 && "text-green-400 font-semibold")}>
                                 {p1?.firstName} {p1?.lastName.charAt(0)}.
                               </span>
-                              <span class="text-xs text-muted-foreground px-2">vs</span>
-                              <span class={cn("flex-1 truncate text-right", isWinner2 && "text-green-400 font-semibold")}>
+                              <span class="text-[10px] text-muted-foreground shrink-0">vs</span>
+                              <span class={cn("flex-1 truncate text-right min-w-0 text-xs sm:text-sm", isWinner2 && "text-green-400 font-semibold")}>
                                 {p2?.firstName} {p2?.lastName.charAt(0)}.
                               </span>
                               {#if match.status === 'completed'}
-                                <Check class="h-3.5 w-3.5 text-green-500" />
+                                <Check class="h-3.5 w-3.5 text-green-500 shrink-0" />
                               {:else if match.status === 'in_progress'}
-                                <span class="h-2 w-2 rounded-full bg-amber-500 animate-pulse"></span>
+                                <span class="h-2 w-2 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
                               {:else}
-                                <span class="h-2 w-2 rounded-full bg-muted-foreground/30"></span>
+                                <span class="h-2 w-2 rounded-full bg-muted-foreground/30 shrink-0"></span>
                               {/if}
                             </div>
                           {:else}
@@ -1024,8 +1013,7 @@
               <Card.Root class="border-dashed">
                 <Card.Content class="flex flex-col items-center justify-center py-12">
                   <Users class="mb-4 h-12 w-12 text-muted-foreground/50" />
-                  <p class="mb-2 text-muted-foreground">No participants yet</p>
-                  <p class="mb-4 text-sm text-muted-foreground">Add participants to generate matches</p>
+                  <p class="mb-2 text-muted-foreground text-center">No participants yet</p>
                   <Button onclick={addAllParticipants} variant="secondary">
                     <UserPlus class="mr-2 h-4 w-4" /> Add All Members
                   </Button>
@@ -1036,7 +1024,6 @@
                 <Card.Content class="flex flex-col items-center justify-center py-12">
                   <Trophy class="mb-4 h-12 w-12 text-muted-foreground/50" />
                   <p class="mb-2 text-muted-foreground">{participants.length} participants ready</p>
-                  <p class="mb-4 text-sm text-muted-foreground">Generate round-robin matches</p>
                   <Button onclick={generateMatches}>
                     <Trophy class="mr-2 h-4 w-4" /> Generate Matches
                   </Button>
@@ -1047,51 +1034,54 @@
         {/if}
       
       {:else if activeTab === 'members'}
-        <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <h1 class="text-2xl font-bold">Members ({members.length})</h1>
           <div class="flex flex-wrap gap-2">
-            <Button variant="secondary" onclick={() => showImportCSV = true}>Import CSV</Button>
-            <Button variant="secondary" onclick={() => { resetMassMembers(); showMassAddMembers = true; }} class="bg-blue-600 hover:bg-blue-700 text-white"><Users class="mr-2 h-4 w-4" /> Add Multiple</Button>
-            <Button onclick={() => showAddMember = true}><Plus class="mr-2 h-4 w-4" /> Add Member</Button>
+            <Button variant="secondary" size="sm" onclick={() => showImportCSV = true} class="text-xs">CSV</Button>
+            <Button variant="secondary" size="sm" onclick={() => { resetMassMembers(); showMassAddMembers = true; }} class="bg-blue-600 hover:bg-blue-700 text-white text-xs"><Users class="mr-1 h-3 w-3" /> Bulk</Button>
+            <Button size="sm" onclick={() => showAddMember = true} class="text-xs"><Plus class="mr-1 h-3 w-3" /> Add</Button>
           </div>
         </div>
-        <div class="mb-4 flex flex-wrap gap-4">
+        <div class="mb-4 flex flex-col sm:flex-row gap-2">
           <Input type="text" bind:value={searchQuery} placeholder="Search..." class="flex-1" />
-          <select bind:value={filterGroup} class="rounded-lg border border-input bg-card px-4 py-2">
+          <select bind:value={filterGroup} class="w-full sm:w-auto rounded-lg border border-input bg-card px-3 py-2 text-sm">
             <option value="all">All Groups</option>
             {#each groups as g}<option value={g.groupId}>{g.name}</option>{/each}
           </select>
         </div>
         <div class="overflow-hidden rounded-xl border border-border bg-card" use:autoAnimate>
           {#each filteredMembers as member (member._id)}
-            <div class="flex items-center justify-between border-b border-border px-4 py-3 last:border-b-0 hover:bg-accent/50">
-              <div><span class="font-semibold">{member.lastName}, {member.firstName}</span><span class="ml-2 text-sm text-muted-foreground">({getGroupName(member.groupId)})</span></div>
-              <button onclick={() => deleteMember(member._id)} class="text-destructive hover:text-destructive/80"><Trash2 class="h-4 w-4" /></button>
+            <div class="flex items-center justify-between border-b border-border px-3 sm:px-4 py-3 last:border-b-0 hover:bg-accent/50 gap-2">
+              <div class="min-w-0 flex-1">
+                <span class="font-semibold text-sm truncate block">{member.lastName}, {member.firstName}</span>
+                <span class="text-xs text-muted-foreground truncate block">{getGroupName(member.groupId)}</span>
+              </div>
+              <button onclick={() => deleteMember(member._id)} class="text-destructive hover:text-destructive/80 shrink-0"><Trash2 class="h-4 w-4" /></button>
             </div>
           {:else}<p class="py-8 text-center text-muted-foreground">No members found</p>{/each}
         </div>
       
       {:else if activeTab === 'groups'}
-        <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <h1 class="text-2xl font-bold">Groups ({groups.length})</h1>
-          <Button onclick={() => showAddGroup = true}><Plus class="mr-2 h-4 w-4" /> Add Group</Button>
+          <Button onclick={() => showAddGroup = true} class="w-full sm:w-auto"><Plus class="mr-2 h-4 w-4" /> Add Group</Button>
         </div>
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" use:autoAnimate>
+        <div class="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" use:autoAnimate>
           {#each groups as group (group._id)}
             {@const memberCount = members.filter(m => m.groupId === group.groupId).length}
             <Card.Root>
               <Card.Header class="pb-2">
-                <div class="flex items-center justify-between">
-                  <Card.Title class="flex items-center gap-2">
-                    {group.name}
-                    {#if group.isHantei}<Badge variant="outline" class="text-[10px] border-orange-500 text-orange-400">Hantei</Badge>{/if}
+                <div class="flex items-center justify-between gap-2">
+                  <Card.Title class="flex items-center gap-2 min-w-0 truncate">
+                    <span class="truncate">{group.name}</span>
+                    {#if group.isHantei}<Badge variant="outline" class="text-[10px] border-orange-500 text-orange-400 shrink-0">H</Badge>{/if}
                   </Card.Title>
-                  <div class="flex gap-1">
+                  <div class="flex gap-1 shrink-0">
                     <button onclick={() => { editingGroup = { ...group }; showEditGroup = true; }} class="p-1 text-muted-foreground hover:text-foreground"><Pencil class="h-4 w-4" /></button>
                     <button onclick={() => deleteGroup(group._id)} class="p-1 text-destructive hover:text-destructive/80"><Trash2 class="h-4 w-4" /></button>
                   </div>
                 </div>
-                <Card.Description>ID: {group.groupId}</Card.Description>
+                <Card.Description class="text-xs truncate">ID: {group.groupId}</Card.Description>
               </Card.Header>
               <Card.Content>
                 <div class="text-2xl font-bold">{memberCount}</div>
@@ -1121,19 +1111,19 @@
               {#if gm.length > 0}
                 <Card.Root>
                   <Card.Header>
-                    <Card.Title class="flex items-center gap-2">
-                      {group.name}
-                      <Badge variant="outline" class="text-xs">{done.length}/{gm.length}</Badge>
+                    <Card.Title class="flex items-center gap-2 text-base sm:text-lg">
+                      <span class="truncate">{group.name}</span>
+                      <Badge variant="outline" class="text-xs shrink-0">{done.length}/{gm.length}</Badge>
                     </Card.Title>
                   </Card.Header>
                   <Card.Content>
                     <div class="space-y-2">
                       {#each done as match}
                         {@const p1Win = match.winner === match.player1Id}
-                        <div class="flex items-center gap-2 rounded bg-muted/50 px-3 py-2 text-sm">
-                          <span class={cn(p1Win && "font-semibold text-green-400")}>{getMemberName(match.player1Id)}{p1Win ? ' 🏆' : ''}</span>
-                          <span class="text-muted-foreground">{match.player1Score?.length || 0} - {match.player2Score?.length || 0}</span>
-                          <span class={cn(!p1Win && match.winner && "font-semibold text-green-400")}>{!p1Win && match.winner ? '🏆 ' : ''}{getMemberName(match.player2Id)}</span>
+                        <div class="flex items-center gap-2 rounded bg-muted/50 px-3 py-2 text-xs sm:text-sm">
+                          <span class={cn("truncate flex-1", p1Win && "font-semibold text-green-400")}>{getMemberName(match.player1Id)}{p1Win ? ' 🏆' : ''}</span>
+                          <span class="text-muted-foreground shrink-0">{match.player1Score?.length || 0} - {match.player2Score?.length || 0}</span>
+                          <span class={cn("truncate flex-1 text-right", !p1Win && match.winner && "font-semibold text-green-400")}>{!p1Win && match.winner ? '🏆 ' : ''}{getMemberName(match.player2Id)}</span>
                         </div>
                       {:else}<p class="text-sm text-muted-foreground">No completed matches</p>{/each}
                     </div>
@@ -1159,7 +1149,7 @@
             {#each completedTournaments as tournament (tournament._id)}
               <Card.Root>
                 <Card.Header>
-                  <Card.Title>{tournament.name}</Card.Title>
+                  <Card.Title class="truncate">{tournament.name}</Card.Title>
                   <Card.Description>📅 {tournament.date}</Card.Description>
                 </Card.Header>
               </Card.Root>
@@ -1173,100 +1163,100 @@
 
 <!-- Dialogs -->
 <Dialog.Root bind:open={showAddGroup}>
-  <Dialog.Content class="sm:max-w-sm">
+  <Dialog.Content class="sm:max-w-sm max-w-[calc(100vw-2rem)]">
     <Dialog.Header><Dialog.Title>Add Group</Dialog.Title></Dialog.Header>
     <div class="space-y-4 py-4">
-      <div class="space-y-2"><Label for="group-id">Group ID</Label><Input id="group-id" bind:value={newGroup.id} placeholder="e.g., YUD, MUD, G1" /></div>
+      <div class="space-y-2"><Label for="group-id">Group ID</Label><Input id="group-id" bind:value={newGroup.id} placeholder="e.g., YUD, MUD" /></div>
       <div class="space-y-2"><Label for="group-name">Group Name</Label><Input id="group-name" bind:value={newGroup.name} placeholder="e.g., Youth Division" /></div>
-      <div class="flex items-center space-x-2"><Checkbox id="group-hantei" bind:checked={newGroup.isHantei} /><Label for="group-hantei" class="cursor-pointer">Hantei (judgment-based)</Label></div>
+      <div class="flex items-center space-x-2"><Checkbox id="group-hantei" bind:checked={newGroup.isHantei} /><Label for="group-hantei" class="cursor-pointer text-sm">Hantei (non-bogu)</Label></div>
     </div>
-    <Dialog.Footer><Button variant="secondary" onclick={() => showAddGroup = false}>Cancel</Button><Button onclick={createGroup}>Create</Button></Dialog.Footer>
+    <Dialog.Footer class="flex-col sm:flex-row gap-2"><Button variant="secondary" onclick={() => showAddGroup = false} class="w-full sm:w-auto">Cancel</Button><Button onclick={createGroup} class="w-full sm:w-auto">Create</Button></Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>
 
 <Dialog.Root bind:open={showEditGroup}>
-  <Dialog.Content class="sm:max-w-sm">
+  <Dialog.Content class="sm:max-w-sm max-w-[calc(100vw-2rem)]">
     <Dialog.Header><Dialog.Title>Edit Group</Dialog.Title></Dialog.Header>
     {#if editingGroup}
       <div class="space-y-4 py-4">
         <div class="space-y-2"><Label for="edit-group-id">Group ID</Label><Input id="edit-group-id" bind:value={editingGroup.groupId} /></div>
         <div class="space-y-2"><Label for="edit-group-name">Group Name</Label><Input id="edit-group-name" bind:value={editingGroup.name} /></div>
-        <div class="flex items-center space-x-2"><Checkbox id="edit-group-hantei" bind:checked={editingGroup.isHantei} /><Label for="edit-group-hantei" class="cursor-pointer">Hantei</Label></div>
+        <div class="flex items-center space-x-2"><Checkbox id="edit-group-hantei" bind:checked={editingGroup.isHantei} /><Label for="edit-group-hantei" class="cursor-pointer text-sm">Hantei</Label></div>
       </div>
     {/if}
-    <Dialog.Footer><Button variant="secondary" onclick={() => showEditGroup = false}>Cancel</Button><Button onclick={updateGroup}>Save</Button></Dialog.Footer>
+    <Dialog.Footer class="flex-col sm:flex-row gap-2"><Button variant="secondary" onclick={() => showEditGroup = false} class="w-full sm:w-auto">Cancel</Button><Button onclick={updateGroup} class="w-full sm:w-auto">Save</Button></Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>
 
 <Dialog.Root bind:open={showAddMember}>
-  <Dialog.Content class="sm:max-w-sm">
+  <Dialog.Content class="sm:max-w-sm max-w-[calc(100vw-2rem)]">
     <Dialog.Header><Dialog.Title>Add Member</Dialog.Title></Dialog.Header>
     <div class="space-y-4 py-4">
       <div class="space-y-2"><Label for="member-first">First Name</Label><Input id="member-first" bind:value={newMember.firstName} placeholder="John" /></div>
       <div class="space-y-2"><Label for="member-last">Last Name</Label><Input id="member-last" bind:value={newMember.lastName} placeholder="Doe" /></div>
-      <div class="space-y-2"><Label for="member-group">Group</Label><select id="member-group" bind:value={newMember.groupId} class="w-full rounded-lg border border-input bg-background px-4 py-2"><option value="">Select Group</option>{#each groups as g}<option value={g.groupId}>{g.name}</option>{/each}</select></div>
+      <div class="space-y-2"><Label for="member-group">Group</Label><select id="member-group" bind:value={newMember.groupId} class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"><option value="">Select Group</option>{#each groups as g}<option value={g.groupId}>{g.name}</option>{/each}</select></div>
     </div>
-    <Dialog.Footer><Button variant="secondary" onclick={() => showAddMember = false}>Cancel</Button><Button onclick={createMember}>Add</Button></Dialog.Footer>
+    <Dialog.Footer class="flex-col sm:flex-row gap-2"><Button variant="secondary" onclick={() => showAddMember = false} class="w-full sm:w-auto">Cancel</Button><Button onclick={createMember} class="w-full sm:w-auto">Add</Button></Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>
 
 <Dialog.Root bind:open={showMassAddMembers}>
-  <Dialog.Content class="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
-    <Dialog.Header><Dialog.Title>Add Multiple Members</Dialog.Title><Dialog.Description>Fill in the rows below. Empty rows will be skipped.</Dialog.Description></Dialog.Header>
-    <div class="py-4">
-      <div class="mb-2 grid grid-cols-[1fr_1fr_1fr_40px] gap-2 text-sm font-medium text-muted-foreground"><span>First Name</span><span>Last Name</span><span>Group</span><span></span></div>
-      <div class="space-y-2" use:autoAnimate>
+  <Dialog.Content class="sm:max-w-3xl max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto">
+    <Dialog.Header><Dialog.Title>Add Multiple Members</Dialog.Title><Dialog.Description>Fill in the rows below.</Dialog.Description></Dialog.Header>
+    <div class="py-4 overflow-x-auto">
+      <div class="mb-2 grid grid-cols-[1fr_1fr_100px_32px] gap-2 text-xs font-medium text-muted-foreground min-w-[320px]"><span>First</span><span>Last</span><span>Group</span><span></span></div>
+      <div class="space-y-2 min-w-[320px]" use:autoAnimate>
         {#each massMembers as member, i (i)}
-          <div class="grid grid-cols-[1fr_1fr_1fr_40px] gap-2">
-            <Input bind:value={member.firstName} placeholder="First Name" />
-            <Input bind:value={member.lastName} placeholder="Last Name" />
-            <select bind:value={member.groupId} class="rounded-lg border border-input bg-background px-3 py-2 text-sm"><option value="">Select Group</option>{#each groups as g}<option value={g.groupId}>{g.name}</option>{/each}</select>
+          <div class="grid grid-cols-[1fr_1fr_100px_32px] gap-2">
+            <Input bind:value={member.firstName} placeholder="First" class="text-sm" />
+            <Input bind:value={member.lastName} placeholder="Last" class="text-sm" />
+            <select bind:value={member.groupId} class="rounded-lg border border-input bg-background px-2 py-2 text-xs"><option value="">-</option>{#each groups as g}<option value={g.groupId}>{g.groupId}</option>{/each}</select>
             <button onclick={() => massMembers = massMembers.filter((_, idx) => idx !== i)} class="flex items-center justify-center text-muted-foreground hover:text-destructive"><Trash2 class="h-4 w-4" /></button>
           </div>
         {/each}
       </div>
-      <button onclick={addMoreRows} class="mt-4 flex items-center gap-2 text-sm text-primary hover:text-primary/80"><Plus class="h-4 w-4" /> Add 5 more rows</button>
+      <button onclick={addMoreRows} class="mt-4 flex items-center gap-2 text-sm text-primary hover:text-primary/80"><Plus class="h-4 w-4" /> Add 5 more</button>
     </div>
-    <Dialog.Footer><Button variant="secondary" onclick={() => showMassAddMembers = false}>Cancel</Button><Button onclick={createMassMembers}>Add Members ({massMembers.filter(m => m.firstName.trim() && m.lastName.trim() && m.groupId).length})</Button></Dialog.Footer>
+    <Dialog.Footer class="flex-col sm:flex-row gap-2"><Button variant="secondary" onclick={() => showMassAddMembers = false} class="w-full sm:w-auto">Cancel</Button><Button onclick={createMassMembers} class="w-full sm:w-auto">Add ({massMembers.filter(m => m.firstName.trim() && m.lastName.trim() && m.groupId).length})</Button></Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>
 
 <Dialog.Root bind:open={showImportCSV}>
-  <Dialog.Content class="sm:max-w-md">
-    <Dialog.Header><Dialog.Title>Import CSV</Dialog.Title><Dialog.Description>Format: FirstName,LastName,GroupID (one per line)</Dialog.Description></Dialog.Header>
-    <div class="py-4"><textarea bind:value={csvText} placeholder="John,Doe,YUD&#10;Jane,Smith,MUD" rows="8" class="w-full rounded-lg border border-input bg-background px-4 py-2 font-mono text-sm focus:border-primary focus:outline-none"></textarea></div>
-    <Dialog.Footer><Button variant="secondary" onclick={() => showImportCSV = false}>Cancel</Button><Button onclick={importCSV}>Import</Button></Dialog.Footer>
+  <Dialog.Content class="sm:max-w-md max-w-[calc(100vw-2rem)]">
+    <Dialog.Header><Dialog.Title>Import CSV</Dialog.Title><Dialog.Description>FirstName,LastName,GroupID</Dialog.Description></Dialog.Header>
+    <div class="py-4"><textarea bind:value={csvText} placeholder="John,Doe,YUD&#10;Jane,Smith,MUD" rows="6" class="w-full rounded-lg border border-input bg-background px-3 py-2 font-mono text-xs sm:text-sm focus:border-primary focus:outline-none"></textarea></div>
+    <Dialog.Footer class="flex-col sm:flex-row gap-2"><Button variant="secondary" onclick={() => showImportCSV = false} class="w-full sm:w-auto">Cancel</Button><Button onclick={importCSV} class="w-full sm:w-auto">Import</Button></Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>
 
 <Dialog.Root bind:open={showCreateTournament}>
-  <Dialog.Content class="sm:max-w-md">
+  <Dialog.Content class="sm:max-w-md max-w-[calc(100vw-2rem)]">
     <Dialog.Header><Dialog.Title>Create Tournament</Dialog.Title></Dialog.Header>
     <div class="space-y-4 py-4">
-      <div class="grid grid-cols-2 gap-4">
-        <div class="space-y-2"><Label for="tournament-month">Month</Label><select id="tournament-month" bind:value={newTournament.month} class="w-full rounded-lg border border-input bg-background px-4 py-2"><option value="">Select</option>{#each MONTHS as month}<option value={month}>{month}</option>{/each}</select></div>
-        <div class="space-y-2"><Label for="tournament-year">Year</Label><select id="tournament-year" bind:value={newTournament.year} class="w-full rounded-lg border border-input bg-background px-4 py-2">{#each [2024, 2025, 2026, 2027] as year}<option value={year}>{year}</option>{/each}</select></div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="space-y-2"><Label for="tournament-month" class="text-xs">Month</Label><select id="tournament-month" bind:value={newTournament.month} class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"><option value="">Select</option>{#each MONTHS as month}<option value={month}>{month}</option>{/each}</select></div>
+        <div class="space-y-2"><Label for="tournament-year" class="text-xs">Year</Label><select id="tournament-year" bind:value={newTournament.year} class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">{#each [2024, 2025, 2026, 2027] as year}<option value={year}>{year}</option>{/each}</select></div>
       </div>
-      <div class="space-y-2"><Label for="tournament-name">Name <span class="text-xs text-muted-foreground">(optional)</span></Label><Input id="tournament-name" bind:value={newTournament.name} placeholder={generateTournamentName()} /></div>
-      <div class="space-y-2"><Label for="tournament-date">Date</Label><Input id="tournament-date" type="date" bind:value={newTournament.date} /></div>
+      <div class="space-y-2"><Label for="tournament-name" class="text-xs">Name <span class="text-muted-foreground">(optional)</span></Label><Input id="tournament-name" bind:value={newTournament.name} placeholder={generateTournamentName()} class="text-sm" /></div>
+      <div class="space-y-2"><Label for="tournament-date" class="text-xs">Date</Label><Input id="tournament-date" type="date" bind:value={newTournament.date} class="text-sm" /></div>
     </div>
-    <Dialog.Footer><Button variant="secondary" onclick={() => showCreateTournament = false}>Cancel</Button><Button onclick={createTournament}>Create</Button></Dialog.Footer>
+    <Dialog.Footer class="flex-col sm:flex-row gap-2"><Button variant="secondary" onclick={() => showCreateTournament = false} class="w-full sm:w-auto">Cancel</Button><Button onclick={createTournament} class="w-full sm:w-auto">Create</Button></Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>
 
 <Dialog.Root bind:open={showDeleteConfirm}>
-  <Dialog.Content class="sm:max-w-sm">
+  <Dialog.Content class="sm:max-w-sm max-w-[calc(100vw-2rem)]">
     <Dialog.Header>
       <Dialog.Title class="flex items-center gap-2 text-red-400">
         <AlertTriangle class="h-5 w-5" /> Delete Tournament?
       </Dialog.Title>
       <Dialog.Description>
-        This will permanently delete "{selectedTournament?.name}" and all its matches and participants. This action cannot be undone.
+        This will permanently delete "{selectedTournament?.name}" and all its data. This cannot be undone.
       </Dialog.Description>
     </Dialog.Header>
-    <Dialog.Footer>
-      <Button variant="secondary" onclick={() => showDeleteConfirm = false}>Cancel</Button>
-      <Button variant="destructive" onclick={deleteTournament}>Delete</Button>
+    <Dialog.Footer class="flex-col sm:flex-row gap-2">
+      <Button variant="secondary" onclick={() => showDeleteConfirm = false} class="w-full sm:w-auto">Cancel</Button>
+      <Button variant="destructive" onclick={deleteTournament} class="w-full sm:w-auto">Delete</Button>
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>
