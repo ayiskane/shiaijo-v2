@@ -3,24 +3,33 @@
   import { api } from '../../convex/_generated/api';
   import { cn } from '$lib/utils';
   import { slide, fade } from 'svelte/transition';
+  import { flip } from 'svelte/animate';
   import { toast } from 'svelte-sonner';
   import { 
     LayoutDashboard, Users, FolderOpen, Trophy, ClipboardList, 
-    ChevronLeft, ChevronDown, Swords, Eye, Menu, Plus, Trash2, Pencil
+    ChevronLeft, ChevronDown, ChevronRight, Swords, Eye, Menu, Plus, Trash2, Pencil,
+    Play, Settings, RefreshCw, RotateCcw, Archive, GripVertical, Timer, 
+    Check, X, AlertTriangle, History, UserPlus
   } from 'lucide-svelte';
   
   // shadcn-svelte components
   import * as Dialog from '$lib/components/ui/dialog';
+  import * as Collapsible from '$lib/components/ui/collapsible';
+  import * as Select from '$lib/components/ui/select';
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
   import { Label } from '$lib/components/ui/label';
   import { Checkbox } from '$lib/components/ui/checkbox';
   import { Skeleton } from '$lib/components/ui/skeleton';
+  import { Badge } from '$lib/components/ui/badge';
+  import { Progress } from '$lib/components/ui/progress';
+  import * as Card from '$lib/components/ui/card';
+  import { Switch } from '$lib/components/ui/switch';
   
   // Convex client for mutations
   const client = useConvexClient();
   
-  // Real-time subscriptions - NO MORE POLLING!
+  // Real-time subscriptions
   const groupsQuery = useQuery(api.groups.list, () => ({}));
   const membersQuery = useQuery(api.members.list, () => ({}));
   const tournamentsQuery = useQuery(api.tournaments.list, () => ({}));
@@ -35,7 +44,7 @@
   let activeTab = $state('dashboard');
   let sidebarOpen = $state(false);
   let sidebarCollapsed = $state(false);
-  let expandedGroups = $state<Set<string>>(new Set(['roster', 'shiai']));
+  let expandedNavGroups = $state<Set<string>>(new Set(['roster', 'shiai']));
   
   // Modal states
   let showAddGroup = $state(false);
@@ -44,6 +53,7 @@
   let showMassAddMembers = $state(false);
   let showImportCSV = $state(false);
   let showCreateTournament = $state(false);
+  let showDeleteConfirm = $state(false);
   
   let editingGroup = $state<any>(null);
   let newGroup = $state({ id: '', name: '', isHantei: false });
@@ -52,7 +62,7 @@
   let newTournament = $state({ name: '', date: '', month: '', year: new Date().getFullYear() });
   let selectedTournamentId = $state<string | null>(null);
   
-  // Tournament-specific queries (conditional - skips when no tournament selected)
+  // Tournament-specific queries
   const participantsQuery = useQuery(
     api.participants.list, 
     () => selectedTournamentId ? { tournamentId: selectedTournamentId } : 'skip'
@@ -65,29 +75,61 @@
   let participants = $derived(participantsQuery.data ?? []);
   let matches = $derived(matchesQuery.data ?? []);
   
+  // Tournament tab state
+  let editTournamentOpen = $state(false);
+  let collapsedGroups = $state<Set<string>>(new Set());
+  let editingGroupId = $state<string | null>(null);
+  
+  // Drag and drop state
+  let draggedGroupId = $state<string | null>(null);
+  let dragOverGroupId = $state<string | null>(null);
+  
+  // Group order for tournament (local state, synced from matches)
+  let groupOrder = $state<string[]>([]);
+  
   // Mass member creation
   type MemberRow = { firstName: string; lastName: string; groupId: string };
-  let massMembers = $state<MemberRow[]>([
-    { firstName: '', lastName: '', groupId: '' },
-    { firstName: '', lastName: '', groupId: '' },
-    { firstName: '', lastName: '', groupId: '' },
-    { firstName: '', lastName: '', groupId: '' },
-    { firstName: '', lastName: '', groupId: '' },
-  ]);
-  
-  function addMoreRows() {
-    massMembers = [...massMembers, ...Array(5).fill(null).map(() => ({ firstName: '', lastName: '', groupId: '' }))];
-  }
-  
-  function resetMassMembers() {
-    massMembers = Array(5).fill(null).map(() => ({ firstName: '', lastName: '', groupId: '' }));
-  }
-  
-  // Filters
-  let searchQuery = $state('');
-  let filterGroup = $state('all');
+  let massMembers = $state<MemberRow[]>(
+    Array(5).fill(null).map(() => ({ firstName: '', lastName: '', groupId: '' }))
+  );
   
   const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const TIMER_OPTIONS = [60, 120, 180, 240, 300];
+  
+  // Derived values
+  let activeTournament = $derived(tournaments.find(t => t.status === 'in_progress') || null);
+  let selectedTournament = $derived(tournaments.find(t => t._id === selectedTournamentId) || activeTournament || tournaments[0] || null);
+  
+  let pendingMatches = $derived(matches.filter(m => m.status === 'pending'));
+  let inProgressMatches = $derived(matches.filter(m => m.status === 'in_progress'));
+  let completedMatches = $derived(matches.filter(m => m.status === 'completed'));
+  let courtAMatches = $derived(matches.filter(m => m.court === 'A' || m.court === 'A+B'));
+  let courtBMatches = $derived(matches.filter(m => m.court === 'B' || m.court === 'A+B'));
+  
+  let progressPercent = $derived(matches.length > 0 ? Math.round((completedMatches.length / matches.length) * 100) : 0);
+  let isComplete = $derived(matches.length > 0 && completedMatches.length === matches.length);
+  
+  // Get unique groups from matches
+  let tournamentGroups = $derived(() => {
+    const uniqueGroupIds = [...new Set(matches.map(m => m.groupId))];
+    return uniqueGroupIds.map(id => groups.find(g => g.groupId === id)).filter(Boolean);
+  });
+  
+  // Auto-select tournament
+  $effect(() => {
+    if (tournaments.length > 0 && !selectedTournamentId) {
+      const active = tournaments.find(t => t.status === 'in_progress');
+      selectedTournamentId = active?._id ?? tournaments[0]._id;
+    }
+  });
+  
+  // Update group order from matches
+  $effect(() => {
+    if (matches.length > 0) {
+      const uniqueGroups = [...new Set(matches.map(m => m.groupId))];
+      groupOrder = uniqueGroups;
+    }
+  });
   
   // Navigation
   const navItems = [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }];
@@ -99,10 +141,14 @@
     { id: 'shiai', label: 'Shiai', items: [
       { id: 'tournament', label: 'Tournament', icon: Trophy },
       { id: 'results', label: 'Results', icon: ClipboardList },
+      { id: 'history', label: 'History', icon: History },
     ]}
   ];
   
-  // Derived
+  // Filters
+  let searchQuery = $state('');
+  let filterGroup = $state('all');
+  
   let filteredMembers = $derived(
     members
       .filter(m => {
@@ -113,32 +159,65 @@
       .sort((a, b) => a.lastName.localeCompare(b.lastName))
   );
   
-  let activeTournament = $derived(tournaments.find(t => t.status === 'in_progress') || null);
-  let selectedTournament = $derived(tournaments.find(t => t._id === selectedTournamentId) || activeTournament || tournaments[0] || null);
-  let pendingMatches = $derived(matches.filter(m => m.status === 'pending'));
-  let completedMatches = $derived(matches.filter(m => m.status === 'completed'));
-  
-  // Auto-select tournament
-  $effect(() => {
-    if (tournaments.length > 0 && !selectedTournamentId) {
-      const active = tournaments.find(t => t.status === 'in_progress');
-      selectedTournamentId = active?._id ?? tournaments[0]._id;
-    }
-  });
-  
   function toggleNavGroup(groupId: string) {
-    const newSet = new Set(expandedGroups);
+    const newSet = new Set(expandedNavGroups);
     newSet.has(groupId) ? newSet.delete(groupId) : newSet.add(groupId);
-    expandedGroups = newSet;
+    expandedNavGroups = newSet;
   }
   
-  function getNextGroupId(): string {
-    const ids = groups.map(g => g.groupId).filter(id => /^G\d+$/.test(id));
-    if (ids.length === 0) return 'G1';
-    const nums = ids.map(id => parseInt(id.slice(1)));
-    return `G${Math.max(...nums) + 1}`;
+  function toggleGroupCollapse(groupId: string) {
+    const newSet = new Set(collapsedGroups);
+    newSet.has(groupId) ? newSet.delete(groupId) : newSet.add(groupId);
+    collapsedGroups = newSet;
   }
   
+  function collapseAllGroups() {
+    collapsedGroups = new Set(groupOrder);
+  }
+  
+  function expandAllGroups() {
+    collapsedGroups = new Set();
+  }
+  
+  // Helper functions
+  function getGroupName(groupId: string): string { 
+    return groups.find(g => g.groupId === groupId)?.name || groupId; 
+  }
+  
+  function getGroupById(groupId: string) {
+    return groups.find(g => g.groupId === groupId);
+  }
+  
+  function getMemberName(memberId: string): string { 
+    const m = members.find(mem => mem._id === memberId); 
+    return m ? `${m.firstName} ${m.lastName.charAt(0)}.` : 'Unknown'; 
+  }
+  
+  function getMemberById(memberId: string) {
+    return members.find(m => m._id === memberId);
+  }
+  
+  function formatTimer(seconds: number): string {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }
+  
+  function generateTournamentName(): string {
+    const month = newTournament.month || MONTHS[new Date().getMonth()];
+    const year = newTournament.year || new Date().getFullYear();
+    return `Renbu Monthly Shiai - ${month} ${year}`;
+  }
+  
+  function addMoreRows() {
+    massMembers = [...massMembers, ...Array(5).fill(null).map(() => ({ firstName: '', lastName: '', groupId: '' }))];
+  }
+  
+  function resetMassMembers() {
+    massMembers = Array(5).fill(null).map(() => ({ firstName: '', lastName: '', groupId: '' }));
+  }
+  
+  // CRUD Operations
   async function createGroup() {
     if (!newGroup.id || !newGroup.name) return;
     try {
@@ -210,12 +289,7 @@
     } catch (e) { toast.error('Import failed'); }
   }
   
-  function generateTournamentName(): string {
-    const month = newTournament.month || MONTHS[new Date().getMonth()];
-    const year = newTournament.year || new Date().getFullYear();
-    return `Renbu Monthly Shiai - ${month} ${year}`;
-  }
-  
+  // Tournament Operations
   async function createTournament() {
     if (!newTournament.date) { toast.error('Please select a date'); return; }
     try {
@@ -235,6 +309,24 @@
     } catch (e) { toast.error('Failed to start tournament'); }
   }
   
+  async function completeTournament() {
+    if (!selectedTournament) return;
+    try {
+      await client.mutation(api.tournaments.complete, { id: selectedTournament._id });
+      toast.success('Tournament archived!');
+    } catch (e) { toast.error('Failed to archive tournament'); }
+  }
+  
+  async function deleteTournament() {
+    if (!selectedTournament) return;
+    try {
+      await client.mutation(api.tournaments.remove, { id: selectedTournament._id });
+      selectedTournamentId = null;
+      showDeleteConfirm = false;
+      toast.success('Tournament deleted');
+    } catch (e) { toast.error('Failed to delete tournament'); }
+  }
+  
   async function addAllParticipants() {
     if (!selectedTournament) return;
     try {
@@ -251,8 +343,99 @@
     } catch (e) { toast.error('Failed to generate matches'); }
   }
   
-  function getGroupName(groupId: string): string { return groups.find(g => g.groupId === groupId)?.name || groupId; }
-  function getMemberName(memberId: string): string { const m = members.find(mem => mem._id === memberId); return m ? `${m.firstName} ${m.lastName.charAt(0)}.` : 'Unknown'; }
+  async function refreshParticipants() {
+    if (!selectedTournament) return;
+    try {
+      const result = await client.mutation(api.tournaments.refreshParticipants, { tournamentId: selectedTournament._id });
+      toast.success(`Added ${result.addedCount} new matches`);
+    } catch (e) { toast.error('Failed to refresh participants'); }
+  }
+  
+  async function resetTournament() {
+    if (!selectedTournament) return;
+    if (!confirm('Reset all matches to pending? This will clear all scores.')) return;
+    try {
+      const result = await client.mutation(api.tournaments.reset, { tournamentId: selectedTournament._id });
+      toast.success(`Reset ${result.resetCount} matches`);
+    } catch (e) { toast.error('Failed to reset tournament'); }
+  }
+  
+  async function setGroupCourt(groupId: string, court: 'A' | 'B' | 'A+B') {
+    if (!selectedTournament) return;
+    try {
+      await client.mutation(api.matches.setGroupCourt, { 
+        tournamentId: selectedTournament._id, 
+        groupId, 
+        court 
+      });
+      toast.success(`${getGroupName(groupId)} assigned to Court ${court}`);
+    } catch (e) { toast.error('Failed to set court'); }
+  }
+  
+  async function setGroupMatchType(groupId: string, matchType: 'sanbon' | 'ippon') {
+    if (!selectedTournament) return;
+    try {
+      await client.mutation(api.matches.setGroupMatchType, { 
+        tournamentId: selectedTournament._id, 
+        groupId, 
+        matchType 
+      });
+      toast.success(`${getGroupName(groupId)} set to ${matchType}`);
+    } catch (e) { toast.error('Failed to set match type'); }
+  }
+  
+  async function setGroupTimer(groupId: string, timerDuration: number) {
+    if (!selectedTournament) return;
+    try {
+      await client.mutation(api.matches.setGroupTimer, { 
+        tournamentId: selectedTournament._id, 
+        groupId, 
+        timerDuration 
+      });
+      toast.success(`${getGroupName(groupId)} timer set to ${formatTimer(timerDuration)}`);
+    } catch (e) { toast.error('Failed to set timer'); }
+  }
+  
+  // Drag and Drop handlers
+  function handleDragStart(e: DragEvent, groupId: string) {
+    draggedGroupId = groupId;
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', groupId);
+    }
+  }
+  
+  function handleDragOver(e: DragEvent, groupId: string) {
+    e.preventDefault();
+    if (draggedGroupId && draggedGroupId !== groupId) {
+      dragOverGroupId = groupId;
+    }
+  }
+  
+  function handleDragLeave() {
+    dragOverGroupId = null;
+  }
+  
+  function handleDrop(e: DragEvent, targetGroupId: string) {
+    e.preventDefault();
+    if (draggedGroupId && draggedGroupId !== targetGroupId) {
+      const oldIndex = groupOrder.indexOf(draggedGroupId);
+      const newIndex = groupOrder.indexOf(targetGroupId);
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newOrder = [...groupOrder];
+        newOrder.splice(oldIndex, 1);
+        newOrder.splice(newIndex, 0, draggedGroupId);
+        groupOrder = newOrder;
+      }
+    }
+    draggedGroupId = null;
+    dragOverGroupId = null;
+  }
+  
+  function handleDragEnd() {
+    draggedGroupId = null;
+    dragOverGroupId = null;
+  }
 </script>
 
 <svelte:head><title>Admin - 試合場 Shiaijo</title></svelte:head>
@@ -278,10 +461,10 @@
         <div class="mt-2">
           {#if !sidebarCollapsed}
             <button onclick={() => toggleNavGroup(group.id)} class="flex w-full items-center gap-2 px-3 py-1.5 text-[10px] uppercase tracking-wider text-sidebar-foreground/60 hover:text-sidebar-foreground">
-              <ChevronDown class={cn("h-3 w-3 transition-transform", !expandedGroups.has(group.id) && "-rotate-90")} />{group.label}
+              <ChevronDown class={cn("h-3 w-3 transition-transform", !expandedNavGroups.has(group.id) && "-rotate-90")} />{group.label}
             </button>
           {/if}
-          {#if sidebarCollapsed || expandedGroups.has(group.id)}
+          {#if sidebarCollapsed || expandedNavGroups.has(group.id)}
             {#each group.items as item}
               <button onclick={() => activeTab = item.id} title={sidebarCollapsed ? item.label : undefined} class={cn("flex w-full items-center gap-3 px-3 py-2.5 text-sm transition-colors", sidebarCollapsed && "justify-center px-0", activeTab === item.id ? "border-l-2 border-sidebar-primary bg-sidebar-accent text-sidebar-primary" : "text-sidebar-foreground hover:bg-sidebar-accent")}>
                 <div class={cn("flex h-7 w-7 items-center justify-center rounded-md", activeTab === item.id ? "bg-sidebar-primary/20" : "bg-sidebar-accent")}><svelte:component this={item.icon} class="h-4 w-4" /></div>
@@ -314,7 +497,7 @@
     <aside class="fixed inset-y-0 left-0 z-50 w-64 border-r border-sidebar-border bg-sidebar md:hidden" transition:slide={{ axis: 'x' }}>
       <div class="flex h-14 items-center gap-3 border-b border-sidebar-border px-4"><img src="/shiaijologo.png" alt="Shiaijo" class="h-10 w-10 object-contain" /><span class="font-jp text-xl">試合場</span></div>
       <nav class="p-2">
-        {#each [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }, { id: 'members', label: 'Members', icon: Users }, { id: 'groups', label: 'Groups', icon: FolderOpen }, { id: 'tournament', label: 'Tournament', icon: Trophy }, { id: 'results', label: 'Results', icon: ClipboardList }] as tab}
+        {#each [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }, { id: 'members', label: 'Members', icon: Users }, { id: 'groups', label: 'Groups', icon: FolderOpen }, { id: 'tournament', label: 'Tournament', icon: Trophy }, { id: 'results', label: 'Results', icon: ClipboardList }, { id: 'history', label: 'History', icon: History }] as tab}
           <button onclick={() => { activeTab = tab.id; sidebarOpen = false; }} class={cn("flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm", activeTab === tab.id ? "bg-sidebar-accent text-sidebar-primary" : "text-sidebar-foreground hover:bg-sidebar-accent")}><svelte:component this={tab.icon} class="h-4 w-4" />{tab.label}</button>
         {/each}
       </nav>
@@ -330,6 +513,7 @@
     <div class="p-6">
       {#if loading}
         <div class="space-y-4"><Skeleton class="h-8 w-48" /><div class="grid gap-4 md:grid-cols-3"><Skeleton class="h-24" /><Skeleton class="h-24" /><Skeleton class="h-24" /></div></div>
+      
       {:else if activeTab === 'dashboard'}
         <h1 class="mb-6 text-2xl font-bold">Dashboard</h1>
         <div class="mb-6 grid gap-4 md:grid-cols-3">
@@ -341,49 +525,364 @@
           <div class="rounded-xl border border-green-500/50 bg-green-900/20 p-4">
             <div class="mb-2 flex items-center gap-2"><span class="h-2 w-2 animate-pulse rounded-full bg-green-500"></span><h3 class="font-bold text-green-400">Live: {activeTournament.name}</h3></div>
             <div class="flex flex-wrap gap-4 text-sm text-muted-foreground"><span>📅 {activeTournament.date}</span><span>⚔️ {completedMatches.length}/{matches.length} matches</span><span>👥 {participants.length} participants</span></div>
+            <div class="mt-3">
+              <Progress value={progressPercent} class="h-2" />
+              <p class="mt-1 text-xs text-muted-foreground">{progressPercent}% complete</p>
+            </div>
           </div>
         {/if}
+      
       {:else if activeTab === 'tournament'}
-        <div class="mb-6 flex flex-wrap items-center justify-between gap-4"><h1 class="text-2xl font-bold">Tournament</h1><Button onclick={() => showCreateTournament = true}><Plus class="mr-2 h-4 w-4" /> New Tournament</Button></div>
+        <!-- TOURNAMENT TAB - Enhanced Version -->
+        <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+          <h1 class="text-2xl font-bold">Tournament</h1>
+          <Button onclick={() => showCreateTournament = true}><Plus class="mr-2 h-4 w-4" /> New Tournament</Button>
+        </div>
+        
         {#if tournaments.length === 0}
-          <div class="rounded-xl border border-border bg-card p-6 text-center"><p class="mb-4 text-muted-foreground">No tournaments yet</p><Button onclick={() => showCreateTournament = true}>Create Your First Tournament</Button></div>
+          <Card.Root class="border-dashed">
+            <Card.Content class="flex flex-col items-center justify-center py-12">
+              <Trophy class="mb-4 h-12 w-12 text-muted-foreground/50" />
+              <p class="mb-4 text-muted-foreground">No tournaments yet</p>
+              <Button onclick={() => showCreateTournament = true}>Create Your First Tournament</Button>
+            </Card.Content>
+          </Card.Root>
         {:else}
-          <div class="mb-6"><select value={selectedTournamentId} onchange={(e) => selectedTournamentId = (e.target as HTMLSelectElement).value} class="w-full rounded-lg border border-input bg-card px-4 py-2 md:w-auto">{#each tournaments as t}<option value={t._id}>{t.name} ({t.date}) - {t.status}</option>{/each}</select></div>
+          <!-- Tournament Selector -->
+          <div class="mb-6">
+            <select 
+              value={selectedTournamentId} 
+              onchange={(e) => selectedTournamentId = (e.target as HTMLSelectElement).value} 
+              class="w-full rounded-lg border border-input bg-card px-4 py-2 md:w-auto"
+            >
+              {#each tournaments as t}
+                <option value={t._id}>{t.name} ({t.date}) - {t.status}</option>
+              {/each}
+            </select>
+          </div>
+          
           {#if selectedTournament}
-            <div class="rounded-xl border border-border bg-card p-4">
-              <div class="mb-4 flex flex-wrap items-start justify-between gap-4"><div><h3 class="text-lg font-bold">{selectedTournament.name}</h3><p class="text-sm text-muted-foreground">📅 {selectedTournament.date}</p></div><span class={cn("rounded-lg border px-3 py-1 text-sm font-medium", selectedTournament.status === 'in_progress' ? "border-green-500/50 bg-green-500/20 text-green-400" : selectedTournament.status === 'setup' ? "border-amber-500/50 bg-amber-500/20 text-amber-400" : "border-blue-500/50 bg-blue-500/20 text-blue-400")}>{selectedTournament.status}</span></div>
-              <div class="mb-4 grid grid-cols-2 gap-4 md:grid-cols-4">
-                <div class="rounded-lg bg-background p-3 text-center"><div class="text-2xl font-bold text-primary">{participants.length}</div><div class="text-xs text-muted-foreground">Participants</div></div>
-                <div class="rounded-lg bg-background p-3 text-center"><div class="text-2xl font-bold text-blue-400">{matches.length}</div><div class="text-xs text-muted-foreground">Matches</div></div>
-                <div class="rounded-lg bg-background p-3 text-center"><div class="text-2xl font-bold text-green-400">{completedMatches.length}</div><div class="text-xs text-muted-foreground">Completed</div></div>
-                <div class="rounded-lg bg-background p-3 text-center"><div class="text-2xl font-bold text-amber-400">{pendingMatches.length}</div><div class="text-xs text-muted-foreground">Remaining</div></div>
+            <!-- Tournament Header Card -->
+            <Card.Root class="mb-4">
+              <Card.Header class="pb-3">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <Card.Title class="text-xl">{selectedTournament.name}</Card.Title>
+                    <Card.Description>📅 {selectedTournament.date}</Card.Description>
+                  </div>
+                  <Badge class={cn(
+                    "text-sm px-3 py-1",
+                    selectedTournament.status === 'in_progress' ? (isComplete ? "bg-emerald-600" : "bg-amber-500") :
+                    selectedTournament.status === 'setup' ? "bg-yellow-600" : "bg-blue-600"
+                  )}>
+                    {selectedTournament.status === 'setup' ? 'Setup' : 
+                     selectedTournament.status === 'in_progress' ? (isComplete ? 'Complete!' : 'In Progress') : 
+                     'Completed'}
+                  </Badge>
+                </div>
+              </Card.Header>
+              <Card.Content class="space-y-4">
+                <!-- Progress Bar -->
+                <div class="flex items-center gap-4">
+                  <div class="flex-1">
+                    <Progress value={progressPercent} class={cn("h-2", isComplete ? "bg-emerald-900/30" : "")} />
+                  </div>
+                  <span class="text-sm text-muted-foreground">
+                    {completedMatches.length}/{matches.length} <span class="hidden sm:inline">Matches</span>
+                  </span>
+                </div>
+                
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <div class="rounded-lg bg-muted/50 p-3 text-center">
+                    <div class="text-2xl font-bold text-primary">{participants.length}</div>
+                    <div class="text-xs text-muted-foreground">Participants</div>
+                  </div>
+                  <div class="rounded-lg bg-muted/50 p-3 text-center">
+                    <div class="text-2xl font-bold text-blue-400">{matches.length}</div>
+                    <div class="text-xs text-muted-foreground">Total Matches</div>
+                  </div>
+                  <div class="rounded-lg bg-amber-900/20 border border-amber-700/30 p-3 text-center">
+                    <div class="text-2xl font-bold text-amber-400">{courtAMatches.length}</div>
+                    <div class="text-xs text-muted-foreground">Court A</div>
+                  </div>
+                  <div class="rounded-lg bg-sky-900/20 border border-sky-700/30 p-3 text-center">
+                    <div class="text-2xl font-bold text-sky-400">{courtBMatches.length}</div>
+                    <div class="text-xs text-muted-foreground">Court B</div>
+                  </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="flex flex-wrap gap-2">
+                  {#if selectedTournament.status === 'setup'}
+                    <Button onclick={addAllParticipants} variant="secondary">
+                      <UserPlus class="mr-2 h-4 w-4" /> Add All Members
+                    </Button>
+                    <Button onclick={generateMatches} variant="secondary">
+                      <Trophy class="mr-2 h-4 w-4" /> Generate Matches
+                    </Button>
+                    {#if matches.length > 0}
+                      <Button onclick={startTournament} class="bg-emerald-600 hover:bg-emerald-700">
+                        <Play class="mr-2 h-4 w-4" /> Start Tournament
+                      </Button>
+                    {/if}
+                  {/if}
+                  {#if selectedTournament.status === 'in_progress' && isComplete}
+                    <Button onclick={completeTournament} class="bg-orange-600 hover:bg-orange-700">
+                      <Archive class="mr-2 h-4 w-4" /> Archive & Complete
+                    </Button>
+                  {/if}
+                </div>
+              </Card.Content>
+            </Card.Root>
+            
+            <!-- Edit Tournament Section (Collapsible) -->
+            <Collapsible.Root bind:open={editTournamentOpen} class="mb-4">
+              <Card.Root>
+                <Collapsible.Trigger class="w-full">
+                  <Card.Header class="cursor-pointer hover:bg-muted/50 transition-colors">
+                    <div class="flex items-center justify-between">
+                      <Card.Title class="text-sm flex items-center gap-2">
+                        <Settings class="h-4 w-4 text-orange-400" />
+                        Edit Tournament
+                      </Card.Title>
+                      <ChevronDown class={cn("h-4 w-4 text-muted-foreground transition-transform", editTournamentOpen && "rotate-180")} />
+                    </div>
+                  </Card.Header>
+                </Collapsible.Trigger>
+                <Collapsible.Content>
+                  <Card.Content class="space-y-4 pt-0">
+                    <!-- Timer Options -->
+                    <div class="rounded-lg bg-muted/30 p-3 border border-border">
+                      <span class="text-xs text-muted-foreground block mb-2">Timer Options</span>
+                      <div class="flex flex-wrap gap-2">
+                        {#each TIMER_OPTIONS as secs}
+                          {@const isSelected = (selectedTournament.timerOptions || TIMER_OPTIONS).includes(secs)}
+                          <button
+                            onclick={() => {
+                              // Toggle timer option
+                              const current = selectedTournament.timerOptions || TIMER_OPTIONS;
+                              const newOptions = isSelected 
+                                ? current.filter(t => t !== secs)
+                                : [...current, secs].sort((a, b) => a - b);
+                              if (newOptions.length === 0) return;
+                              client.mutation(api.tournaments.update, { 
+                                id: selectedTournament._id, 
+                                timerOptions: newOptions 
+                              });
+                            }}
+                            class={cn(
+                              "px-3 py-1.5 rounded text-sm font-medium transition-all",
+                              isSelected ? "bg-blue-600 text-white" : "bg-muted text-muted-foreground hover:bg-muted/80"
+                            )}
+                          >
+                            {formatTimer(secs)}
+                          </button>
+                        {/each}
+                      </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="flex flex-wrap gap-2">
+                      <Button onclick={refreshParticipants} variant="outline" size="sm">
+                        <RefreshCw class="mr-2 h-4 w-4" /> Update Participants
+                      </Button>
+                      <Button onclick={resetTournament} variant="outline" size="sm" class="border-amber-700/60 text-amber-400 hover:bg-amber-900/20">
+                        <RotateCcw class="mr-2 h-4 w-4" /> Reset Scores
+                      </Button>
+                      <Button onclick={() => showDeleteConfirm = true} variant="outline" size="sm" class="border-red-700/60 text-red-400 hover:bg-red-900/20">
+                        <Trash2 class="mr-2 h-4 w-4" /> Delete
+                      </Button>
+                    </div>
+                  </Card.Content>
+                </Collapsible.Content>
+              </Card.Root>
+            </Collapsible.Root>
+            
+            <!-- Group Order Controls -->
+            {#if groupOrder.length > 0}
+              <div class="mb-4 flex items-center justify-between">
+                <span class="text-sm text-muted-foreground">{groupOrder.length} groups</span>
+                <div class="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onclick={() => collapsedGroups.size === groupOrder.length ? expandAllGroups() : collapseAllGroups()}
+                  >
+                    <ChevronDown class={cn("mr-2 h-4 w-4 transition-transform", collapsedGroups.size === groupOrder.length && "-rotate-90")} />
+                    {collapsedGroups.size === groupOrder.length ? 'Expand All' : 'Collapse All'}
+                  </Button>
+                </div>
               </div>
-              <div class="flex flex-wrap gap-2">
-                {#if selectedTournament.status === 'setup'}
-                  <Button variant="secondary" onclick={addAllParticipants}>Add All Members</Button>
-                  {#if matches.length === 0}<Button variant="secondary" onclick={generateMatches} class="bg-green-600 hover:bg-green-700 text-white">Generate Matches</Button>{/if}
-                  <Button onclick={startTournament}>▶ Start Tournament</Button>
-                {/if}
+              
+              <!-- Group Cards (Draggable) -->
+              <div class="space-y-3">
+                {#each groupOrder as groupId (groupId)}
+                  {@const group = getGroupById(groupId)}
+                  {@const groupMatches = matches.filter(m => m.groupId === groupId)}
+                  {@const completedCount = groupMatches.filter(m => m.status === 'completed').length}
+                  {@const isCollapsed = collapsedGroups.has(groupId)}
+                  {@const isEditing = editingGroupId === groupId}
+                  {@const firstMatch = groupMatches[0]}
+                  {@const currentCourt = firstMatch?.court || 'A'}
+                  {@const currentMatchType = firstMatch?.matchType || 'sanbon'}
+                  {@const currentTimer = firstMatch?.timerDuration || 180}
+                  {@const isHantei = group?.isHantei}
+                  
+                  <div
+                    draggable="true"
+                    ondragstart={(e) => handleDragStart(e, groupId)}
+                    ondragover={(e) => handleDragOver(e, groupId)}
+                    ondragleave={handleDragLeave}
+                    ondrop={(e) => handleDrop(e, groupId)}
+                    ondragend={handleDragEnd}
+                    animate:flip={{ duration: 200 }}
+                    class={cn(
+                      "rounded-xl border bg-card transition-all",
+                      draggedGroupId === groupId && "opacity-50",
+                      dragOverGroupId === groupId && "border-primary border-2",
+                      currentCourt === 'A' ? "border-amber-700/30" : 
+                      currentCourt === 'B' ? "border-sky-700/30" : 
+                      "border-emerald-700/30"
+                    )}
+                  >
+                    <!-- Group Header -->
+                    <div class="flex items-center gap-2 p-3">
+                      <button class="cursor-grab text-muted-foreground hover:text-foreground active:cursor-grabbing">
+                        <GripVertical class="h-4 w-4" />
+                      </button>
+                      <button onclick={() => toggleGroupCollapse(groupId)} class="text-muted-foreground hover:text-foreground">
+                        <ChevronDown class={cn("h-4 w-4 transition-transform", isCollapsed && "-rotate-90")} />
+                      </button>
+                      <Badge class={cn(
+                        "text-[10px] font-bold",
+                        currentCourt === 'A' ? "bg-amber-500 text-black" :
+                        currentCourt === 'B' ? "bg-sky-500 text-white" :
+                        "bg-emerald-500 text-white"
+                      )}>
+                        {currentCourt === 'A+B' ? 'A+B' : currentCourt}
+                      </Badge>
+                      <span class="font-medium flex-1">{group?.name || groupId}</span>
+                      {#if isHantei}
+                        <Badge variant="outline" class="text-[10px] border-orange-500 text-orange-400">Hantei</Badge>
+                      {/if}
+                      <button
+                        onclick={() => editingGroupId = isEditing ? null : groupId}
+                        class={cn(
+                          "p-1 rounded transition",
+                          isEditing ? "text-orange-400 bg-orange-500/20" : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        <Pencil class="h-4 w-4" />
+                      </button>
+                      <span class="text-xs text-muted-foreground">{completedCount}/{groupMatches.length}</span>
+                    </div>
+                    
+                    <!-- Group Settings (when editing) -->
+                    {#if isEditing && !isCollapsed}
+                      <div class="flex flex-wrap items-center gap-3 border-t border-border px-3 py-2 bg-muted/30" transition:slide>
+                        {#if !isHantei}
+                          <select
+                            value={currentTimer}
+                            onchange={(e) => setGroupTimer(groupId, parseInt((e.target as HTMLSelectElement).value))}
+                            class="rounded-lg border border-input bg-background px-3 py-1.5 text-sm"
+                          >
+                            {#each (selectedTournament.timerOptions || TIMER_OPTIONS) as secs}
+                              <option value={secs}>{formatTimer(secs)}</option>
+                            {/each}
+                          </select>
+                          <select
+                            value={currentMatchType}
+                            onchange={(e) => setGroupMatchType(groupId, (e.target as HTMLSelectElement).value as 'sanbon' | 'ippon')}
+                            class="rounded-lg border border-input bg-background px-3 py-1.5 text-sm"
+                          >
+                            <option value="sanbon">Sanbon</option>
+                            <option value="ippon">Ippon</option>
+                          </select>
+                        {/if}
+                        <div class="ml-auto flex rounded-lg border border-input overflow-hidden">
+                          <button
+                            onclick={() => setGroupCourt(groupId, 'A')}
+                            class={cn("px-3 py-1.5 text-xs font-bold transition", currentCourt === 'A' ? "bg-amber-500 text-black" : "bg-background text-muted-foreground hover:bg-muted")}
+                          >A</button>
+                          <button
+                            onclick={() => setGroupCourt(groupId, 'A+B')}
+                            class={cn("px-3 py-1.5 text-xs font-bold transition", currentCourt === 'A+B' ? "bg-emerald-500 text-white" : "bg-background text-muted-foreground hover:bg-muted")}
+                          >A+B</button>
+                          <button
+                            onclick={() => setGroupCourt(groupId, 'B')}
+                            class={cn("px-3 py-1.5 text-xs font-bold transition", currentCourt === 'B' ? "bg-sky-500 text-white" : "bg-background text-muted-foreground hover:bg-muted")}
+                          >B</button>
+                        </div>
+                      </div>
+                    {/if}
+                    
+                    <!-- Match List -->
+                    {#if !isCollapsed}
+                      <div class="max-h-64 overflow-y-auto border-t border-border">
+                        {#each groupMatches as match, idx}
+                          {@const p1 = getMemberById(match.player1Id)}
+                          {@const p2 = getMemberById(match.player2Id)}
+                          {@const isWinner1 = match.winner === match.player1Id}
+                          {@const isWinner2 = match.winner === match.player2Id}
+                          <div class={cn(
+                            "flex items-center gap-2 px-3 py-2 text-sm border-b border-border last:border-b-0",
+                            match.status === 'completed' ? "bg-muted/30" : 
+                            match.status === 'in_progress' ? "bg-amber-500/10" : ""
+                          )}>
+                            <span class="w-6 text-xs text-muted-foreground">{idx + 1}</span>
+                            <span class={cn("flex-1", isWinner1 && "text-green-400 font-semibold")}>
+                              {p1?.firstName} {p1?.lastName.charAt(0)}.
+                              {#if isWinner1}<Check class="inline h-3 w-3 ml-1" />{/if}
+                            </span>
+                            <span class="text-xs text-muted-foreground">vs</span>
+                            <span class={cn("flex-1 text-right", isWinner2 && "text-green-400 font-semibold")}>
+                              {#if isWinner2}<Check class="inline h-3 w-3 mr-1" />{/if}
+                              {p2?.firstName} {p2?.lastName.charAt(0)}.
+                            </span>
+                            <Badge variant="outline" class={cn(
+                              "text-[10px] ml-2",
+                              match.status === 'completed' ? "border-green-500 text-green-400" :
+                              match.status === 'in_progress' ? "border-amber-500 text-amber-400" :
+                              "border-muted-foreground text-muted-foreground"
+                            )}>
+                              {match.status === 'completed' ? '✓' : match.status === 'in_progress' ? '⏱' : '○'}
+                            </Badge>
+                          </div>
+                        {:else}
+                          <p class="py-4 text-center text-sm text-muted-foreground">No matches</p>
+                        {/each}
+                      </div>
+                    {/if}
+                  </div>
+                {/each}
               </div>
-            </div>
+            {:else if matches.length === 0 && participants.length === 0}
+              <Card.Root class="border-dashed">
+                <Card.Content class="flex flex-col items-center justify-center py-12">
+                  <Users class="mb-4 h-12 w-12 text-muted-foreground/50" />
+                  <p class="mb-2 text-muted-foreground">No participants yet</p>
+                  <p class="mb-4 text-sm text-muted-foreground">Add participants to generate matches</p>
+                  <Button onclick={addAllParticipants} variant="secondary">
+                    <UserPlus class="mr-2 h-4 w-4" /> Add All Members
+                  </Button>
+                </Card.Content>
+              </Card.Root>
+            {:else if matches.length === 0}
+              <Card.Root class="border-dashed">
+                <Card.Content class="flex flex-col items-center justify-center py-12">
+                  <Trophy class="mb-4 h-12 w-12 text-muted-foreground/50" />
+                  <p class="mb-2 text-muted-foreground">{participants.length} participants ready</p>
+                  <p class="mb-4 text-sm text-muted-foreground">Generate round-robin matches</p>
+                  <Button onclick={generateMatches}>
+                    <Trophy class="mr-2 h-4 w-4" /> Generate Matches
+                  </Button>
+                </Card.Content>
+              </Card.Root>
+            {/if}
           {/if}
         {/if}
-      {:else if activeTab === 'groups'}
-        <div class="mb-6 flex flex-wrap items-center justify-between gap-4"><h1 class="text-2xl font-bold">Groups</h1><Button onclick={() => { newGroup.id = getNextGroupId(); showAddGroup = true; }}><Plus class="mr-2 h-4 w-4" /> Add Group</Button></div>
-        {#if groups.length === 0}
-          <div class="rounded-xl border border-border bg-card p-6 text-center"><p class="mb-4 text-muted-foreground">No groups yet</p><Button onclick={() => { newGroup.id = 'G1'; showAddGroup = true; }}>Create Your First Group</Button></div>
-        {:else}
-          <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {#each groups as group}
-              <div class="rounded-xl border border-border bg-card p-4">
-                <div class="mb-2 flex items-center justify-between"><span class="font-bold">{group.name}</span><span class="text-sm text-muted-foreground">{group.groupId}</span></div>
-                {#if group.isHantei}<span class="inline-block rounded bg-primary/20 px-2 py-0.5 text-xs text-primary">Hantei</span>{/if}
-                <p class="mt-1 text-sm text-muted-foreground">{members.filter(m => m.groupId === group.groupId).length} members</p>
-                <div class="mt-3 flex gap-2"><Button variant="secondary" size="sm" onclick={() => { editingGroup = {...group}; showEditGroup = true; }}><Pencil class="mr-1 h-3 w-3" /> Edit</Button><Button variant="destructive" size="sm" onclick={() => deleteGroup(group._id)}><Trash2 class="mr-1 h-3 w-3" /> Delete</Button></div>
-              </div>
-            {/each}
-          </div>
-        {/if}
+      
       {:else if activeTab === 'members'}
         <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
           <h1 class="text-2xl font-bold">Members ({members.length})</h1>
@@ -393,12 +892,60 @@
             <Button onclick={() => showAddMember = true}><Plus class="mr-2 h-4 w-4" /> Add Member</Button>
           </div>
         </div>
-        <div class="mb-4 flex flex-wrap gap-4"><Input type="text" bind:value={searchQuery} placeholder="Search..." class="flex-1" /><select bind:value={filterGroup} class="rounded-lg border border-input bg-card px-4 py-2"><option value="all">All Groups</option>{#each groups as g}<option value={g.groupId}>{g.name}</option>{/each}</select></div>
+        <div class="mb-4 flex flex-wrap gap-4">
+          <Input type="text" bind:value={searchQuery} placeholder="Search..." class="flex-1" />
+          <select bind:value={filterGroup} class="rounded-lg border border-input bg-card px-4 py-2">
+            <option value="all">All Groups</option>
+            {#each groups as g}<option value={g.groupId}>{g.name}</option>{/each}
+          </select>
+        </div>
         <div class="overflow-hidden rounded-xl border border-border bg-card">
           {#each filteredMembers as member}
-            <div class="flex items-center justify-between border-b border-border px-4 py-3 last:border-b-0 hover:bg-accent/50"><div><span class="font-semibold">{member.lastName}, {member.firstName}</span><span class="ml-2 text-sm text-muted-foreground">({getGroupName(member.groupId)})</span></div><button onclick={() => deleteMember(member._id)} class="text-destructive hover:text-destructive/80"><Trash2 class="h-4 w-4" /></button></div>
+            <div class="flex items-center justify-between border-b border-border px-4 py-3 last:border-b-0 hover:bg-accent/50">
+              <div><span class="font-semibold">{member.lastName}, {member.firstName}</span><span class="ml-2 text-sm text-muted-foreground">({getGroupName(member.groupId)})</span></div>
+              <button onclick={() => deleteMember(member._id)} class="text-destructive hover:text-destructive/80"><Trash2 class="h-4 w-4" /></button>
+            </div>
           {:else}<p class="py-8 text-center text-muted-foreground">No members found</p>{/each}
         </div>
+      
+      {:else if activeTab === 'groups'}
+        <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+          <h1 class="text-2xl font-bold">Groups ({groups.length})</h1>
+          <Button onclick={() => showAddGroup = true}><Plus class="mr-2 h-4 w-4" /> Add Group</Button>
+        </div>
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {#each groups as group}
+            {@const memberCount = members.filter(m => m.groupId === group.groupId).length}
+            <Card.Root>
+              <Card.Header class="pb-2">
+                <div class="flex items-center justify-between">
+                  <Card.Title class="flex items-center gap-2">
+                    {group.name}
+                    {#if group.isHantei}<Badge variant="outline" class="text-[10px] border-orange-500 text-orange-400">Hantei</Badge>{/if}
+                  </Card.Title>
+                  <div class="flex gap-1">
+                    <button onclick={() => { editingGroup = { ...group }; showEditGroup = true; }} class="p-1 text-muted-foreground hover:text-foreground"><Pencil class="h-4 w-4" /></button>
+                    <button onclick={() => deleteGroup(group._id)} class="p-1 text-destructive hover:text-destructive/80"><Trash2 class="h-4 w-4" /></button>
+                  </div>
+                </div>
+                <Card.Description>ID: {group.groupId}</Card.Description>
+              </Card.Header>
+              <Card.Content>
+                <div class="text-2xl font-bold">{memberCount}</div>
+                <div class="text-sm text-muted-foreground">members</div>
+              </Card.Content>
+            </Card.Root>
+          {:else}
+            <Card.Root class="col-span-full border-dashed">
+              <Card.Content class="flex flex-col items-center justify-center py-12">
+                <FolderOpen class="mb-4 h-12 w-12 text-muted-foreground/50" />
+                <p class="mb-4 text-muted-foreground">No groups yet</p>
+                <Button onclick={() => showAddGroup = true}>Create Your First Group</Button>
+              </Card.Content>
+            </Card.Root>
+          {/each}
+        </div>
+      
       {:else if activeTab === 'results'}
         <h1 class="mb-6 text-2xl font-bold">Results</h1>
         {#if !selectedTournament}<p class="text-muted-foreground">No tournament selected</p>
@@ -409,16 +956,50 @@
               {@const gm = matches.filter(m => m.groupId === group.groupId)}
               {@const done = gm.filter(m => m.status === 'completed')}
               {#if gm.length > 0}
-                <div class="rounded-xl border border-border bg-card p-4">
-                  <h3 class="mb-3 font-bold">{group.name} <span class="ml-2 text-sm font-normal text-muted-foreground">({done.length}/{gm.length})</span></h3>
-                  <div class="space-y-2">
-                    {#each done as match}
-                      {@const p1Win = match.winner === match.player1Id}
-                      <div class="flex items-center gap-2 rounded bg-background px-2 py-1 text-sm"><span class={p1Win ? "font-semibold text-green-400" : ""}>{getMemberName(match.player1Id)}{p1Win ? ' 🏆' : ''}</span><span class="text-muted-foreground">{match.player1Score?.length || 0} - {match.player2Score?.length || 0}</span><span class={!p1Win && match.winner ? "font-semibold text-green-400" : ""}>{!p1Win && match.winner ? '🏆 ' : ''}{getMemberName(match.player2Id)}</span></div>
-                    {:else}<p class="text-sm text-muted-foreground">No completed matches</p>{/each}
-                  </div>
-                </div>
+                <Card.Root>
+                  <Card.Header>
+                    <Card.Title class="flex items-center gap-2">
+                      {group.name}
+                      <Badge variant="outline" class="text-xs">{done.length}/{gm.length}</Badge>
+                    </Card.Title>
+                  </Card.Header>
+                  <Card.Content>
+                    <div class="space-y-2">
+                      {#each done as match}
+                        {@const p1Win = match.winner === match.player1Id}
+                        <div class="flex items-center gap-2 rounded bg-muted/50 px-3 py-2 text-sm">
+                          <span class={cn(p1Win && "font-semibold text-green-400")}>{getMemberName(match.player1Id)}{p1Win ? ' 🏆' : ''}</span>
+                          <span class="text-muted-foreground">{match.player1Score?.length || 0} - {match.player2Score?.length || 0}</span>
+                          <span class={cn(!p1Win && match.winner && "font-semibold text-green-400")}>{!p1Win && match.winner ? '🏆 ' : ''}{getMemberName(match.player2Id)}</span>
+                        </div>
+                      {:else}<p class="text-sm text-muted-foreground">No completed matches</p>{/each}
+                    </div>
+                  </Card.Content>
+                </Card.Root>
               {/if}
+            {/each}
+          </div>
+        {/if}
+      
+      {:else if activeTab === 'history'}
+        <h1 class="mb-6 text-2xl font-bold">Tournament History</h1>
+        {@const completedTournaments = tournaments.filter(t => t.status === 'completed')}
+        {#if completedTournaments.length === 0}
+          <Card.Root class="border-dashed">
+            <Card.Content class="flex flex-col items-center justify-center py-12">
+              <History class="mb-4 h-12 w-12 text-muted-foreground/50" />
+              <p class="text-muted-foreground">No completed tournaments yet</p>
+            </Card.Content>
+          </Card.Root>
+        {:else}
+          <div class="space-y-4">
+            {#each completedTournaments as tournament}
+              <Card.Root>
+                <Card.Header>
+                  <Card.Title>{tournament.name}</Card.Title>
+                  <Card.Description>📅 {tournament.date}</Card.Description>
+                </Card.Header>
+              </Card.Root>
             {/each}
           </div>
         {/if}
@@ -428,14 +1009,101 @@
 </div>
 
 <!-- Dialogs -->
-<Dialog.Root bind:open={showAddGroup}><Dialog.Content class="sm:max-w-sm"><Dialog.Header><Dialog.Title>Add Group</Dialog.Title></Dialog.Header><div class="space-y-4 py-4"><div class="space-y-2"><Label for="group-id">Group ID</Label><Input id="group-id" bind:value={newGroup.id} placeholder="e.g., YUD, MUD, G1" /></div><div class="space-y-2"><Label for="group-name">Group Name</Label><Input id="group-name" bind:value={newGroup.name} placeholder="e.g., Youth Division" /></div><div class="flex items-center space-x-2"><Checkbox id="group-hantei" bind:checked={newGroup.isHantei} /><Label for="group-hantei" class="cursor-pointer">Hantei (judgment-based)</Label></div></div><Dialog.Footer><Button variant="secondary" onclick={() => showAddGroup = false}>Cancel</Button><Button onclick={createGroup}>Create</Button></Dialog.Footer></Dialog.Content></Dialog.Root>
+<Dialog.Root bind:open={showAddGroup}>
+  <Dialog.Content class="sm:max-w-sm">
+    <Dialog.Header><Dialog.Title>Add Group</Dialog.Title></Dialog.Header>
+    <div class="space-y-4 py-4">
+      <div class="space-y-2"><Label for="group-id">Group ID</Label><Input id="group-id" bind:value={newGroup.id} placeholder="e.g., YUD, MUD, G1" /></div>
+      <div class="space-y-2"><Label for="group-name">Group Name</Label><Input id="group-name" bind:value={newGroup.name} placeholder="e.g., Youth Division" /></div>
+      <div class="flex items-center space-x-2"><Checkbox id="group-hantei" bind:checked={newGroup.isHantei} /><Label for="group-hantei" class="cursor-pointer">Hantei (judgment-based)</Label></div>
+    </div>
+    <Dialog.Footer><Button variant="secondary" onclick={() => showAddGroup = false}>Cancel</Button><Button onclick={createGroup}>Create</Button></Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>
 
-<Dialog.Root bind:open={showEditGroup}><Dialog.Content class="sm:max-w-sm"><Dialog.Header><Dialog.Title>Edit Group</Dialog.Title></Dialog.Header>{#if editingGroup}<div class="space-y-4 py-4"><div class="space-y-2"><Label for="edit-group-id">Group ID</Label><Input id="edit-group-id" bind:value={editingGroup.groupId} /></div><div class="space-y-2"><Label for="edit-group-name">Group Name</Label><Input id="edit-group-name" bind:value={editingGroup.name} /></div><div class="flex items-center space-x-2"><Checkbox id="edit-group-hantei" bind:checked={editingGroup.isHantei} /><Label for="edit-group-hantei" class="cursor-pointer">Hantei</Label></div></div>{/if}<Dialog.Footer><Button variant="secondary" onclick={() => showEditGroup = false}>Cancel</Button><Button onclick={updateGroup}>Save</Button></Dialog.Footer></Dialog.Content></Dialog.Root>
+<Dialog.Root bind:open={showEditGroup}>
+  <Dialog.Content class="sm:max-w-sm">
+    <Dialog.Header><Dialog.Title>Edit Group</Dialog.Title></Dialog.Header>
+    {#if editingGroup}
+      <div class="space-y-4 py-4">
+        <div class="space-y-2"><Label for="edit-group-id">Group ID</Label><Input id="edit-group-id" bind:value={editingGroup.groupId} /></div>
+        <div class="space-y-2"><Label for="edit-group-name">Group Name</Label><Input id="edit-group-name" bind:value={editingGroup.name} /></div>
+        <div class="flex items-center space-x-2"><Checkbox id="edit-group-hantei" bind:checked={editingGroup.isHantei} /><Label for="edit-group-hantei" class="cursor-pointer">Hantei</Label></div>
+      </div>
+    {/if}
+    <Dialog.Footer><Button variant="secondary" onclick={() => showEditGroup = false}>Cancel</Button><Button onclick={updateGroup}>Save</Button></Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>
 
-<Dialog.Root bind:open={showAddMember}><Dialog.Content class="sm:max-w-sm"><Dialog.Header><Dialog.Title>Add Member</Dialog.Title></Dialog.Header><div class="space-y-4 py-4"><div class="space-y-2"><Label for="member-first">First Name</Label><Input id="member-first" bind:value={newMember.firstName} placeholder="John" /></div><div class="space-y-2"><Label for="member-last">Last Name</Label><Input id="member-last" bind:value={newMember.lastName} placeholder="Doe" /></div><div class="space-y-2"><Label for="member-group">Group</Label><select id="member-group" bind:value={newMember.groupId} class="w-full rounded-lg border border-input bg-background px-4 py-2"><option value="">Select Group</option>{#each groups as g}<option value={g.groupId}>{g.name}</option>{/each}</select></div></div><Dialog.Footer><Button variant="secondary" onclick={() => showAddMember = false}>Cancel</Button><Button onclick={createMember}>Add</Button></Dialog.Footer></Dialog.Content></Dialog.Root>
+<Dialog.Root bind:open={showAddMember}>
+  <Dialog.Content class="sm:max-w-sm">
+    <Dialog.Header><Dialog.Title>Add Member</Dialog.Title></Dialog.Header>
+    <div class="space-y-4 py-4">
+      <div class="space-y-2"><Label for="member-first">First Name</Label><Input id="member-first" bind:value={newMember.firstName} placeholder="John" /></div>
+      <div class="space-y-2"><Label for="member-last">Last Name</Label><Input id="member-last" bind:value={newMember.lastName} placeholder="Doe" /></div>
+      <div class="space-y-2"><Label for="member-group">Group</Label><select id="member-group" bind:value={newMember.groupId} class="w-full rounded-lg border border-input bg-background px-4 py-2"><option value="">Select Group</option>{#each groups as g}<option value={g.groupId}>{g.name}</option>{/each}</select></div>
+    </div>
+    <Dialog.Footer><Button variant="secondary" onclick={() => showAddMember = false}>Cancel</Button><Button onclick={createMember}>Add</Button></Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>
 
-<Dialog.Root bind:open={showMassAddMembers}><Dialog.Content class="sm:max-w-3xl max-h-[90vh] overflow-y-auto"><Dialog.Header><Dialog.Title>Add Multiple Members</Dialog.Title><Dialog.Description>Fill in the rows below. Empty rows will be skipped.</Dialog.Description></Dialog.Header><div class="py-4"><div class="mb-2 grid grid-cols-[1fr_1fr_1fr_40px] gap-2 text-sm font-medium text-muted-foreground"><span>First Name</span><span>Last Name</span><span>Group</span><span></span></div><div class="space-y-2">{#each massMembers as member, i}<div class="grid grid-cols-[1fr_1fr_1fr_40px] gap-2"><Input bind:value={member.firstName} placeholder="First Name" /><Input bind:value={member.lastName} placeholder="Last Name" /><select bind:value={member.groupId} class="rounded-lg border border-input bg-background px-3 py-2 text-sm"><option value="">Select Group</option>{#each groups as g}<option value={g.groupId}>{g.name}</option>{/each}</select><button onclick={() => massMembers = massMembers.filter((_, idx) => idx !== i)} class="flex items-center justify-center text-muted-foreground hover:text-destructive"><Trash2 class="h-4 w-4" /></button></div>{/each}</div><button onclick={addMoreRows} class="mt-4 flex items-center gap-2 text-sm text-primary hover:text-primary/80"><Plus class="h-4 w-4" /> Add 5 more rows</button></div><Dialog.Footer><Button variant="secondary" onclick={() => showMassAddMembers = false}>Cancel</Button><Button onclick={createMassMembers}>Add Members ({massMembers.filter(m => m.firstName.trim() && m.lastName.trim() && m.groupId).length})</Button></Dialog.Footer></Dialog.Content></Dialog.Root>
+<Dialog.Root bind:open={showMassAddMembers}>
+  <Dialog.Content class="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+    <Dialog.Header><Dialog.Title>Add Multiple Members</Dialog.Title><Dialog.Description>Fill in the rows below. Empty rows will be skipped.</Dialog.Description></Dialog.Header>
+    <div class="py-4">
+      <div class="mb-2 grid grid-cols-[1fr_1fr_1fr_40px] gap-2 text-sm font-medium text-muted-foreground"><span>First Name</span><span>Last Name</span><span>Group</span><span></span></div>
+      <div class="space-y-2">
+        {#each massMembers as member, i}
+          <div class="grid grid-cols-[1fr_1fr_1fr_40px] gap-2">
+            <Input bind:value={member.firstName} placeholder="First Name" />
+            <Input bind:value={member.lastName} placeholder="Last Name" />
+            <select bind:value={member.groupId} class="rounded-lg border border-input bg-background px-3 py-2 text-sm"><option value="">Select Group</option>{#each groups as g}<option value={g.groupId}>{g.name}</option>{/each}</select>
+            <button onclick={() => massMembers = massMembers.filter((_, idx) => idx !== i)} class="flex items-center justify-center text-muted-foreground hover:text-destructive"><Trash2 class="h-4 w-4" /></button>
+          </div>
+        {/each}
+      </div>
+      <button onclick={addMoreRows} class="mt-4 flex items-center gap-2 text-sm text-primary hover:text-primary/80"><Plus class="h-4 w-4" /> Add 5 more rows</button>
+    </div>
+    <Dialog.Footer><Button variant="secondary" onclick={() => showMassAddMembers = false}>Cancel</Button><Button onclick={createMassMembers}>Add Members ({massMembers.filter(m => m.firstName.trim() && m.lastName.trim() && m.groupId).length})</Button></Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>
 
-<Dialog.Root bind:open={showImportCSV}><Dialog.Content class="sm:max-w-md"><Dialog.Header><Dialog.Title>Import CSV</Dialog.Title><Dialog.Description>Format: FirstName,LastName,GroupID (one per line)</Dialog.Description></Dialog.Header><div class="py-4"><textarea bind:value={csvText} placeholder="John,Doe,YUD&#10;Jane,Smith,MUD" rows="8" class="w-full rounded-lg border border-input bg-background px-4 py-2 font-mono text-sm focus:border-primary focus:outline-none"></textarea></div><Dialog.Footer><Button variant="secondary" onclick={() => showImportCSV = false}>Cancel</Button><Button onclick={importCSV}>Import</Button></Dialog.Footer></Dialog.Content></Dialog.Root>
+<Dialog.Root bind:open={showImportCSV}>
+  <Dialog.Content class="sm:max-w-md">
+    <Dialog.Header><Dialog.Title>Import CSV</Dialog.Title><Dialog.Description>Format: FirstName,LastName,GroupID (one per line)</Dialog.Description></Dialog.Header>
+    <div class="py-4"><textarea bind:value={csvText} placeholder="John,Doe,YUD&#10;Jane,Smith,MUD" rows="8" class="w-full rounded-lg border border-input bg-background px-4 py-2 font-mono text-sm focus:border-primary focus:outline-none"></textarea></div>
+    <Dialog.Footer><Button variant="secondary" onclick={() => showImportCSV = false}>Cancel</Button><Button onclick={importCSV}>Import</Button></Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>
 
-<Dialog.Root bind:open={showCreateTournament}><Dialog.Content class="sm:max-w-md"><Dialog.Header><Dialog.Title>Create Tournament</Dialog.Title></Dialog.Header><div class="space-y-4 py-4"><div class="grid grid-cols-2 gap-4"><div class="space-y-2"><Label for="tournament-month">Month</Label><select id="tournament-month" bind:value={newTournament.month} class="w-full rounded-lg border border-input bg-background px-4 py-2"><option value="">Select</option>{#each MONTHS as month}<option value={month}>{month}</option>{/each}</select></div><div class="space-y-2"><Label for="tournament-year">Year</Label><select id="tournament-year" bind:value={newTournament.year} class="w-full rounded-lg border border-input bg-background px-4 py-2">{#each [2024, 2025, 2026, 2027] as year}<option value={year}>{year}</option>{/each}</select></div></div><div class="space-y-2"><Label for="tournament-name">Name <span class="text-xs text-muted-foreground">(optional)</span></Label><Input id="tournament-name" bind:value={newTournament.name} placeholder={generateTournamentName()} /></div><div class="space-y-2"><Label for="tournament-date">Date</Label><Input id="tournament-date" type="date" bind:value={newTournament.date} /></div></div><Dialog.Footer><Button variant="secondary" onclick={() => showCreateTournament = false}>Cancel</Button><Button onclick={createTournament}>Create</Button></Dialog.Footer></Dialog.Content></Dialog.Root>
+<Dialog.Root bind:open={showCreateTournament}>
+  <Dialog.Content class="sm:max-w-md">
+    <Dialog.Header><Dialog.Title>Create Tournament</Dialog.Title></Dialog.Header>
+    <div class="space-y-4 py-4">
+      <div class="grid grid-cols-2 gap-4">
+        <div class="space-y-2"><Label for="tournament-month">Month</Label><select id="tournament-month" bind:value={newTournament.month} class="w-full rounded-lg border border-input bg-background px-4 py-2"><option value="">Select</option>{#each MONTHS as month}<option value={month}>{month}</option>{/each}</select></div>
+        <div class="space-y-2"><Label for="tournament-year">Year</Label><select id="tournament-year" bind:value={newTournament.year} class="w-full rounded-lg border border-input bg-background px-4 py-2">{#each [2024, 2025, 2026, 2027] as year}<option value={year}>{year}</option>{/each}</select></div>
+      </div>
+      <div class="space-y-2"><Label for="tournament-name">Name <span class="text-xs text-muted-foreground">(optional)</span></Label><Input id="tournament-name" bind:value={newTournament.name} placeholder={generateTournamentName()} /></div>
+      <div class="space-y-2"><Label for="tournament-date">Date</Label><Input id="tournament-date" type="date" bind:value={newTournament.date} /></div>
+    </div>
+    <Dialog.Footer><Button variant="secondary" onclick={() => showCreateTournament = false}>Cancel</Button><Button onclick={createTournament}>Create</Button></Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>
+
+<Dialog.Root bind:open={showDeleteConfirm}>
+  <Dialog.Content class="sm:max-w-sm">
+    <Dialog.Header>
+      <Dialog.Title class="flex items-center gap-2 text-red-400">
+        <AlertTriangle class="h-5 w-5" /> Delete Tournament?
+      </Dialog.Title>
+      <Dialog.Description>
+        This will permanently delete "{selectedTournament?.name}" and all its matches and participants. This action cannot be undone.
+      </Dialog.Description>
+    </Dialog.Header>
+    <Dialog.Footer>
+      <Button variant="secondary" onclick={() => showDeleteConfirm = false}>Cancel</Button>
+      <Button variant="destructive" onclick={deleteTournament}>Delete</Button>
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>
