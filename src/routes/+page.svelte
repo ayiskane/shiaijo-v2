@@ -1,4 +1,8 @@
 <script lang="ts">
+  // Vite handles image optimization (hashing, caching)
+  // For AVIF/WebP, use Vercel Image Optimization or a CDN
+  import shiaijoLogo from '$lib/assets/shiaijologo.png';
+  
   const spectator = { id: 'spectator', href: '/spectator', kanji: '観', label: 'SPECTATOR', desc: 'Watch live tournament matches' };
   
   const staffPortals = [
@@ -20,8 +24,8 @@
     <!-- Left side - Logo & Title -->
     <div class="title-section">
       <div class="logo-wrapper">
-        <!-- Enhanced image: auto AVIF/WebP, responsive srcset, prevents CLS -->
-        <enhanced:img src="$lib/assets/shiaijologo.png" alt="Shiaijo" class="logo" fetchpriority="high" />
+        <!-- Vite-processed image with hash for caching, explicit dimensions prevent CLS -->
+        <img src={shiaijoLogo} alt="Shiaijo" class="logo" width="180" height="180" fetchpriority="high" />
       </div>
       
       <div class="brand-name">S H I A I J O</div>
