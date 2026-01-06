@@ -1159,93 +1159,150 @@
         {/if}
       
       {:else if activeTab === 'members'}
-        <div class="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 class="text-2xl font-bold">Members ({members.length})</h1>
-            {#if selectedTournament}
-              <p class="text-sm text-muted-foreground">{participants.length} registered for {selectedTournament.name}</p>
+        <!-- Sticky Search & Filter Bar -->
+        <div class="sticky top-0 z-10 -mx-4 sm:-mx-6 px-4 sm:px-6 py-4 bg-background/95 backdrop-blur-sm border-b border-border mb-4">
+          <!-- Header with count -->
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h1 class="text-xl sm:text-2xl font-bold">Members</h1>
+              <p class="text-sm text-muted-foreground">
+                {filteredMembers.length} of {members.length}
+                {#if selectedTournament}· {participants.length} registered{/if}
+              </p>
+            </div>
+            <Button onclick={() => showAddMember = true} variant="outline" size="sm" class="h-9 px-4">
+              <Plus class="mr-2 h-4 w-4" /> Add
+            </Button>
+          </div>
+          
+          <!-- Search -->
+          <div class="relative mb-3">
+            <Input 
+              type="text" 
+              bind:value={searchQuery} 
+              placeholder="Search by name..." 
+              class="h-12 text-base pl-4 pr-10"
+            />
+            {#if searchQuery}
+              <button 
+                onclick={() => searchQuery = ''} 
+                class="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+              >
+                <X class="h-5 w-5" />
+              </button>
             {/if}
           </div>
-          <div class="flex flex-wrap gap-2">
-            <Button variant="secondary" size="sm" onclick={() => showImportCSV = true} class="text-xs">CSV</Button>
-            <Button variant="secondary" size="sm" onclick={() => { resetMassMembers(); showMassAddMembers = true; }} class="bg-blue-600 hover:bg-blue-700 text-white text-xs"><Users class="mr-1 h-3 w-3" /> Bulk</Button>
-            <Button size="sm" onclick={() => showAddMember = true} class="text-xs"><Plus class="mr-1 h-3 w-3" /> Add</Button>
+          
+          <!-- Filter Chips -->
+          <div class="flex flex-wrap items-center gap-2">
+            <!-- Group Filter Chip -->
+            <div class="relative">
+              <select 
+                bind:value={filterGroup} 
+                class="h-10 appearance-none rounded-full border border-border bg-card pl-4 pr-10 text-sm font-medium cursor-pointer hover:bg-accent/50 transition-colors"
+              >
+                <option value="all">All Groups</option>
+                {#each groups as g}<option value={g.groupId}>{g.name}</option>{/each}
+              </select>
+              <ChevronDown class="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            </div>
+            
+            <!-- Registration Filter Chip -->
+            {#if selectedTournament}
+              <div class="relative">
+                <select 
+                  bind:value={registrationFilter} 
+                  class="h-10 appearance-none rounded-full border border-border bg-card pl-4 pr-10 text-sm font-medium cursor-pointer hover:bg-accent/50 transition-colors"
+                >
+                  <option value="all">All</option>
+                  <option value="registered">✓ Registered</option>
+                  <option value="unregistered">○ Not Registered</option>
+                </select>
+                <ChevronDown class="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              </div>
+            {/if}
+            
+            <!-- Clear Filters -->
+            {#if filterGroup !== 'all' || registrationFilter !== 'all' || searchQuery}
+              <button 
+                onclick={() => { filterGroup = 'all'; registrationFilter = 'all'; searchQuery = ''; }}
+                class="h-10 px-4 rounded-full text-sm font-medium text-primary hover:bg-primary/10 transition-colors"
+              >
+                Clear filters
+              </button>
+            {/if}
+            
+            <!-- More Actions -->
+            <div class="ml-auto flex gap-2">
+              <Button variant="ghost" size="sm" onclick={() => showImportCSV = true} class="h-9 px-3 text-xs">
+                CSV
+              </Button>
+              <Button variant="ghost" size="sm" onclick={() => { resetMassMembers(); showMassAddMembers = true; }} class="h-9 px-3 text-xs">
+                Bulk
+              </Button>
+            </div>
           </div>
         </div>
         
-        <!-- Registration Actions -->
+        <!-- Quick Actions Bar (when tournament selected) -->
         {#if selectedTournament}
-          <div class="mb-4 p-3 rounded-lg border border-border bg-card/50">
-            <div class="flex flex-wrap items-center gap-2">
-              <span class="text-xs font-medium text-muted-foreground mr-2">Registration:</span>
-              <Button variant="outline" size="sm" onclick={addAllParticipants} class="text-xs h-7">
-                <UserPlus class="mr-1 h-3 w-3" /> Register All
+          <div class="mb-4 p-4 rounded-2xl border-2 border-border bg-card/50">
+            <div class="flex flex-wrap items-center gap-3">
+              <span class="text-sm font-medium text-muted-foreground">Quick:</span>
+              <Button variant="outline" size="sm" onclick={addAllParticipants} class="h-10 px-4 rounded-xl">
+                <UserPlus class="mr-2 h-4 w-4" /> Register All
               </Button>
-              <Button variant="outline" size="sm" onclick={clearAllParticipants} class="text-xs h-7 text-destructive hover:text-destructive">
-                <X class="mr-1 h-3 w-3" /> Clear All
+              <Button variant="outline" size="sm" onclick={clearAllParticipants} class="h-10 px-4 rounded-xl text-destructive hover:text-destructive">
+                <X class="mr-2 h-4 w-4" /> Clear All
               </Button>
               {#if selectedMemberIds.size > 0}
-                <Button variant="default" size="sm" onclick={registerSelectedMembers} class="text-xs h-7 bg-emerald-600 hover:bg-emerald-700">
-                  <Check class="mr-1 h-3 w-3" /> Register Selected ({selectedMemberIds.size})
+                <Button onclick={registerSelectedMembers} class="h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700">
+                  <Check class="mr-2 h-4 w-4" /> Register {selectedMemberIds.size} Selected
                 </Button>
-                <Button variant="ghost" size="sm" onclick={clearSelection} class="text-xs h-7">Clear Selection</Button>
+                <button onclick={clearSelection} class="text-sm text-muted-foreground hover:text-foreground">Clear</button>
               {/if}
             </div>
           </div>
         {/if}
         
-        <!-- Filters -->
-        <div class="mb-4 flex flex-col sm:flex-row gap-2">
-          <Input type="text" bind:value={searchQuery} placeholder="Search..." class="flex-1" />
-          <select bind:value={filterGroup} class="w-full sm:w-auto rounded-lg border border-input bg-card px-3 py-2 text-sm">
-            <option value="all">All Groups</option>
-            {#each groups as g}<option value={g.groupId}>{g.name}</option>{/each}
-          </select>
-          {#if selectedTournament}
-            <select bind:value={registrationFilter} class="w-full sm:w-auto rounded-lg border border-input bg-card px-3 py-2 text-sm">
-              <option value="all">All Members</option>
-              <option value="registered">✓ Registered ({participants.length})</option>
-              <option value="unregistered">○ Unregistered ({members.length - participants.length})</option>
-            </select>
-          {/if}
-        </div>
-        
         <!-- Group Quick Register -->
         {#if selectedTournament && filterGroup !== 'all'}
           {@const groupMemberCount = members.filter(m => m.groupId === filterGroup).length}
           {@const registeredInGroup = members.filter(m => m.groupId === filterGroup && registeredMemberIds.has(m._id)).length}
-          <div class="mb-4 flex items-center gap-2 text-sm">
-            <span class="text-muted-foreground">{registeredInGroup}/{groupMemberCount} registered in this group</span>
+          <div class="mb-4 flex items-center justify-between p-4 rounded-2xl bg-primary/5 border border-primary/20">
+            <span class="text-sm font-medium">{registeredInGroup} of {groupMemberCount} registered</span>
             {#if registeredInGroup < groupMemberCount}
-              <Button variant="outline" size="sm" onclick={() => registerGroupMembers(filterGroup)} class="text-xs h-6">
-                Register Group
+              <Button variant="default" size="sm" onclick={() => registerGroupMembers(filterGroup)} class="h-10 px-4 rounded-xl">
+                Register Entire Group
               </Button>
             {/if}
           </div>
         {/if}
         
         <!-- Member List -->
-        <div class="overflow-hidden rounded-xl border border-border bg-card" use:autoAnimate>
-          <!-- Header row with select all -->
+        <div class="rounded-2xl border-2 border-border bg-card overflow-hidden" use:autoAnimate>
+          <!-- Select All Header -->
           {#if selectedTournament && filteredMembers.length > 0}
-            <div class="flex items-center gap-3 border-b border-border px-3 sm:px-4 py-2 bg-muted/30">
+            <div class="flex items-center gap-4 px-5 py-3 bg-muted/30 border-b border-border">
               <input 
                 type="checkbox" 
                 checked={allFilteredSelected}
                 onchange={() => allFilteredSelected ? clearSelection() : selectAllFiltered()}
-                class="h-4 w-4 rounded border-gray-600 bg-transparent"
+                class="h-5 w-5 rounded border-2 border-muted-foreground"
               />
-              <span class="text-xs text-muted-foreground">
-                {selectedMemberIds.size > 0 ? `${selectedMemberIds.size} selected` : 'Select all'}
+              <span class="text-sm text-muted-foreground">
+                {selectedMemberIds.size > 0 ? `${selectedMemberIds.size} selected` : `Select all ${filteredMembers.length}`}
               </span>
             </div>
           {/if}
+          
           {#each filteredMembers as member (member._id)}
             {@const isRegistered = registeredMemberIds.has(member._id)}
             {@const isSelected = selectedMemberIds.has(member._id)}
             <div class={cn(
-              "flex items-center gap-3 border-b border-border px-3 sm:px-4 py-3 last:border-b-0 hover:bg-accent/50",
-              isRegistered && "bg-emerald-950/20"
+              "flex items-center gap-4 px-5 py-4 border-b border-border last:border-b-0 transition-colors min-h-[72px]",
+              isRegistered && "bg-emerald-950/20",
+              "hover:bg-accent/30 active:bg-accent/50"
             )}>
               <!-- Selection checkbox -->
               {#if selectedTournament}
@@ -1253,7 +1310,7 @@
                   type="checkbox" 
                   checked={isSelected}
                   onchange={() => toggleMemberSelection(member._id)}
-                  class="h-4 w-4 rounded border-gray-600 bg-transparent shrink-0"
+                  class="h-5 w-5 rounded border-2 border-muted-foreground shrink-0"
                 />
               {/if}
               
@@ -1262,27 +1319,49 @@
                 <button 
                   onclick={() => toggleMemberRegistration(member._id)}
                   class={cn(
-                    "shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-colors",
+                    "shrink-0 w-11 h-11 rounded-xl flex items-center justify-center transition-all",
                     isRegistered 
                       ? "bg-emerald-500 text-white hover:bg-emerald-600" 
                       : "bg-muted text-muted-foreground hover:bg-muted/80"
                   )}
                   title={isRegistered ? "Click to unregister" : "Click to register"}
                 >
-                  {#if isRegistered}<Check class="h-3 w-3" />{:else}<Plus class="h-3 w-3" />{/if}
+                  {#if isRegistered}<Check class="h-5 w-5" />{:else}<Plus class="h-5 w-5" />{/if}
                 </button>
               {/if}
               
               <!-- Member info -->
               <div class="min-w-0 flex-1">
-                <span class="font-semibold text-sm truncate block">{member.lastName}, {member.firstName}</span>
-                <span class="text-xs text-muted-foreground truncate block">{getGroupName(member.groupId)}</span>
+                <span class="font-semibold text-base block truncate">{member.lastName}, {member.firstName}</span>
+                <span class="text-sm text-muted-foreground block truncate">{getGroupName(member.groupId)}</span>
               </div>
               
               <!-- Delete button -->
-              <button onclick={() => deleteMember(member._id)} class="text-destructive hover:text-destructive/80 shrink-0"><Trash2 class="h-4 w-4" /></button>
+              <button 
+                onclick={() => deleteMember(member._id)} 
+                class="shrink-0 w-11 h-11 flex items-center justify-center rounded-xl text-destructive/70 hover:text-destructive hover:bg-destructive/10 transition-colors"
+              >
+                <Trash2 class="h-5 w-5" />
+              </button>
             </div>
-          {:else}<p class="py-8 text-center text-muted-foreground">No members found</p>{/each}
+          {:else}
+            <div class="py-16 text-center">
+              <Users class="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+              <p class="text-lg text-muted-foreground mb-2">No members found</p>
+              {#if searchQuery || filterGroup !== 'all'}
+                <button 
+                  onclick={() => { searchQuery = ''; filterGroup = 'all'; }}
+                  class="text-sm text-primary hover:underline"
+                >
+                  Clear filters
+                </button>
+              {:else}
+                <Button onclick={() => showAddMember = true} variant="outline" class="mt-2">
+                  Add your first member
+                </Button>
+              {/if}
+            </div>
+          {/each}
         </div>
       
       {:else if activeTab === 'groups'}
