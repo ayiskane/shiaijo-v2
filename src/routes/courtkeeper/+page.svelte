@@ -9,7 +9,7 @@
   import { Progress } from '$lib/components/ui/progress';
   import { Badge } from '$lib/components/ui/badge';
   import * as Sheet from '$lib/components/ui/sheet';
-  import { Swords, Menu, RotateCcw, Play, Pause, Undo2, Flag, Trophy } from 'lucide-svelte';
+  import { Swords, Menu, RotateCcw, Play, Pause, Undo2, Flag, Trophy, Home } from 'lucide-svelte';
   
   const client = useConvexClient();
   
@@ -148,11 +148,14 @@
 <div class="min-h-screen bg-background text-foreground flex flex-col select-none">
   <header class="bg-card border-b border-border px-4 py-3 flex items-center justify-between">
     <div class="flex items-center gap-3">
-      <img src="/shiaijologo.png" alt="" class="h-8" />
+      <a href="/" class="hover:opacity-80 transition-opacity"><img src="/shiaijologo.png" alt="" class="h-8" /></a>
       <Badge variant="default" class={cn("text-lg font-bold px-3 py-1", selectedCourt === 'A' ? "bg-amber-500 text-black hover:bg-amber-500" : "bg-blue-500 text-white hover:bg-blue-500")}>Court {selectedCourt}</Badge>
       {#if currentMatch}<span class="text-sm text-muted-foreground">{getGroupName(currentMatch.groupId)}</span>{/if}
     </div>
-    <Button variant="outline" size="icon" onclick={() => showQueuePanel = true}><Menu class="h-5 w-5" /></Button>
+    <div class="flex items-center gap-2">
+      <Button variant="ghost" size="icon" asChild><a href="/"><Home class="h-5 w-5" /></a></Button>
+      <Button variant="outline" size="icon" onclick={() => showQueuePanel = true}><Menu class="h-5 w-5" /></Button>
+    </div>
   </header>
   
   {#if loading}
@@ -256,3 +259,4 @@
   </Sheet.Content>
 </Sheet.Root>
 {/if}
+
