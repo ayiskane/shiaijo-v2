@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Tournament Tab - Hybrid Stepper + Command Center Layout
+  // Build timestamp: 2026-01-06T03:25:00Z
   import { onMount, onDestroy } from 'svelte';
   import { useQuery, useConvexClient } from 'convex-svelte';
   import { api } from '../../convex/_generated/api';
@@ -1830,6 +1830,7 @@
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>
+
 
 
 
