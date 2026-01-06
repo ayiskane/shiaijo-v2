@@ -77,30 +77,40 @@ export const complete = mutation({
 export const remove = mutation({
   args: { id: v.id("tournaments") },
   handler: async (ctx, { id }) => {
-    // Delete all matches for this tournament
-    const matches = await ctx.db
-      .query("matches")
-      .withIndex("by_tournament", (q) => q.eq("tournamentId", id))
-      .collect();
-    for (const match of matches) {
-      await ctx.db.delete(match._id);
+    // Delete matches in chunks to avoid large reads/writes in one mutation
+    let deletedMatches = 0;
+    while (true) {
+      const batch = await ctx.db
+        .query("matches")
+        .withIndex("by_tournament", (q) => q.eq("tournamentId", id))
+        .take(200);
+      if (batch.length === 0) break;
+      for (const match of batch) {
+        await ctx.db.delete(match._id);
+      }
+      deletedMatches += batch.length;
     }
     
-    // Delete all participants for this tournament
-    const participants = await ctx.db
-      .query("participants")
-      .withIndex("by_tournament", (q) => q.eq("tournamentId", id))
-      .collect();
-    for (const participant of participants) {
-      await ctx.db.delete(participant._id);
+    // Delete participants in chunks
+    let deletedParticipants = 0;
+    while (true) {
+      const batch = await ctx.db
+        .query("participants")
+        .withIndex("by_tournament", (q) => q.eq("tournamentId", id))
+        .take(200);
+      if (batch.length === 0) break;
+      for (const participant of batch) {
+        await ctx.db.delete(participant._id);
+      }
+      deletedParticipants += batch.length;
     }
     
     // Delete the tournament
     await ctx.db.delete(id);
     
     return { 
-      deletedMatches: matches.length, 
-      deletedParticipants: participants.length 
+      deletedMatches, 
+      deletedParticipants 
     };
   },
 });

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import { useQuery, useConvexClient } from 'convex-svelte';
+  import { asset } from '$app/paths';
   import { api } from '../../convex/_generated/api';
   import { cn } from '$lib/utils';
   import { toast } from 'svelte-sonner';
@@ -10,7 +11,9 @@
   import { Badge } from '$lib/components/ui/badge';
   import * as Sheet from '$lib/components/ui/sheet';
   import * as ToggleGroup from '$lib/components/ui/toggle-group';
-  import { Swords, Menu, RotateCcw, Play, Pause, Undo2, Flag, Trophy, Home, Gavel } from 'lucide-svelte';
+  import { Swords, Menu, RotateCcw, Play, Pause, Undo2, Flag, Trophy, Home, Gavel } from '@lucide/svelte';
+  
+  const shiaijoLogo = asset('/shiaijologo.png');
   
   const client = useConvexClient();
   
@@ -31,6 +34,18 @@
   );
   let matches = $derived(matchesQuery.data ?? []);
   let loading = $derived(tournamentsQuery.isLoading || membersQuery.isLoading);
+  
+  let membersById = $derived.by(() => {
+    const map = new Map<string, typeof members[number]>();
+    for (const m of members) map.set(m._id, m);
+    return map;
+  });
+  
+  let groupsByGroupId = $derived.by(() => {
+    const map = new Map<string, typeof groups[number]>();
+    for (const g of groups) map.set(g.groupId, g);
+    return map;
+  });
   
   // Score labels
   const SCORE_LABELS: Record<number, string> = { 1: 'M', 2: 'K', 3: 'D', 4: 'T', 5: 'H', 6: 'FF' };
@@ -59,10 +74,30 @@
   let akaFlags = $state(0);
   let shiroFlags = $state(0);
   
-  let courtMatches = $derived(matches.filter(m => m.court === selectedCourt || m.court === 'A+B').sort((a, b) => a.orderIndex - b.orderIndex));
-  let pendingMatches = $derived(courtMatches.filter(m => m.status === 'pending'));
-  let inProgressMatches = $derived(courtMatches.filter(m => m.status === 'in_progress'));
-  let currentMatch = $derived(inProgressMatches.find(m => m.court === selectedCourt || m.court === 'A+B') || pendingMatches[0] || null);
+  let courtMatchData = $derived.by(() => {
+    if (!selectedCourt) return { courtMatches: [], pending: [], inProgress: [], current: null };
+    
+    const courtMatches: typeof matches = [];
+    for (const m of matches) {
+      if (m.court === selectedCourt || m.court === 'A+B') {
+        courtMatches.push(m);
+      }
+    }
+    courtMatches.sort((a, b) => a.orderIndex - b.orderIndex);
+    
+    const pending: typeof matches = [];
+    const inProgress: typeof matches = [];
+    for (const m of courtMatches) {
+      if (m.status === 'pending') pending.push(m);
+      else if (m.status === 'in_progress') inProgress.push(m);
+    }
+    
+    const current = inProgress.find(m => m.court === selectedCourt || m.court === 'A+B') || pending[0] || null;
+    return { courtMatches, pending, inProgress, current };
+  });
+  
+  let pendingMatches = $derived(courtMatchData.pending);
+  let currentMatch = $derived(courtMatchData.current);
   
   // Hantei match detection
   let isHanteiMatch = $derived(currentMatch?.matchType === 'hantei');
@@ -116,14 +151,14 @@
       if (currentMatch?.timerStartedAt && !currentMatch?.timerPausedAt) {
         elapsedSeconds = Math.floor((Date.now() - currentMatch.timerStartedAt) / 1000);
       }
-    }, 100);
+    }, 500);
   }
   
   function stopLocalTimer() { if (timerInterval) { clearInterval(timerInterval); timerInterval = null; } }
   function formatTime(s: number): string { return `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`; }
   function selectCourt(court: 'A' | 'B') { selectedCourt = court; showCourtSelect = false; }
-  function getMemberName(id: string | undefined): string { if (!id) return 'Unknown'; const m = members.find(mem => mem._id === id); return m ? `${m.firstName} ${m.lastName.charAt(0)}.` : 'Unknown'; }
-  function getGroupName(id: string): string { return groups.find(g => g.groupId === id)?.name || id; }
+  function getMemberName(id: string | undefined): string { if (!id) return 'Unknown'; const m = membersById.get(id); return m ? `${m.firstName} ${m.lastName.charAt(0)}.` : 'Unknown'; }
+  function getGroupName(id: string): string { return groupsByGroupId.get(id)?.name || id; }
   
   // Bogu scoring
   async function addScore(player: 'player1' | 'player2', scoreType: number) {
@@ -215,7 +250,7 @@
 <div class="min-h-screen bg-background text-foreground flex flex-col select-none">
   <header class="bg-card border-b border-border px-4 py-3 flex items-center justify-between">
     <div class="flex items-center gap-3">
-      <a href="/" class="hover:opacity-80 transition-opacity"><img src="/shiaijologo.png" alt="" class="h-8" /></a>
+      <a href="/" class="hover:opacity-80 transition-opacity"><img src={shiaijoLogo} alt="" class="h-8" /></a>
       <Badge variant="default" class={cn("text-lg font-bold px-3 py-1", selectedCourt === 'A' ? "bg-amber-500 text-black hover:bg-amber-500" : "bg-blue-500 text-white hover:bg-blue-500")}>Court {selectedCourt}</Badge>
       {#if currentMatch}
         <span class="text-sm text-muted-foreground">{getGroupName(currentMatch.groupId)}</span>

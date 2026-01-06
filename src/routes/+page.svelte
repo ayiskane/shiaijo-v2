@@ -1,7 +1,6 @@
 <script lang="ts">
-  // Vite handles image optimization (hashing, caching)
-  // For AVIF/WebP, use Vercel Image Optimization or a CDN
-  import shiaijoLogo from '$lib/assets/shiaijologo.png';
+  import { asset } from '$app/paths';
+  const shiaijoLogo = asset('/shiaijologo.png');
   
   const spectator = { id: 'spectator', href: '/spectator', kanji: '観', label: 'SPECTATOR', desc: 'Watch live tournament matches' };
   

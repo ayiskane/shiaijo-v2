@@ -18,9 +18,13 @@ export const create = mutation({
     isHantei: v.boolean(),
   },
   handler: async (ctx, { groupId, name, isHantei }) => {
-    // Get max order
-    const groups = await ctx.db.query("groups").collect();
-    const maxOrder = groups.length > 0 ? Math.max(...groups.map(g => g.order)) : 0;
+    // Get max order using index for efficiency
+    const lastGroup = await ctx.db
+      .query("groups")
+      .withIndex("by_order")
+      .order("desc")
+      .first();
+    const maxOrder = lastGroup?.order ?? 0;
     
     return await ctx.db.insert("groups", {
       groupId,

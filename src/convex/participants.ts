@@ -96,26 +96,24 @@ export const addBulk = mutation({
     })),
   },
   handler: async (ctx, { tournamentId, participants }) => {
-    const ids = [];
+    const existing = await ctx.db
+      .query("participants")
+      .withIndex("by_tournament", (q) => q.eq("tournamentId", tournamentId))
+      .collect();
+    const existingMemberIds = new Set(existing.map(p => p.memberId));
+    
+    let addedCount = 0;
     for (const p of participants) {
-      // Use compound index for efficient lookup
-      const existing = await ctx.db
-        .query("participants")
-        .withIndex("by_tournament_member", (q) =>
-          q.eq("tournamentId", tournamentId).eq("memberId", p.memberId)
-        )
-        .first();
-      
-      if (!existing) {
-        const id = await ctx.db.insert("participants", {
-          tournamentId,
-          memberId: p.memberId,
-          groupId: p.groupId,
-        });
-        ids.push(id);
-      }
+      if (existingMemberIds.has(p.memberId)) continue;
+      await ctx.db.insert("participants", {
+        tournamentId,
+        memberId: p.memberId,
+        groupId: p.groupId,
+      });
+      existingMemberIds.add(p.memberId);
+      addedCount++;
     }
-    return { addedCount: ids.length };
+    return { addedCount };
   },
 });
 

@@ -15,7 +15,7 @@
     ChevronLeft, ChevronDown, ChevronRight, Swords, Eye, Menu, Plus, Trash2, Pencil,
     Play, Settings, RefreshCw, RotateCcw, Archive, GripVertical, Timer, 
     Check, X, AlertTriangle, History, UserPlus, Home
-  } from 'lucide-svelte';
+  } from '@lucide/svelte';
   
   // shadcn-svelte components
   import * as Dialog from '$lib/components/ui/dialog';
@@ -94,6 +94,94 @@
   let participants = $derived(participantsQuery.data ?? []);
   let matches = $derived(matchesQuery.data ?? []);
   
+  // Precomputed lookup maps for faster render paths
+  let membersById = $derived.by(() => {
+    const map = new Map<string, typeof members[number]>();
+    for (const m of members) map.set(m._id, m);
+    return map;
+  });
+  
+  let groupsByGroupId = $derived.by(() => {
+    const map = new Map<string, typeof groups[number]>();
+    for (const g of groups) map.set(g.groupId, g);
+    return map;
+  });
+  
+  let membersByGroupId = $derived.by(() => {
+    const map = new Map<string, typeof members[number][]>();
+    for (const m of members) {
+      const list = map.get(m.groupId);
+      if (list) list.push(m);
+      else map.set(m.groupId, [m]);
+    }
+    return map;
+  });
+  
+  let matchesByStatus = $derived.by(() => {
+    const pending: typeof matches = [];
+    const inProgress: typeof matches = [];
+    const completed: typeof matches = [];
+    for (const m of matches) {
+      if (m.status === 'pending') pending.push(m);
+      else if (m.status === 'in_progress') inProgress.push(m);
+      else completed.push(m);
+    }
+    return { pending, inProgress, completed };
+  });
+  
+  let matchesByGroupId = $derived.by(() => {
+    const map = new Map<string, typeof matches>();
+    for (const m of matches) {
+      const list = map.get(m.groupId);
+      if (list) list.push(m);
+      else map.set(m.groupId, [m]);
+    }
+    return map;
+  });
+  
+  let completedMatchesByGroupId = $derived.by(() => {
+    const map = new Map<string, typeof matches>();
+    for (const m of matches) {
+      if (m.status !== 'completed') continue;
+      const list = map.get(m.groupId);
+      if (list) list.push(m);
+      else map.set(m.groupId, [m]);
+    }
+    return map;
+  });
+  
+  let matchStatsByGroup = $derived.by(() => {
+    const map = new Map<string, { total: number; completed: number; inProgress: number; pending: number }>();
+    for (const m of matches) {
+      const stats = map.get(m.groupId) ?? { total: 0, completed: 0, inProgress: 0, pending: 0 };
+      stats.total += 1;
+      if (m.status === 'completed') stats.completed += 1;
+      else if (m.status === 'in_progress') stats.inProgress += 1;
+      else stats.pending += 1;
+      map.set(m.groupId, stats);
+    }
+    return map;
+  });
+  
+  let courtData = $derived.by(() => {
+    const courtA: typeof matches = [];
+    const courtB: typeof matches = [];
+    let courtACompleted = 0;
+    let courtBCompleted = 0;
+    for (const m of matches) {
+      const isCompleted = m.status === 'completed';
+      if (m.court === 'A' || m.court === 'A+B') {
+        courtA.push(m);
+        if (isCompleted) courtACompleted++;
+      }
+      if (m.court === 'B' || m.court === 'A+B') {
+        courtB.push(m);
+        if (isCompleted) courtBCompleted++;
+      }
+    }
+    return { courtA, courtB, courtACompleted, courtBCompleted };
+  });
+  
   // Tournament tab state
   let editTournamentOpen = $state(true);
   let collapsedGroups = $state<Set<string>>(new Set());
@@ -136,11 +224,13 @@
   let activeTournament = $derived(tournaments.find(t => t.status === 'in_progress') || null);
   let selectedTournament = $derived(tournaments.find(t => t._id === selectedTournamentId) || activeTournament || tournaments[0] || null);
   
-  let pendingMatches = $derived(matches.filter(m => m.status === 'pending'));
-  let inProgressMatches = $derived(matches.filter(m => m.status === 'in_progress'));
-  let completedMatches = $derived(matches.filter(m => m.status === 'completed'));
-  let courtAMatches = $derived(matches.filter(m => m.court === 'A' || m.court === 'A+B'));
-  let courtBMatches = $derived(matches.filter(m => m.court === 'B' || m.court === 'A+B'));
+  let pendingMatches = $derived(matchesByStatus.pending);
+  let inProgressMatches = $derived(matchesByStatus.inProgress);
+  let completedMatches = $derived(matchesByStatus.completed);
+  let courtAMatches = $derived(courtData.courtA);
+  let courtBMatches = $derived(courtData.courtB);
+  let courtACompletedCount = $derived(courtData.courtACompleted);
+  let courtBCompletedCount = $derived(courtData.courtBCompleted);
   
   let progressPercent = $derived(matches.length > 0 ? Math.round((completedMatches.length / matches.length) * 100) : 0);
   let isComplete = $derived(matches.length > 0 && completedMatches.length === matches.length);
@@ -182,12 +272,12 @@
   
   // Separate bogu and hantei groups
   let boguGroups = $derived(groupOrder.filter(gId => {
-    const g = groups.find(gr => gr.groupId === gId);
+    const g = groupsByGroupId.get(gId);
     return g && !g.isHantei;
   }));
   
   let hanteiGroups = $derived(groupOrder.filter(gId => {
-    const g = groups.find(gr => gr.groupId === gId);
+    const g = groupsByGroupId.get(gId);
     return g && g.isHantei;
   }));
   
@@ -292,20 +382,20 @@
   
   // Helper functions
   function getGroupName(groupId: string): string { 
-    return groups.find(g => g.groupId === groupId)?.name || groupId; 
+    return groupsByGroupId.get(groupId)?.name || groupId; 
   }
   
   function getGroupById(groupId: string) {
-    return groups.find(g => g.groupId === groupId);
+    return groupsByGroupId.get(groupId);
   }
   
   function getMemberName(memberId: string): string { 
-    const m = members.find(mem => mem._id === memberId); 
+    const m = membersById.get(memberId); 
     return m ? `${m.firstName} ${m.lastName.charAt(0)}.` : 'Unknown'; 
   }
   
   function getMemberById(memberId: string) {
-    return members.find(m => m._id === memberId);
+    return membersById.get(memberId);
   }
   
   function formatTimer(seconds: number): string {
@@ -516,7 +606,7 @@
   
   async function registerGroupMembers(groupId: string) {
     if (!selectedTournament) return;
-    const groupMembers = members.filter(m => m.groupId === groupId);
+    const groupMembers = membersByGroupId.get(groupId) ?? [];
     const unregisteredIds = groupMembers.filter(m => !registeredMemberIds.has(m._id)).map(m => m._id);
     if (unregisteredIds.length === 0) { toast.info('All members in this group are already registered'); return; }
     try {
@@ -857,7 +947,7 @@
                             {#each groupOrder as groupId, idx (groupId)}
                               {@const group = getGroupById(groupId)}
                               {@const court = getEffectiveCourt(groupId)}
-                              {@const groupMembers = members.filter(m => m.groupId === groupId)}
+            {@const groupMembers = membersByGroupId.get(groupId) ?? []}
                               
                               <div
                                 draggable="true"
@@ -990,13 +1080,13 @@
                   <div class="flex items-center justify-between mb-2">
                     <div class="text-xl font-black text-amber-400">Court A</div>
                     <div class="text-xs text-muted-foreground">
-                      {courtAMatches.filter(m => m.status === 'completed').length}/{courtAMatches.length}
+                      {courtACompletedCount}/{courtAMatches.length}
                     </div>
                   </div>
                   <div class="h-1.5 bg-muted rounded-full overflow-hidden mb-3">
                     <div 
                       class="h-full bg-amber-500 rounded-full"
-                      style="width: {courtAMatches.length > 0 ? (courtAMatches.filter(m => m.status === 'completed').length / courtAMatches.length) * 100 : 0}%"
+                      style="width: {courtAMatches.length > 0 ? (courtACompletedCount / courtAMatches.length) * 100 : 0}%"
                     />
                   </div>
                   {#if currentCourtAMatch}
@@ -1018,13 +1108,13 @@
                   <div class="flex items-center justify-between mb-2">
                     <div class="text-xl font-black text-sky-400">Court B</div>
                     <div class="text-xs text-muted-foreground">
-                      {courtBMatches.filter(m => m.status === 'completed').length}/{courtBMatches.length}
+                      {courtBCompletedCount}/{courtBMatches.length}
                     </div>
                   </div>
                   <div class="h-1.5 bg-muted rounded-full overflow-hidden mb-3">
                     <div 
                       class="h-full bg-sky-500 rounded-full"
-                      style="width: {courtBMatches.length > 0 ? (courtBMatches.filter(m => m.status === 'completed').length / courtBMatches.length) * 100 : 0}%"
+                      style="width: {courtBMatches.length > 0 ? (courtBCompletedCount / courtBMatches.length) * 100 : 0}%"
                     />
                   </div>
                   {#if currentCourtBMatch}
@@ -1057,7 +1147,7 @@
                   <div class="text-[10px] text-muted-foreground">Done</div>
                 </div>
                 <div class="rounded-xl bg-amber-500/10 border border-amber-500/30 p-2 text-center">
-                  <div class="text-lg font-bold text-amber-400">{matches.filter(m => m.status === 'in_progress').length}</div>
+                  <div class="text-lg font-bold text-amber-400">{inProgressMatches.length}</div>
                   <div class="text-[10px] text-muted-foreground">Live</div>
                 </div>
               </div>
@@ -1081,8 +1171,8 @@
                   <div class="space-y-2" use:autoAnimate>
                     {#each groupOrder as groupId (groupId)}
                       {@const group = getGroupById(groupId)}
-                      {@const groupMatches = matches.filter(m => m.groupId === groupId)}
-                      {@const completedCount = groupMatches.filter(m => m.status === 'completed').length}
+                      {@const groupMatches = matchesByGroupId.get(groupId) ?? []}
+                      {@const groupStats = matchStatsByGroup.get(groupId) ?? { total: 0, completed: 0, inProgress: 0, pending: 0 }}
                       {@const court = getEffectiveCourt(groupId)}
                       {@const isCollapsed = collapsedGroups.has(groupId)}
                       
@@ -1109,7 +1199,7 @@
                           {#if group?.isHantei}
                             <Badge variant="outline" class="text-[10px] border-orange-500 text-orange-400 shrink-0">H</Badge>
                           {/if}
-                          <span class="text-xs text-muted-foreground shrink-0">{completedCount}/{groupMatches.length}</span>
+                          <span class="text-xs text-muted-foreground shrink-0">{groupStats.completed}/{groupStats.total}</span>
                         </button>
                         
                         {#if !isCollapsed}
@@ -1195,8 +1285,8 @@
                     {#each groupOrder as groupId, idx (groupId)}
                       {@const group = getGroupById(groupId)}
                       {@const court = getEffectiveCourt(groupId)}
-                      {@const groupMatches = matches.filter(m => m.groupId === groupId)}
-                      {@const completedCount = groupMatches.filter(m => m.status === 'completed').length}
+                      {@const groupMatches = matchesByGroupId.get(groupId) ?? []}
+                      {@const groupStats = matchStatsByGroup.get(groupId) ?? { total: 0, completed: 0, inProgress: 0, pending: 0 }}
                       
                       <div
                         draggable="true"
@@ -1219,7 +1309,7 @@
                         
                         <div class="flex-1 min-w-0">
                           <div class="font-medium truncate">{group?.name || groupId}</div>
-                          <span class="text-xs text-muted-foreground">{completedCount}/{groupMatches.length} matches</span>
+                          <span class="text-xs text-muted-foreground">{groupStats.completed}/{groupStats.total} matches</span>
                         </div>
                         
                         <!-- Court Assignment -->
@@ -1626,7 +1716,7 @@
         <!-- Accordion List -->
         <div class="flex flex-col gap-3" use:autoAnimate>
           {#each groups as group (group._id)}
-            {@const groupMembers = members.filter(m => m.groupId === group.groupId)}
+            {@const groupMembers = membersByGroupId.get(group.groupId) ?? []}
             {@const isExpanded = expandedGroupId === group._id}
             <div class={cn("rounded-2xl border-2 overflow-hidden transition-all duration-200", isExpanded ? "border-primary bg-card" : "border-border bg-card/50")}>
               <!-- Group Header - Clickable -->
@@ -1726,8 +1816,8 @@
         {:else}
           <div class="space-y-4" use:autoAnimate>
             {#each groups as group (group._id)}
-              {@const gm = matches.filter(m => m.groupId === group.groupId)}
-              {@const done = gm.filter(m => m.status === 'completed')}
+              {@const gm = matchesByGroupId.get(group.groupId) ?? []}
+              {@const done = completedMatchesByGroupId.get(group.groupId) ?? []}
               {#if gm.length > 0}
                 <Card.Root>
                   <Card.Header>

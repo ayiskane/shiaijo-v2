@@ -61,7 +61,7 @@
 /* Japanese fonts - for kanji and Japanese characters */
 @font-face {
   font-family: 'SicYubi-HyojunGakushu';
-  src: url('/fonts/SicYubi-HyojunGakushu.ttf') format('truetype');
+  src: url('/fonts/SicYubi-HyojunGakushu.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -70,7 +70,7 @@
 
 @font-face {
   font-family: 'SicYubi-FudeGyosho';
-  src: url('/fonts/SicYubi-FudeGyosho.ttf') format('truetype');
+  src: url('/fonts/SicYubi-FudeGyosho.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: swap;

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { useQuery } from 'convex-svelte';
+  import { asset } from '$app/paths';
   import { api } from '../../convex/_generated/api';
   import { cn } from '$lib/utils';
   import { Badge } from '$lib/components/ui/badge';
@@ -7,7 +8,9 @@
   import { Progress } from '$lib/components/ui/progress';
   import { Separator } from '$lib/components/ui/separator';
   import * as Card from '$lib/components/ui/card';
-  import { Trophy, Clock, Users, Swords, Home, RefreshCw } from 'lucide-svelte';
+  import { Trophy, Clock, Users, Swords, Home } from '@lucide/svelte';
+  
+  const shiaijoLogo = asset('/shiaijologo.png');
   
   // Real-time queries - NO POLLING NEEDED!
   const tournamentsQuery = useQuery(api.tournaments.list, () => ({}));
@@ -27,29 +30,80 @@
   );
   let matches = $derived(matchesQuery.data ?? []);
   
+  let membersById = $derived.by(() => {
+    const map = new Map<string, typeof members[number]>();
+    for (const m of members) map.set(m._id, m);
+    return map;
+  });
+  
+  let groupsByGroupId = $derived.by(() => {
+    const map = new Map<string, typeof groups[number]>();
+    for (const g of groups) map.set(g.groupId, g);
+    return map;
+  });
+  
   let currentTime = $state(Date.now());
   let timeInterval: ReturnType<typeof setInterval> | null = null;
   
   // Only need local timer for elapsed time display
   $effect(() => {
     if (tournament && !timeInterval) {
-      timeInterval = setInterval(() => currentTime = Date.now(), 100);
+      timeInterval = setInterval(() => currentTime = Date.now(), 1000);
     }
     return () => { if (timeInterval) clearInterval(timeInterval); };
   });
   
-  let liveMatches = $derived(matches.filter(m => m.status === 'in_progress'));
-  let courtALive = $derived(liveMatches.find(m => m.court === 'A' || m.court === 'A+B'));
-  let courtBLive = $derived(liveMatches.find(m => m.court === 'B' || (m.court === 'A+B' && !courtALive)));
-  let courtAQueue = $derived(matches.filter(m => (m.court === 'A' || m.court === 'A+B') && m.status === 'pending').sort((a, b) => a.orderIndex - b.orderIndex).slice(0, 5));
-  let courtBQueue = $derived(matches.filter(m => (m.court === 'B' || m.court === 'A+B') && m.status === 'pending').sort((a, b) => a.orderIndex - b.orderIndex).slice(0, 5));
-  let recentResults = $derived(matches.filter(m => m.status === 'completed').slice(-8));
-  let completedCount = $derived(matches.filter(m => m.status === 'completed').length);
-  let pendingCount = $derived(matches.filter(m => m.status === 'pending').length);
+  let matchOverview = $derived.by(() => {
+    const liveMatches: typeof matches = [];
+    const pendingCourtA: typeof matches = [];
+    const pendingCourtB: typeof matches = [];
+    const completedMatches: typeof matches = [];
+    let completedCount = 0;
+    let pendingCount = 0;
+    
+    for (const m of matches) {
+      if (m.status === 'in_progress') {
+        liveMatches.push(m);
+      } else if (m.status === 'completed') {
+        completedMatches.push(m);
+        completedCount++;
+      } else {
+        pendingCount++;
+        if (m.court === 'A' || m.court === 'A+B') pendingCourtA.push(m);
+        if (m.court === 'B' || m.court === 'A+B') pendingCourtB.push(m);
+      }
+    }
+    
+    pendingCourtA.sort((a, b) => a.orderIndex - b.orderIndex);
+    pendingCourtB.sort((a, b) => a.orderIndex - b.orderIndex);
+    
+    const courtALive = liveMatches.find(m => m.court === 'A' || m.court === 'A+B') || null;
+    const courtBLive = liveMatches.find(m => m.court === 'B') || (!courtALive ? liveMatches.find(m => m.court === 'A+B') || null : null);
+    
+    return {
+      liveMatches,
+      courtALive,
+      courtBLive,
+      courtAQueue: pendingCourtA.slice(0, 5),
+      courtBQueue: pendingCourtB.slice(0, 5),
+      recentResults: completedMatches.slice(-8),
+      completedCount,
+      pendingCount
+    };
+  });
+  
+  let liveMatches = $derived(matchOverview.liveMatches);
+  let courtALive = $derived(matchOverview.courtALive);
+  let courtBLive = $derived(matchOverview.courtBLive);
+  let courtAQueue = $derived(matchOverview.courtAQueue);
+  let courtBQueue = $derived(matchOverview.courtBQueue);
+  let recentResults = $derived(matchOverview.recentResults);
+  let completedCount = $derived(matchOverview.completedCount);
+  let pendingCount = $derived(matchOverview.pendingCount);
   let totalProgress = $derived(matches.length > 0 ? (completedCount / matches.length) * 100 : 0);
   
-  function getMemberName(id: string): string { const m = members.find(mem => mem._id === id); return m ? `${m.firstName} ${m.lastName.charAt(0)}.` : 'TBD'; }
-  function getGroupName(id: string): string { return groups.find(g => g.groupId === id)?.name || id; }
+  function getMemberName(id: string): string { const m = membersById.get(id); return m ? `${m.firstName} ${m.lastName.charAt(0)}.` : 'TBD'; }
+  function getGroupName(id: string): string { return groupsByGroupId.get(id)?.name || id; }
   function getElapsedTime(m: any): number {
     if (m.timerPausedAt) return m.timerPausedAt;
     if (m.timerStartedAt) return Math.floor((currentTime - m.timerStartedAt) / 1000);
@@ -64,7 +118,7 @@
   <header class="bg-card border-b border-border px-4 py-3 sticky top-0 z-10">
     <div class="max-w-6xl mx-auto flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <a href="/" class="flex items-center gap-2"><img src="/shiaijologo.png" alt="試合場" class="h-10" /></a>
+        <a href="/" class="flex items-center gap-2"><img src={shiaijoLogo} alt="試合場" class="h-10" /></a>
         {#if tournament}<Separator orientation="vertical" class="h-6" /><span class="text-lg font-bold text-primary">{tournament.name}</span>{/if}
       </div>
       <div class="flex items-center gap-2">
