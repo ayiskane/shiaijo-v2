@@ -188,7 +188,7 @@
   }
 
   .portal-kanji {
-    font-family: var(--font-jp);
+    font-family: 'SicYubi-HyojunGakushu', serif;
     font-size: 42px;
     font-weight: 700;
     color: var(--text);
@@ -289,7 +289,7 @@
   }
 
   .footer-jp {
-    font-family: var(--font-jp);
+    font-family: 'SicYubi-FudeGyosho', serif;
     font-size: 12px;
     color: var(--text-faint);
     letter-spacing: 0.15em;
@@ -374,5 +374,6 @@
   .staff-row .portal-card:nth-child(2) { animation-delay: 0.15s; }
   .staff-row .portal-card:nth-child(3) { animation-delay: 0.2s; }
 </style>
+
 
 
