@@ -22,6 +22,7 @@
   import * as Collapsible from '$lib/components/ui/collapsible';
   import * as Select from '$lib/components/ui/select';
   import * as Sheet from '$lib/components/ui/sheet';
+  import * as ToggleGroup from '$lib/components/ui/toggle-group';
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
   import { Label } from '$lib/components/ui/label';
@@ -144,6 +145,9 @@
   let setupStep = $derived(matches.length > 0 ? 4 : participants.length > 0 ? 3 : 2);
   let currentCourtAMatch = $derived(courtAMatches.find(m => m.status === 'in_progress') || null);
   let currentCourtBMatch = $derived(courtBMatches.find(m => m.status === 'in_progress') || null);
+  let tournamentSelectorLabel = $derived(
+    selectedTournament ? `${selectedTournament.name} - ${selectedTournament.status}` : 'Select tournament'
+  );
   
   // Build a reactive map of group courts from matches
   let groupCourtMap = $derived.by(() => {
@@ -728,15 +732,28 @@
         {:else}
           <!-- Tournament Selector -->
           <div class="mb-4">
-            <select 
-              value={selectedTournamentId} 
-              onchange={(e) => selectedTournamentId = (e.target as HTMLSelectElement).value} 
-              class="w-full rounded-xl border border-input bg-card px-3 py-3 text-sm truncate"
-            >
-              {#each tournaments as t}
-                <option value={t._id}>{t.name} - {t.status}</option>
-              {/each}
-            </select>
+            <Select.Root type="single" bind:value={selectedTournamentId}>
+              <Select.Trigger class="w-full rounded-xl h-12">
+                {tournamentSelectorLabel}
+              </Select.Trigger>
+              <Select.Content>
+                {#each tournaments as t (t._id)}
+                  <Select.Item value={t._id} label="{t.name} - {t.status}">
+                    <div class="flex items-center justify-between w-full">
+                      <span>{t.name}</span>
+                      <Badge variant="outline" class={cn(
+                        "ml-2 text-[10px]",
+                        t.status === 'in_progress' ? "border-amber-500 text-amber-400" :
+                        t.status === 'setup' ? "border-yellow-500 text-yellow-400" :
+                        "border-emerald-500 text-emerald-400"
+                      )}>
+                        {t.status === 'setup' ? 'Setup' : t.status === 'in_progress' ? 'Live' : 'Done'}
+                      </Badge>
+                    </div>
+                  </Select.Item>
+                {/each}
+              </Select.Content>
+            </Select.Root>
           </div>
           
           {#if selectedTournament}
@@ -844,35 +861,29 @@
                                   <span class="text-xs text-muted-foreground">{groupMembers.length} members</span>
                                 </div>
                                 
-                                <!-- Inline Court Toggle -->
-                                {#if editingCourtGroupId === groupId}
-                                  <div class="flex gap-1">
-                                    <button 
-                                      onclick={() => { setGroupCourt(groupId, 'A'); editingCourtGroupId = null; }}
-                                      class="w-10 h-10 bg-amber-500 text-black rounded-lg font-bold text-sm"
-                                    >A</button>
-                                    <button 
-                                      onclick={() => { setGroupCourt(groupId, 'A+B'); editingCourtGroupId = null; }}
-                                      class="w-10 h-10 bg-emerald-500 text-white rounded-lg font-bold text-xs"
-                                    >A+B</button>
-                                    <button 
-                                      onclick={() => { setGroupCourt(groupId, 'B'); editingCourtGroupId = null; }}
-                                      class="w-10 h-10 bg-sky-500 text-white rounded-lg font-bold text-sm"
-                                    >B</button>
-                                  </div>
-                                {:else}
-                                  <button 
-                                    onclick={() => editingCourtGroupId = groupId}
-                                    class={cn(
-                                      "w-10 h-10 rounded-lg font-bold text-sm flex items-center justify-center border-2",
-                                      court === 'A' ? "bg-amber-500/20 text-amber-400 border-amber-500/50" : 
-                                      court === 'B' ? "bg-sky-500/20 text-sky-400 border-sky-500/50" :
-                                      "bg-emerald-500/20 text-emerald-400 border-emerald-500/50"
-                                    )}
-                                  >
-                                    {court === 'A+B' ? '+' : court}
-                                  </button>
-                                {/if}
+                                <!-- Court Toggle -->
+                                <ToggleGroup.Root 
+                                  type="single" 
+                                  value={court}
+                                  onValueChange={(value) => value && setGroupCourt(groupId, value)}
+                                  class="shrink-0"
+                                >
+                                  <ToggleGroup.Item 
+                                    value="A" 
+                                    aria-label="Court A"
+                                    class="w-9 h-9 text-xs font-bold data-[state=on]:bg-amber-500 data-[state=on]:text-black"
+                                  >A</ToggleGroup.Item>
+                                  <ToggleGroup.Item 
+                                    value="A+B" 
+                                    aria-label="Both Courts"
+                                    class="w-9 h-9 text-xs font-bold data-[state=on]:bg-emerald-500 data-[state=on]:text-white"
+                                  >+</ToggleGroup.Item>
+                                  <ToggleGroup.Item 
+                                    value="B" 
+                                    aria-label="Court B"
+                                    class="w-9 h-9 text-xs font-bold data-[state=on]:bg-sky-500 data-[state=on]:text-white"
+                                  >B</ToggleGroup.Item>
+                                </ToggleGroup.Root>
                               </div>
                             {/each}
                           </div>
@@ -1185,29 +1196,28 @@
                         </div>
                         
                         <!-- Court Assignment -->
-                        <div class="flex rounded-lg border border-input overflow-hidden shrink-0">
-                          <button
-                            onclick={() => setGroupCourt(groupId, 'A')}
-                            class={cn(
-                              "px-3 py-2 text-xs font-bold transition-colors",
-                              court === 'A' ? "bg-amber-500 text-black" : "bg-background text-muted-foreground hover:bg-muted"
-                            )}
-                          >A</button>
-                          <button
-                            onclick={() => setGroupCourt(groupId, 'A+B')}
-                            class={cn(
-                              "px-2 py-2 text-xs font-bold transition-colors border-x border-input",
-                              court === 'A+B' ? "bg-emerald-500 text-white" : "bg-background text-muted-foreground hover:bg-muted"
-                            )}
-                          >+</button>
-                          <button
-                            onclick={() => setGroupCourt(groupId, 'B')}
-                            class={cn(
-                              "px-3 py-2 text-xs font-bold transition-colors",
-                              court === 'B' ? "bg-sky-500 text-white" : "bg-background text-muted-foreground hover:bg-muted"
-                            )}
-                          >B</button>
-                        </div>
+                        <ToggleGroup.Root 
+                          type="single" 
+                          value={court}
+                          onValueChange={(value) => value && setGroupCourt(groupId, value)}
+                          class="shrink-0"
+                        >
+                          <ToggleGroup.Item 
+                            value="A" 
+                            aria-label="Court A"
+                            class="px-3 py-2 text-xs font-bold data-[state=on]:bg-amber-500 data-[state=on]:text-black"
+                          >A</ToggleGroup.Item>
+                          <ToggleGroup.Item 
+                            value="A+B" 
+                            aria-label="Both Courts"
+                            class="px-2 py-2 text-xs font-bold data-[state=on]:bg-emerald-500 data-[state=on]:text-white"
+                          >+</ToggleGroup.Item>
+                          <ToggleGroup.Item 
+                            value="B" 
+                            aria-label="Court B"
+                            class="px-3 py-2 text-xs font-bold data-[state=on]:bg-sky-500 data-[state=on]:text-white"
+                          >B</ToggleGroup.Item>
+                        </ToggleGroup.Root>
                       </div>
                     {/each}
                   </div>
@@ -1830,6 +1840,7 @@
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>
+
 
 
 
