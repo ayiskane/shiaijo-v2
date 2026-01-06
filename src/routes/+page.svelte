@@ -89,7 +89,7 @@
   .landing {
     min-height: 100vh;
     background: var(--bg);
-    font-family: var(--font-default, 'Inter', system-ui, sans-serif);
+    font-family: var(--font-default, 'Titillium Web', system-ui, sans-serif);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -374,4 +374,5 @@
   .staff-row .portal-card:nth-child(2) { animation-delay: 0.15s; }
   .staff-row .portal-card:nth-child(3) { animation-delay: 0.2s; }
 </style>
+
 
