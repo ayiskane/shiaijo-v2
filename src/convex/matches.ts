@@ -374,3 +374,159 @@ export const declareForfeit = mutation({
     });
   },
 });
+
+/**
+ * Hantei (Judges Decision) Scoring
+ * 
+ * For non-bogu matches, scoring is done by flag counts from 3 referees.
+ * Each referee raises a flag for aka (red/player1) or shiro (white/player2).
+ * 
+ * A hantei match typically has 2 rounds:
+ * - Round 1: 2 kihon-waza combos (e.g., K-M = Kote then Men)
+ * - Round 2: 3 kihon-waza combos (e.g., M-K-D = Men then Kote then Do)
+ * 
+ * Winner is determined by:
+ * - Most round wins (best of 2)
+ * - If tied, total flag count across all rounds
+ */
+
+export const addHanteiRound = mutation({
+  args: {
+    matchId: v.id("matches"),
+    round: v.number(),
+    combo: v.string(),
+    akaFlags: v.number(), // 0-3 flags for player1 (aka/red)
+    shiroFlags: v.number(), // 0-3 flags for player2 (shiro/white)
+  },
+  handler: async (ctx, { matchId, round, combo, akaFlags, shiroFlags }) => {
+    const match = await ctx.db.get(matchId);
+    if (!match) throw new Error("Match not found");
+    if (match.status === "completed") throw new Error("Match already completed");
+    if (match.matchType !== "hantei") throw new Error("Not a hantei match");
+    
+    // Validate flag counts (0-3 from 3 judges)
+    if (akaFlags < 0 || akaFlags > 3 || shiroFlags < 0 || shiroFlags > 3) {
+      throw new Error("Invalid flag count");
+    }
+    if (akaFlags + shiroFlags > 3) {
+      throw new Error("Total flags cannot exceed 3");
+    }
+    
+    const rounds = match.hanteiRounds || [];
+    
+    // Check if this round already exists, replace it
+    const existingIdx = rounds.findIndex(r => r.round === round);
+    if (existingIdx >= 0) {
+      rounds[existingIdx] = { round, combo, akaFlags, shiroFlags };
+    } else {
+      rounds.push({ round, combo, akaFlags, shiroFlags });
+    }
+    
+    // Sort by round number
+    rounds.sort((a, b) => a.round - b.round);
+    
+    // Determine winner if we have both rounds
+    let winner: typeof match.player1Id | undefined = undefined;
+    let status: "pending" | "in_progress" | "completed" = "in_progress";
+    
+    if (rounds.length >= 2) {
+      // Count round wins
+      let akaWins = 0;
+      let shiroWins = 0;
+      let totalAkaFlags = 0;
+      let totalShiroFlags = 0;
+      
+      for (const r of rounds) {
+        totalAkaFlags += r.akaFlags;
+        totalShiroFlags += r.shiroFlags;
+        
+        if (r.akaFlags > r.shiroFlags) akaWins++;
+        else if (r.shiroFlags > r.akaFlags) shiroWins++;
+        // Tied rounds don't count for either
+      }
+      
+      // Determine winner: most round wins, then total flags
+      if (akaWins > shiroWins) {
+        winner = match.player1Id;
+        status = "completed";
+      } else if (shiroWins > akaWins) {
+        winner = match.player2Id;
+        status = "completed";
+      } else if (totalAkaFlags > totalShiroFlags) {
+        // Tiebreaker: total flags
+        winner = match.player1Id;
+        status = "completed";
+      } else if (totalShiroFlags > totalAkaFlags) {
+        winner = match.player2Id;
+        status = "completed";
+      }
+      // If still tied, match continues (or needs manual decision)
+    }
+    
+    await ctx.db.patch(matchId, {
+      hanteiRounds: rounds,
+      winner,
+      status,
+      actualDuration: winner ? (match.timerPausedAt || 
+        (match.timerStartedAt ? Math.floor((Date.now() - match.timerStartedAt) / 1000) : 0)) : undefined,
+      updatedAt: Date.now(),
+    });
+    
+    return { 
+      rounds, 
+      winner: winner ? (winner === match.player1Id ? "player1" : "player2") : null,
+      completed: status === "completed"
+    };
+  },
+});
+
+export const undoHanteiRound = mutation({
+  args: {
+    matchId: v.id("matches"),
+  },
+  handler: async (ctx, { matchId }) => {
+    const match = await ctx.db.get(matchId);
+    if (!match) throw new Error("Match not found");
+    
+    const rounds = match.hanteiRounds || [];
+    if (rounds.length === 0) throw new Error("No rounds to undo");
+    
+    // Remove the last round
+    rounds.pop();
+    
+    // If we were completed, reopen the match
+    const wasCompleted = match.status === "completed";
+    
+    await ctx.db.patch(matchId, {
+      hanteiRounds: rounds,
+      winner: undefined,
+      status: rounds.length > 0 ? "in_progress" : "pending",
+      actualDuration: undefined,
+      updatedAt: Date.now(),
+    });
+    
+    return { rounds, reopened: wasCompleted };
+  },
+});
+
+export const declareHanteiWinner = mutation({
+  args: {
+    matchId: v.id("matches"),
+    winner: v.union(v.literal("player1"), v.literal("player2")),
+  },
+  handler: async (ctx, { matchId, winner }) => {
+    const match = await ctx.db.get(matchId);
+    if (!match) throw new Error("Match not found");
+    if (match.matchType !== "hantei") throw new Error("Not a hantei match");
+    
+    const winnerId = winner === "player1" ? match.player1Id : match.player2Id;
+    
+    await ctx.db.patch(matchId, {
+      winner: winnerId,
+      status: "completed",
+      actualDuration: match.timerPausedAt ||
+        (match.timerStartedAt ? Math.floor((Date.now() - match.timerStartedAt) / 1000) : 0),
+      updatedAt: Date.now(),
+    });
+  },
+});

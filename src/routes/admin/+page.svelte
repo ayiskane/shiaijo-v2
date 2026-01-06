@@ -66,12 +66,14 @@
   let showAddGroup = $state(false);
   let showEditGroup = $state(false);
   let showAddMember = $state(false);
+  let showEditMember = $state(false);
   let showMassAddMembers = $state(false);
   let showImportCSV = $state(false);
   let showCreateTournament = $state(false);
   let showDeleteConfirm = $state(false);
   
   let editingGroup = $state<any>(null);
+  let editingMember = $state<any>(null);
   let expandedGroupId = $state<string | null>(null);
   let newGroup = $state({ id: '', name: '', isHantei: false });
   let newMember = $state({ firstName: '', lastName: '', groupId: '' });
@@ -381,6 +383,31 @@
       await client.mutation(api.members.remove, { id });
       toast.success('Member removed');
     } catch (e) { toast.error('Failed to delete member'); }
+  }
+  
+  function openEditMember(member: any) {
+    editingMember = { ...member };
+    showEditMember = true;
+  }
+  
+  async function updateMember() {
+    if (!editingMember) return;
+    if (!editingMember.firstName?.trim() || !editingMember.lastName?.trim()) {
+      toast.error('Name is required');
+      return;
+    }
+    try {
+      await client.mutation(api.members.update, { 
+        id: editingMember._id, 
+        firstName: editingMember.firstName.trim(), 
+        lastName: editingMember.lastName.trim(), 
+        groupId: editingMember.groupId,
+        rank: editingMember.rank?.trim() || undefined
+      });
+      showEditMember = false;
+      editingMember = null;
+      toast.success('Member updated');
+    } catch (e) { toast.error('Failed to update member'); }
   }
   
   async function importCSV() {
@@ -1539,9 +1566,22 @@
               
               <!-- Member info -->
               <div class="min-w-0 flex-1">
-                <span class="font-semibold text-base block truncate">{member.lastName}, {member.firstName}</span>
+                <div class="flex items-center gap-2">
+                  <span class="font-semibold text-base truncate">{member.lastName}, {member.firstName}</span>
+                  {#if member.rank}
+                    <Badge variant="outline" class="text-xs shrink-0">{member.rank}</Badge>
+                  {/if}
+                </div>
                 <span class="text-sm text-muted-foreground block truncate">{getGroupName(member.groupId)}</span>
               </div>
+              
+              <!-- Edit button -->
+              <button 
+                onclick={() => openEditMember(member)} 
+                class="shrink-0 w-11 h-11 flex items-center justify-center rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              >
+                <Pencil class="h-4 w-4" />
+              </button>
               
               <!-- Delete button -->
               <button 
@@ -1777,6 +1817,39 @@
       <div class="space-y-2"><Label for="member-group">Group</Label><select id="member-group" bind:value={newMember.groupId} class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"><option value="">Select Group</option>{#each groups as g}<option value={g.groupId}>{g.name}</option>{/each}</select></div>
     </div>
     <Dialog.Footer class="flex-col sm:flex-row gap-2"><Button variant="secondary" onclick={() => showAddMember = false} class="w-full sm:w-auto">Cancel</Button><Button onclick={createMember} class="w-full sm:w-auto">Add</Button></Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>
+
+<Dialog.Root bind:open={showEditMember}>
+  <Dialog.Content class="sm:max-w-sm max-w-[calc(100vw-2rem)]">
+    <Dialog.Header><Dialog.Title>Edit Member</Dialog.Title></Dialog.Header>
+    {#if editingMember}
+      <div class="space-y-4 py-4">
+        <div class="space-y-2">
+          <Label for="edit-member-first">First Name</Label>
+          <Input id="edit-member-first" bind:value={editingMember.firstName} />
+        </div>
+        <div class="space-y-2">
+          <Label for="edit-member-last">Last Name</Label>
+          <Input id="edit-member-last" bind:value={editingMember.lastName} />
+        </div>
+        <div class="space-y-2">
+          <Label for="edit-member-group">Group</Label>
+          <select id="edit-member-group" bind:value={editingMember.groupId} class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+            <option value="">Select Group</option>
+            {#each groups as g}<option value={g.groupId}>{g.name}</option>{/each}
+          </select>
+        </div>
+        <div class="space-y-2">
+          <Label for="edit-member-rank">Rank <span class="text-muted-foreground text-xs">(optional)</span></Label>
+          <Input id="edit-member-rank" bind:value={editingMember.rank} placeholder="e.g., 1-dan, 2-kyu" />
+        </div>
+      </div>
+    {/if}
+    <Dialog.Footer class="flex-col sm:flex-row gap-2">
+      <Button variant="secondary" onclick={() => { showEditMember = false; editingMember = null; }} class="w-full sm:w-auto">Cancel</Button>
+      <Button onclick={updateMember} class="w-full sm:w-auto">Save</Button>
+    </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>
 
