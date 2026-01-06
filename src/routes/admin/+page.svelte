@@ -12,7 +12,7 @@
     LayoutDashboard, Users, FolderOpen, Trophy, ClipboardList, 
     ChevronLeft, ChevronDown, ChevronRight, Swords, Eye, Menu, Plus, Trash2, Pencil,
     Play, Settings, RefreshCw, RotateCcw, Archive, GripVertical, Timer, 
-    Check, X, AlertTriangle, History, UserPlus
+    Check, X, AlertTriangle, History, UserPlus, Home
   } from 'lucide-svelte';
   
   // shadcn-svelte components
@@ -640,8 +640,9 @@
     <div class="border-t border-sidebar-border p-3">
       {#if !sidebarCollapsed}<p class="mb-2 px-1 text-[10px] uppercase tracking-wider text-sidebar-foreground/60">Switch Portal</p>{/if}
       <div class={cn("flex gap-2", sidebarCollapsed ? "flex-col items-center" : "flex-col")}>
-        <a href="/courtkeeper" class={cn("flex items-center gap-2 rounded-lg bg-gradient-to-r from-sky-900/50 to-sky-800/30 text-sky-300 transition-colors hover:from-sky-900/70", sidebarCollapsed ? "h-10 w-10 justify-center" : "px-3 py-2 text-sm")}><Swords class="h-4 w-4" />{#if !sidebarCollapsed}<span>Courtkeeper</span>{/if}</a>
-        <a href="/spectator" class={cn("flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-900/50 to-emerald-800/30 text-emerald-300 transition-colors hover:from-emerald-900/70", sidebarCollapsed ? "h-10 w-10 justify-center" : "px-3 py-2 text-sm")}><Eye class="h-4 w-4" />{#if !sidebarCollapsed}<span>Spectator</span>{/if}</a>
+        <a href="/" class={cn("flex items-center gap-2 rounded-lg bg-primary/10 text-primary transition-colors hover:bg-primary/20", sidebarCollapsed ? "h-10 w-10 justify-center" : "px-3 py-2 text-sm")}><Home class="h-4 w-4" />{#if !sidebarCollapsed}<span>Home</span>{/if}</a>
+        <a href="/courtkeeper" class={cn("flex items-center gap-2 rounded-lg bg-amber-900/30 text-amber-400 transition-colors hover:bg-amber-900/50", sidebarCollapsed ? "h-10 w-10 justify-center" : "px-3 py-2 text-sm")}><Swords class="h-4 w-4" />{#if !sidebarCollapsed}<span>Courtkeeper</span>{/if}</a>
+        <a href="/spectator" class={cn("flex items-center gap-2 rounded-lg bg-emerald-900/30 text-emerald-400 transition-colors hover:bg-emerald-900/50", sidebarCollapsed ? "h-10 w-10 justify-center" : "px-3 py-2 text-sm")}><Eye class="h-4 w-4" />{#if !sidebarCollapsed}<span>Spectator</span>{/if}</a>
       </div>
     </div>
   </aside>
@@ -1475,5 +1476,6 @@
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>
+
 
 
