@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount, onDestroy } from 'svelte';
   import { useQuery, useConvexClient } from 'convex-svelte';
   import { api } from '../../convex/_generated/api';
   import { cn } from '$lib/utils';
@@ -32,6 +33,14 @@
   
   // Convex client for mutations
   const client = useConvexClient();
+  
+  // Apply Sumi theme to admin portal
+  onMount(() => {
+    document.documentElement.classList.add('theme-sumi');
+  });
+  onDestroy(() => {
+    document.documentElement.classList.remove('theme-sumi');
+  });
   
   // Real-time subscriptions
   const groupsQuery = useQuery(api.groups.list, () => ({}));
@@ -1476,6 +1485,7 @@
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>
+
 
 
 
