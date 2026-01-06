@@ -170,19 +170,20 @@
    Inspired by Sumi-e ink painting
    =========================================== */
 .dark.theme-sumi {
+  --background: oklch(0.13 0.005 0);            /* #0c0c0c - Pure dark black */
   --foreground: oklch(0.85 0.01 60);           /* #d6d3d1 - Warm white */
-  --card: oklch(0.15 0.005 60);
+  --card: oklch(0.15 0.005 0);
   --card-foreground: oklch(0.85 0.01 60);
-  --popover: oklch(0.17 0.005 60);
+  --popover: oklch(0.17 0.005 0);
   --popover-foreground: oklch(0.85 0.01 60);
   --primary: oklch(0.68 0.01 60);              /* #a8a29e - Warm gray accent */
-  --primary-foreground: oklch(0.13 0.01 60);
+  --primary-foreground: oklch(0.13 0.005 0);
   --secondary: oklch(0.40 0.01 60);            /* #57534e - Stone */
   --secondary-foreground: oklch(0.85 0.01 60);
-  --muted: oklch(0.20 0.005 60);
+  --muted: oklch(0.20 0.005 0);
   --muted-foreground: oklch(0.52 0.01 60);     /* #78716c - Medium stone */
   --accent: oklch(0.68 0.01 60);
-  --accent-foreground: oklch(0.13 0.01 60);
+  --accent-foreground: oklch(0.13 0.005 0);
   --destructive: oklch(0.50 0.18 25);          /* Deep red */
   --border: oklch(1 0 0 / 8%);                 /* Subtle white border */
   --input: oklch(1 0 0 / 6%);
@@ -192,11 +193,11 @@
   --chart-3: oklch(0.45 0.01 60);
   --chart-4: oklch(0.60 0.01 60);
   --chart-5: oklch(0.50 0.01 60);
-  --sidebar: oklch(0.12 0.005 60);
+  --sidebar: oklch(0.11 0.005 0);
   --sidebar-foreground: oklch(0.85 0.01 60);
   --sidebar-primary: oklch(0.68 0.01 60);
-  --sidebar-primary-foreground: oklch(0.13 0.01 60);
-  --sidebar-accent: oklch(0.18 0.005 60);
+  --sidebar-primary-foreground: oklch(0.13 0.005 0);
+  --sidebar-accent: oklch(0.18 0.005 0);
   --sidebar-accent-foreground: oklch(0.85 0.01 60);
   --sidebar-border: oklch(1 0 0 / 6%);
   --sidebar-ring: oklch(0.68 0.01 60);
@@ -305,12 +306,141 @@
   .glow-sumi {
     filter: drop-shadow(0 0 15px rgba(168, 162, 158, 0.15));
   }
+  
+  /* ===========================================
+     SIDEBAR TRANSITION HELPERS
+     Smooth expand/collapse without text squish
+     =========================================== */
+  .sidebar-text {
+    white-space: nowrap;
+    overflow: hidden;
+    transition: opacity 0.2s ease-out, width 0.3s ease-out;
+  }
+  
+  .sidebar-text-hidden {
+    opacity: 0;
+    width: 0;
+    pointer-events: none;
+  }
+  
+  .sidebar-text-visible {
+    opacity: 1;
+    width: auto;
+  }
 }
 
 /* Utility class for explicitly using Japanese font */
 .font-jp {
   font-family: var(--font-jp);
 }
+
+/* ===========================================
+   MOBILE-FIRST ACCESSIBILITY (45+ Users)
+   Based on WCAG 2.1 and research guidelines
+   - Touch targets: minimum 44x44px
+   - Font size: minimum 16px, prefer 18px
+   - High contrast ratios
+   - Clear visual feedback
+   =========================================== */
+
+/* Touch target sizing - minimum 44x44px for older users */
+@layer components {
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .touch-target-lg {
+    min-height: 52px;
+    min-width: 52px;
+  }
+  
+  /* Large, readable buttons for 45+ users */
+  .btn-accessible {
+    min-height: 48px;
+    padding: 12px 24px;
+    font-size: 16px;
+    font-weight: 500;
+    border-radius: 12px;
+    touch-action: manipulation; /* Prevent double-tap zoom */
+  }
+  
+  /* Clear focus states for accessibility */
+  .focus-accessible:focus-visible {
+    outline: 3px solid var(--ring);
+    outline-offset: 2px;
+  }
+  
+  /* High contrast card for better readability */
+  .card-accessible {
+    border-width: 2px;
+    padding: 20px;
+  }
+  
+  /* Large text variants */
+  .text-accessible {
+    font-size: 18px;
+    line-height: 1.6;
+  }
+  
+  .text-accessible-sm {
+    font-size: 16px;
+    line-height: 1.5;
+  }
+  
+  /* Spacing for easier tapping */
+  .gap-accessible {
+    gap: 16px;
+  }
+  
+  .gap-accessible-lg {
+    gap: 24px;
+  }
+}
+
+/* Mobile-first base adjustments */
+@media (max-width: 768px) {
+  /* Increase base font size on mobile for readability */
+  html {
+    font-size: 16px;
+  }
+  
+  /* Ensure buttons are easily tappable */
+  button, 
+  [role="button"],
+  a {
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+  
+  /* Increase spacing between interactive elements */
+  .space-y-2 > * + * {
+    margin-top: 12px;
+  }
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --border: oklch(1 0 0 / 20%);
+  }
+  
+  .dark {
+    --border: oklch(1 0 0 / 25%);
+  }
+}
+
 
 
 
