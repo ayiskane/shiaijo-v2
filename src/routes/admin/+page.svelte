@@ -142,6 +142,8 @@
   let progressPercent = $derived(matches.length > 0 ? Math.round((completedMatches.length / matches.length) * 100) : 0);
   let isComplete = $derived(matches.length > 0 && completedMatches.length === matches.length);
   let setupStep = $derived(matches.length > 0 ? 4 : participants.length > 0 ? 3 : 2);
+  let currentCourtAMatch = $derived(courtAMatches.find(m => m.status === 'in_progress') || null);
+  let currentCourtBMatch = $derived(courtBMatches.find(m => m.status === 'in_progress') || null);
   
   // Build a reactive map of group courts from matches
   let groupCourtMap = $derived.by(() => {
@@ -959,10 +961,9 @@
                       style="width: {courtAMatches.length > 0 ? (courtAMatches.filter(m => m.status === 'completed').length / courtAMatches.length) * 100 : 0}%"
                     />
                   </div>
-                  {@const currentA = courtAMatches.find(m => m.status === 'in_progress')}
-                  {#if currentA}
-                    {@const p1 = getMemberById(currentA.player1Id)}
-                    {@const p2 = getMemberById(currentA.player2Id)}
+                  {#if currentCourtAMatch}
+                    {@const p1 = getMemberById(currentCourtAMatch.player1Id)}
+                    {@const p2 = getMemberById(currentCourtAMatch.player2Id)}
                     <div class="text-center">
                       <div class="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Now Playing</div>
                       <div class="text-sm font-medium">{p1?.firstName} {p1?.lastName?.charAt(0)}.</div>
@@ -988,10 +989,9 @@
                       style="width: {courtBMatches.length > 0 ? (courtBMatches.filter(m => m.status === 'completed').length / courtBMatches.length) * 100 : 0}%"
                     />
                   </div>
-                  {@const currentB = courtBMatches.find(m => m.status === 'in_progress')}
-                  {#if currentB}
-                    {@const p1 = getMemberById(currentB.player1Id)}
-                    {@const p2 = getMemberById(currentB.player2Id)}
+                  {#if currentCourtBMatch}
+                    {@const p1 = getMemberById(currentCourtBMatch.player1Id)}
+                    {@const p2 = getMemberById(currentCourtBMatch.player2Id)}
                     <div class="text-center">
                       <div class="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Now Playing</div>
                       <div class="text-sm font-medium">{p1?.firstName} {p1?.lastName?.charAt(0)}.</div>
