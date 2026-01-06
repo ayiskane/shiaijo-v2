@@ -43,11 +43,25 @@ export const getByCourt = query({
     court: v.union(v.literal("A"), v.literal("B"))
   },
   handler: async (ctx, { tournamentId, court }) => {
-    const allMatches = await ctx.db
+    // Use indexed queries instead of filtering all matches
+    // Query 1: Get matches specifically for this court
+    const courtMatches = await ctx.db
       .query("matches")
-      .withIndex("by_tournament", (q) => q.eq("tournamentId", tournamentId))
+      .withIndex("by_tournament_court", (q) => 
+        q.eq("tournamentId", tournamentId).eq("court", court)
+      )
       .collect();
-    return allMatches.filter(m => m.court === court || m.court === "A+B");
+    
+    // Query 2: Get shared matches (A+B)
+    const sharedMatches = await ctx.db
+      .query("matches")
+      .withIndex("by_tournament_court", (q) => 
+        q.eq("tournamentId", tournamentId).eq("court", "A+B")
+      )
+      .collect();
+    
+    // Combine and sort by orderIndex
+    return [...courtMatches, ...sharedMatches].sort((a, b) => a.orderIndex - b.orderIndex);
   },
 });
 

@@ -18,11 +18,11 @@ export const get = query({
 export const getActive = query({
   args: {},
   handler: async (ctx) => {
-    const tournaments = await ctx.db
+    // Use .first() instead of .collect()[0] for efficiency
+    return await ctx.db
       .query("tournaments")
       .withIndex("by_status", (q) => q.eq("status", "in_progress"))
-      .collect();
-    return tournaments[0] || null;
+      .first();
   },
 });
 

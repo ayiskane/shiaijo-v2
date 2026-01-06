@@ -225,9 +225,10 @@
     transform: translateX(4px);
   }
 
-  /* Wide spectator card */
+  /* Wide spectator card - narrower width */
   .portal-wide {
     padding: 24px;
+    max-width: 280px;
   }
 
   .portal-wide .portal-kanji {
@@ -358,9 +359,13 @@
     .portal-wide .portal-kanji {
       font-size: 36px;
     }
-    
+
     .portal-wide .portal-label {
       font-size: 12px;
+    }
+
+    .portal-wide .portal-desc {
+      font-size: 10px;
     }
 
     .staff-row {
@@ -373,10 +378,6 @@
 
     .portal-staff .portal-kanji {
       font-size: 28px;
-    }
-    
-    .portal-staff .portal-label {
-      font-size: 9px;
     }
   }
 

@@ -33,10 +33,12 @@ export const add = mutation({
     groupId: v.string(),
   },
   handler: async (ctx, { tournamentId, memberId, groupId }) => {
+    // Use compound index for efficient lookup
     const existing = await ctx.db
       .query("participants")
-      .withIndex("by_tournament", (q) => q.eq("tournamentId", tournamentId))
-      .filter((q) => q.eq(q.field("memberId"), memberId))
+      .withIndex("by_tournament_member", (q) => 
+        q.eq("tournamentId", tournamentId).eq("memberId", memberId)
+      )
       .first();
     
     if (existing) {
@@ -96,10 +98,12 @@ export const addBulk = mutation({
   handler: async (ctx, { tournamentId, participants }) => {
     const ids = [];
     for (const p of participants) {
+      // Use compound index for efficient lookup
       const existing = await ctx.db
         .query("participants")
-        .withIndex("by_tournament", (q) => q.eq("tournamentId", tournamentId))
-        .filter((q) => q.eq(q.field("memberId"), p.memberId))
+        .withIndex("by_tournament_member", (q) =>
+          q.eq("tournamentId", tournamentId).eq("memberId", p.memberId)
+        )
         .first();
       
       if (!existing) {
@@ -128,10 +132,12 @@ export const removeByMember = mutation({
     memberId: v.id("members"),
   },
   handler: async (ctx, { tournamentId, memberId }) => {
+    // Use compound index for efficient lookup
     const participant = await ctx.db
       .query("participants")
-      .withIndex("by_tournament", (q) => q.eq("tournamentId", tournamentId))
-      .filter((q) => q.eq(q.field("memberId"), memberId))
+      .withIndex("by_tournament_member", (q) =>
+        q.eq("tournamentId", tournamentId).eq("memberId", memberId)
+      )
       .first();
     
     if (participant) {

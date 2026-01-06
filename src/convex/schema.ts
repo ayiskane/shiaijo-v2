@@ -50,6 +50,7 @@ export default defineSchema({
     groupId: v.string(),
   }).index("by_tournament", ["tournamentId"])
     .index("by_tournament_group", ["tournamentId", "groupId"])
+    .index("by_tournament_member", ["tournamentId", "memberId"])
     .index("by_member", ["memberId"]),
 
   // Matches - individual bouts
