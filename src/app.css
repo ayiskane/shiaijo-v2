@@ -119,38 +119,94 @@
 }
 
 .dark {
-  /* Ink & Paper Dark Theme - Warm, earthy tones */
+  /* ===========================================
+     RENBU 練武 Theme (Default)
+     Warm amber from the Renbu logo, earthy dojo tones
+     Used by: Landing, Spectator, Courtkeeper
+     =========================================== */
   --background: oklch(0.13 0.01 60);           /* #0c0b09 - Deep warm black */
-  --foreground: oklch(0.92 0.02 80);           /* #ede8de - Warm off-white */
-  --card: oklch(0.16 0.01 60);                 /* Slightly lighter than bg */
-  --card-foreground: oklch(0.92 0.02 80);
-  --popover: oklch(0.18 0.01 60);
-  --popover-foreground: oklch(0.92 0.02 80);
-  --primary: oklch(0.65 0.18 25);              /* #dc4c4c - Red accent */
-  --primary-foreground: oklch(0.98 0.01 80);
-  --secondary: oklch(0.20 0.01 60);
-  --secondary-foreground: oklch(0.92 0.02 80);
-  --muted: oklch(0.22 0.01 60);
-  --muted-foreground: oklch(0.60 0.03 70);     /* #8f8475 - Warm muted */
-  --accent: oklch(0.65 0.18 25);               /* Red accent */
-  --accent-foreground: oklch(0.98 0.01 80);
-  --destructive: oklch(0.65 0.20 25);
-  --border: oklch(1 0 0 / 5%);                 /* Subtle warm border */
-  --input: oklch(1 0 0 / 8%);
-  --ring: oklch(0.65 0.18 25);                 /* Red ring */
-  --chart-1: oklch(0.65 0.18 25);
+  --foreground: oklch(0.95 0.02 85);           /* #fef3c7 - Warm cream */
+  --card: oklch(0.16 0.01 55);
+  --card-foreground: oklch(0.95 0.02 85);
+  --popover: oklch(0.18 0.01 55);
+  --popover-foreground: oklch(0.95 0.02 85);
+  --primary: oklch(0.70 0.16 70);              /* #d97706 - Amber */
+  --primary-foreground: oklch(0.13 0.01 60);
+  --secondary: oklch(0.50 0.02 60);            /* Warm slate */
+  --secondary-foreground: oklch(0.95 0.02 85);
+  --muted: oklch(0.22 0.01 55);
+  --muted-foreground: oklch(0.65 0.02 70);     /* #a8a29e - Warm gray */
+  --accent: oklch(0.70 0.16 70);               /* Amber accent */
+  --accent-foreground: oklch(0.13 0.01 60);
+  --destructive: oklch(0.60 0.20 25);          /* Red for errors */
+  --border: oklch(0.70 0.16 70 / 12%);         /* Amber tinted border */
+  --input: oklch(0.70 0.16 70 / 8%);
+  --ring: oklch(0.70 0.16 70);
+  --chart-1: oklch(0.70 0.16 70);
   --chart-2: oklch(0.60 0.15 150);
   --chart-3: oklch(0.70 0.15 60);
   --chart-4: oklch(0.55 0.20 280);
   --chart-5: oklch(0.65 0.15 200);
-  --sidebar: oklch(0.14 0.01 60);
-  --sidebar-foreground: oklch(0.92 0.02 80);
-  --sidebar-primary: oklch(0.65 0.18 25);
-  --sidebar-primary-foreground: oklch(0.98 0.01 80);
-  --sidebar-accent: oklch(0.20 0.01 60);
-  --sidebar-accent-foreground: oklch(0.92 0.02 80);
-  --sidebar-border: oklch(1 0 0 / 5%);
-  --sidebar-ring: oklch(0.65 0.18 25);
+  --sidebar: oklch(0.14 0.01 55);
+  --sidebar-foreground: oklch(0.95 0.02 85);
+  --sidebar-primary: oklch(0.70 0.16 70);
+  --sidebar-primary-foreground: oklch(0.13 0.01 60);
+  --sidebar-accent: oklch(0.20 0.01 55);
+  --sidebar-accent-foreground: oklch(0.95 0.02 85);
+  --sidebar-border: oklch(0.70 0.16 70 / 10%);
+  --sidebar-ring: oklch(0.70 0.16 70);
+  
+  /* Theme-specific colors */
+  --theme-accent: #d97706;
+  --theme-accent-light: #f59e0b;
+  --theme-glow: rgba(217, 119, 6, 0.3);
+  --aka: #ef4444;
+  --shiro: #d1d5db;
+}
+
+/* ===========================================
+   SUMI 墨 Theme (Admin Portal)
+   Pure ink aesthetics, monochrome with subtle warmth
+   Inspired by Sumi-e ink painting
+   =========================================== */
+.dark.theme-sumi {
+  --foreground: oklch(0.85 0.01 60);           /* #d6d3d1 - Warm white */
+  --card: oklch(0.15 0.005 60);
+  --card-foreground: oklch(0.85 0.01 60);
+  --popover: oklch(0.17 0.005 60);
+  --popover-foreground: oklch(0.85 0.01 60);
+  --primary: oklch(0.68 0.01 60);              /* #a8a29e - Warm gray accent */
+  --primary-foreground: oklch(0.13 0.01 60);
+  --secondary: oklch(0.40 0.01 60);            /* #57534e - Stone */
+  --secondary-foreground: oklch(0.85 0.01 60);
+  --muted: oklch(0.20 0.005 60);
+  --muted-foreground: oklch(0.52 0.01 60);     /* #78716c - Medium stone */
+  --accent: oklch(0.68 0.01 60);
+  --accent-foreground: oklch(0.13 0.01 60);
+  --destructive: oklch(0.50 0.18 25);          /* Deep red */
+  --border: oklch(1 0 0 / 8%);                 /* Subtle white border */
+  --input: oklch(1 0 0 / 6%);
+  --ring: oklch(0.68 0.01 60);
+  --chart-1: oklch(0.68 0.01 60);
+  --chart-2: oklch(0.55 0.01 60);
+  --chart-3: oklch(0.45 0.01 60);
+  --chart-4: oklch(0.60 0.01 60);
+  --chart-5: oklch(0.50 0.01 60);
+  --sidebar: oklch(0.12 0.005 60);
+  --sidebar-foreground: oklch(0.85 0.01 60);
+  --sidebar-primary: oklch(0.68 0.01 60);
+  --sidebar-primary-foreground: oklch(0.13 0.01 60);
+  --sidebar-accent: oklch(0.18 0.005 60);
+  --sidebar-accent-foreground: oklch(0.85 0.01 60);
+  --sidebar-border: oklch(1 0 0 / 6%);
+  --sidebar-ring: oklch(0.68 0.01 60);
+  
+  /* Theme-specific colors */
+  --theme-accent: #a8a29e;
+  --theme-accent-light: #d6d3d1;
+  --theme-glow: rgba(168, 162, 158, 0.2);
+  --aka: #b91c1c;
+  --shiro: #e7e5e4;
 }
 
 @theme inline {
@@ -231,14 +287,23 @@
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
   }
   
-  /* Red glow effect for kanji/icons */
+  /* Glow effects using theme accent */
   .glow-accent {
-    filter: drop-shadow(0 0 20px oklch(0.65 0.18 25 / 0.15));
+    filter: drop-shadow(0 0 20px var(--theme-glow, rgba(217, 119, 6, 0.15)));
   }
   
-  /* Strong red glow (like logo) */
   .glow-accent-strong {
-    filter: drop-shadow(0 0 30px oklch(0.65 0.18 25 / 0.3));
+    filter: drop-shadow(0 0 30px var(--theme-glow, rgba(217, 119, 6, 0.3)));
+  }
+  
+  /* Renbu amber glow */
+  .glow-renbu {
+    filter: drop-shadow(0 0 20px rgba(217, 119, 6, 0.25));
+  }
+  
+  /* Sumi subtle glow */
+  .glow-sumi {
+    filter: drop-shadow(0 0 15px rgba(168, 162, 158, 0.15));
   }
 }
 
@@ -246,6 +311,7 @@
 .font-jp {
   font-family: var(--font-jp);
 }
+
 
 
 
