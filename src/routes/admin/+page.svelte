@@ -140,6 +140,7 @@
   
   let progressPercent = $derived(matches.length > 0 ? Math.round((completedMatches.length / matches.length) * 100) : 0);
   let isComplete = $derived(matches.length > 0 && completedMatches.length === matches.length);
+  let setupStep = $derived(matches.length > 0 ? 4 : participants.length > 0 ? 3 : 2);
   
   // Build a reactive map of group courts from matches
   let groupCourtMap = $derived.by(() => {
@@ -746,18 +747,14 @@
 
               <!-- Stepper Progress -->
               <div class="flex items-center justify-between mb-8 relative px-2">
-                {@const hasParticipants = participants.length > 0}
-                {@const hasMatches = matches.length > 0}
-                {@const currentStep = hasMatches ? 4 : hasParticipants ? 3 : 2}
-                
                 {#each [
                   { num: 1, name: 'Created', icon: '✓' },
                   { num: 2, name: 'Participants', icon: '👥' },
                   { num: 3, name: 'Groups', icon: '⚙️' },
                   { num: 4, name: 'Ready', icon: '⚔️' }
                 ] as step, i}
-                  {@const isActive = step.num === currentStep}
-                  {@const isComplete = step.num < currentStep}
+                  {@const isActive = step.num === setupStep}
+                  {@const isComplete = step.num < setupStep}
                   <div class="flex flex-col items-center flex-1 z-10">
                     <div class={cn(
                       "w-11 h-11 rounded-xl flex items-center justify-center text-base mb-1 transition-all",
@@ -776,7 +773,7 @@
                 <div class="absolute top-5 left-12 right-12 h-0.5 bg-muted -z-0">
                   <div 
                     class="h-full bg-emerald-500 transition-all" 
-                    style="width: {((currentStep - 1) / 3) * 100}%" 
+                    style="width: {((setupStep - 1) / 3) * 100}%" 
                   />
                 </div>
               </div>
@@ -1832,6 +1829,7 @@
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>
+
 
 
 
