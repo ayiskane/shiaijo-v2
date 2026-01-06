@@ -2,21 +2,72 @@
 
 @import "tw-animate-css";
 
-/* Load Inter font from Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+/* ===========================================
+   SELF-HOSTED FONTS (Optimized WOFF2)
+   - Better performance than Google Fonts CDN
+   - No third-party requests
+   - GDPR compliant
+   =========================================== */
 
-/* Japanese font - for kanji and Japanese characters */
+/* Titillium Web - Primary UI Font */
+@font-face {
+  font-family: 'Titillium Web';
+  src: url('/fonts/TitilliumWeb-ExtraLight.woff2') format('woff2');
+  font-weight: 200;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Titillium Web';
+  src: url('/fonts/TitilliumWeb-Light.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Titillium Web';
+  src: url('/fonts/TitilliumWeb-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Titillium Web';
+  src: url('/fonts/TitilliumWeb-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Titillium Web';
+  src: url('/fonts/TitilliumWeb-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Titillium Web';
+  src: url('/fonts/TitilliumWeb-Black.woff2') format('woff2');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Japanese fonts - for kanji and Japanese characters */
 @font-face {
   font-family: 'SicYubi-HyojunGakushu';
   src: url('/fonts/SicYubi-HyojunGakushu.ttf') format('truetype');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
-  /* Unicode ranges for Japanese characters (Hiragana, Katakana, Kanji, punctuation) */
   unicode-range: U+3000-303F, U+3040-309F, U+30A0-30FF, U+4E00-9FFF, U+FF00-FFEF, U+2E80-2EFF, U+3200-32FF, U+3400-4DBF, U+20000-2A6DF;
 }
 
-/* Fallback Japanese font */
 @font-face {
   font-family: 'SicYubi-FudeGyosho';
   src: url('/fonts/SicYubi-FudeGyosho.ttf') format('truetype');
@@ -30,7 +81,7 @@
 
 :root {
   /* Font variables */
-  --font-default: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-default: 'Titillium Web', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-jp: 'SicYubi-HyojunGakushu', 'SicYubi-FudeGyosho', serif;
   
   --radius: 0.625rem;
@@ -156,4 +207,5 @@
 .font-jp {
   font-family: var(--font-jp);
 }
+
 
