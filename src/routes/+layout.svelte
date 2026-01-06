@@ -15,8 +15,7 @@
 <Toaster richColors position="top-center" />
 
 <svelte:head>
-	<link rel="stylesheet" href="/FA/css/all.css" />
-	<!-- Preload critical fonts for faster rendering -->
+	<!-- Preload critical fonts for faster rendering (already in app.html, but fallback) -->
 	<link
 		rel="preload"
 		href="/fonts/TitilliumWeb-Regular.woff2"
@@ -40,4 +39,3 @@
 	/>
 </svelte:head>
 {@render children()}
-
