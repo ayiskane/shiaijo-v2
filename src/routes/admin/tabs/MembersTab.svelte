@@ -55,12 +55,12 @@
   });
 </script>
 
-<!-- Top Bar - Hybrid: Design 2 structure with Design 1 centered tabs -->
+<!-- Top Bar -->
 <div class="top-bar">
-  <!-- Left: Breadcrumb + Title -->
+  <!-- Left: Breadcrumb + Title (inline) -->
   <div class="top-bar-left">
-    <div class="top-bar-breadcrumb">Admin / Roster</div>
-    <h1 class="top-bar-title">Member Management</h1>
+    <span class="top-bar-breadcrumb">Admin</span>
+    <span class="top-bar-title">Member Management</span>
   </div>
   
   <!-- Center: Filter Tabs -->
