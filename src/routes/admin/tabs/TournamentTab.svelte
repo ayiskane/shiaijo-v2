@@ -82,8 +82,10 @@
   export let getMemberById: (id: string) => any;
   export let formatTimer: (secs: number) => string;
 
+  const BUILD_TAG = 'tournament-settings-optim-v3'; // helps verify deploy on Vercel
+
   function openSettings() {
-    console.debug('[admin][tournament] settings gear clicked', { selectedTournamentId, status: selectedTournament?.status });
+    console.debug('[admin][tournament] settings gear clicked', { selectedTournamentId, status: selectedTournament?.status, build: BUILD_TAG });
     onOpenSettings();
   }
 
@@ -267,27 +269,14 @@
                           </div>
                           <span class="text-xs text-muted-foreground">{groupMembers.length} members</span>
                         </div>
-                        <div class="flex gap-1 shrink-0" role="group" aria-label="Select court">
-                          {#each ['A','A+B','B'] as c}
-                            <button
-                              class={cn(
-                                'w-9 h-9 rounded-md text-xs font-bold border transition-colors',
-                                court === c
-                                  ? c === 'A' ? 'bg-amber-500 text-black border-amber-500'
-                                  : c === 'B' ? 'bg-sky-500 text-white border-sky-500'
-                                  : 'bg-emerald-500 text-white border-emerald-500'
-                                  : 'bg-muted text-muted-foreground border-border hover:bg-accent/30'
-                              )}
-                              aria-pressed={court === c}
-                              onclick={() => onSetGroupCourt(groupId, c)}
-                            >
-                              {c === 'A+B' ? '+' : c}
-                            </button>
-                          {/each}
-                        </div>
-                      </div>
-                    {/each}
-                  </div>
+                <ToggleGroup.Root type="single" value={court} onValueChange={(value) => value && onSetGroupCourt(groupId, value)} class="court-toggle-root">
+                  <ToggleGroup.Item value="A" aria-label="Court A" class="court-toggle-item">A</ToggleGroup.Item>
+                  <ToggleGroup.Item value="A+B" aria-label="Both Courts" class="court-toggle-item">+</ToggleGroup.Item>
+                  <ToggleGroup.Item value="B" aria-label="Court B" class="court-toggle-item">B</ToggleGroup.Item>
+                </ToggleGroup.Root>
+              </div>
+            {/each}
+          </div>
                 </div>
               {/if}
 
@@ -510,24 +499,11 @@
                   <div class="font-medium truncate">{group?.name || groupId}</div>
                   <span class="text-xs text-muted-foreground">{groupStats.completed}/{groupStats.total} matches</span>
                 </div>
-                <div class="flex gap-1 shrink-0" role="group" aria-label="Select court">
-                  {#each ['A','A+B','B'] as c}
-                    <button
-                      class={cn(
-                        'px-3 py-2 rounded-md text-xs font-bold border transition-colors',
-                        court === c
-                          ? c === 'A' ? 'bg-amber-500 text-black border-amber-500'
-                          : c === 'B' ? 'bg-sky-500 text-white border-sky-500'
-                          : 'bg-emerald-500 text-white border-emerald-500'
-                          : 'bg-muted text-muted-foreground border-border hover:bg-accent/30'
-                      )}
-                      aria-pressed={court === c}
-                      onclick={() => onSetGroupCourt(groupId, c)}
-                    >
-                      {c === 'A+B' ? '+' : c}
-                    </button>
-                  {/each}
-                </div>
+                <ToggleGroup.Root type="single" value={court} onValueChange={(value) => value && onSetGroupCourt(groupId, value)} class="court-toggle-root">
+                  <ToggleGroup.Item value="A" aria-label="Court A" class="court-toggle-item">A</ToggleGroup.Item>
+                  <ToggleGroup.Item value="A+B" aria-label="Both Courts" class="court-toggle-item">+</ToggleGroup.Item>
+                  <ToggleGroup.Item value="B" aria-label="Court B" class="court-toggle-item">B</ToggleGroup.Item>
+                </ToggleGroup.Root>
               </div>
             {/each}
           </div>

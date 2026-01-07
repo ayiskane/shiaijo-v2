@@ -1332,6 +1332,49 @@
     backdrop-filter: blur(16px);
     border-top: 1px solid rgba(92,99,112,0.5);
   }
+
+  /* Court toggle styling (shadcn ToggleGroup override) */
+  .court-toggle-root {
+    display: inline-flex;
+    gap: 0;
+    background: rgba(20,19,16,0.8);
+    border: 1px solid rgba(92,99,112,0.35);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 8px 24px rgba(0,0,0,0.35);
+  }
+  .court-toggle-item {
+    @apply px-3 py-2 text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground;
+    min-width: 42px;
+    text-align: center;
+    border: none;
+    background: transparent;
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+  .court-toggle-item:first-child { border-radius: 12px 0 0 12px; }
+  .court-toggle-item:last-child { border-radius: 0 12px 12px 0; }
+  .court-toggle-item[data-state="on"] {
+    color: #0c0b09;
+  }
+  .court-toggle-item[data-state="on"][data-value="A"] {
+    background: linear-gradient(135deg, #fbbf24, #d97706);
+    color: #0c0b09;
+  }
+  .court-toggle-item[data-state="on"][data-value="A+B"] {
+    background: linear-gradient(135deg, #34d399, #059669);
+    color: #0c0b09;
+  }
+  .court-toggle-item[data-state="on"][data-value="B"] {
+    background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+    color: #0c0b09;
+  }
+  .court-toggle-item[data-state="off"] {
+    background: transparent;
+  }
+  .court-toggle-item:hover {
+    color: var(--text-primary);
+    background: rgba(96,165,250,0.12);
+  }
   
   /* ---------------------------------------------------------------------------
      6.7 UI - Stats
