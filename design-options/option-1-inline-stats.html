@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Design Option 1 - Inline Stats Bar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --background: #0C0B09;
+            --surface: #141310;
+            --surface-elevated: #1A1916;
+            --indigo-primary: #3b82f6;
+            --indigo-light: #60a5fa;
+            --indigo-glow: rgba(59, 130, 246, 0.15);
+            --accent-fire: #E86F3A;
+            --accent-fire-glow: rgba(232, 111, 58, 0.2);
+            --text-primary: #EAEAEC;
+            --text-secondary: #9ca0ad;
+            --text-muted: #5c6370;
+            --text-faint: #3d4148;
+            --border-subtle: rgba(92, 99, 112, 0.2);
+            --border-default: rgba(92, 99, 112, 0.35);
+            --success: #4ade80;
+            --warning: #fbbf24;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Space Mono', monospace;
+            background: var(--background);
+            color: var(--text-primary);
+            padding: 40px;
+            min-height: 100vh;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            opacity: 0.02;
+            pointer-events: none;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+            z-index: 1000;
+        }
+        
+        .title {
+            font-family: 'Noto Serif JP', serif;
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+        
+        .subtitle {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 32px;
+        }
+        
+        /* OPTION 1: Inline Stats Bar */
+        .inline-stats-bar {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            padding: 16px 20px;
+            background: var(--surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            margin-bottom: 24px;
+        }
+        
+        .stat-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .stat-group .stat-value {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .stat-group .stat-label {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .stat-divider {
+            width: 1px;
+            height: 24px;
+            background: var(--border-subtle);
+        }
+        
+        .stat-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+        }
+        
+        .stat-icon.indigo { background: var(--indigo-glow); }
+        .stat-icon.success { background: rgba(74, 222, 128, 0.12); }
+        .stat-icon.warning { background: rgba(251, 191, 36, 0.12); }
+        .stat-icon.fire { background: var(--accent-fire-glow); }
+        
+        .spacer { flex: 1; }
+        
+        .filter-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: var(--background);
+            border-radius: 6px;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+        
+        .filter-info span {
+            color: var(--indigo-light);
+            font-weight: 600;
+        }
+        
+        /* Sample table preview */
+        .table-preview {
+            background: var(--surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        
+        .table-preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .table-preview-title {
+            font-family: 'Noto Serif JP', serif;
+            font-size: 0.95rem;
+        }
+        
+        .table-row {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        
+        .table-row:last-child { border-bottom: none; }
+        
+        .member-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--surface-elevated);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            margin-right: 12px;
+        }
+        
+        .member-name {
+            font-size: 0.8rem;
+            flex: 1;
+        }
+        
+        .badge {
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.6rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .badge.active {
+            background: rgba(74, 222, 128, 0.12);
+            color: var(--success);
+        }
+    </style>
+</head>
+<body>
+    <div class="title">Option 1: Inline Stats Bar</div>
+    <p class="subtitle">Compact horizontal bar with all stats in one line. Clean and space-efficient.</p>
+    
+    <!-- The new stats bar design -->
+    <div class="inline-stats-bar">
+        <div class="stat-group">
+            <div class="stat-icon indigo">👥</div>
+            <div>
+                <div class="stat-value">248</div>
+                <div class="stat-label">Total</div>
+            </div>
+        </div>
+        
+        <div class="stat-divider"></div>
+        
+        <div class="stat-group">
+            <div class="stat-icon success">✓</div>
+            <div>
+                <div class="stat-value">186</div>
+                <div class="stat-label">Registered</div>
+            </div>
+        </div>
+        
+        <div class="stat-divider"></div>
+        
+        <div class="stat-group">
+            <div class="stat-icon warning">⏳</div>
+            <div>
+                <div class="stat-value">62</div>
+                <div class="stat-label">Pending</div>
+            </div>
+        </div>
+        
+        <div class="spacer"></div>
+        
+        <div class="filter-info">
+            Showing <span>248</span> of 248 members
+        </div>
+    </div>
+    
+    <!-- Table preview -->
+    <div class="table-preview">
+        <div class="table-preview-header">
+            <div class="table-preview-title">Member Directory</div>
+        </div>
+        <div class="table-row">
+            <div class="member-avatar">TK</div>
+            <div class="member-name">Tanaka Kenji</div>
+            <span class="badge active">Active</span>
+        </div>
+        <div class="table-row">
+            <div class="member-avatar">SM</div>
+            <div class="member-name">Suzuki Mei</div>
+            <span class="badge active">Active</span>
+        </div>
+        <div class="table-row">
+            <div class="member-avatar">NH</div>
+            <div class="member-name">Nakamura Hiro</div>
+            <span class="badge active">Active</span>
+        </div>
+    </div>
+</body>
+</html>
