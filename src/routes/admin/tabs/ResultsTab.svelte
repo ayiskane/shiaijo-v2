@@ -19,9 +19,30 @@
 
   let listEl: HTMLElement;
   $: listEl && autoAnimate(listEl);
+  
+  $: completedMatches = matches.filter(m => m.status === 'completed');
 </script>
 
-<h1 class="mb-6 text-2xl font-bold">Results</h1>
+<!-- Top Bar - Design 2 -->
+<div class="top-bar sticky top-0 z-10 -mx-4 sm:-mx-6 px-5 py-4 mb-5" style="background: var(--surface); border-bottom: 1px solid var(--border-subtle);">
+  <div class="flex items-center justify-between">
+    <div>
+      <div class="text-[0.6rem] uppercase tracking-widest mb-1" style="color: var(--text-faint);">Admin / Shiai</div>
+      <h1 class="font-jp text-lg font-bold" style="color: var(--text-primary);">Results & Standings</h1>
+    </div>
+    {#if selectedTournament}
+      <div class="flex items-center gap-3 px-4 py-2 rounded-lg" style="background: var(--background); border: 1px solid var(--border-subtle);">
+        <span class="text-xs" style="color: var(--text-muted);">Tournament:</span>
+        <span class="text-sm font-semibold" style="color: var(--text-primary);">{selectedTournament.name}</span>
+      </div>
+    {/if}
+    <div class="flex items-center gap-3">
+      <button class="btn-sm ghost">📄 Export</button>
+      <button class="btn-sm ghost">🖨 Print</button>
+    </div>
+  </div>
+</div>
+
 {#if !selectedTournament}
   <p class="text-muted-foreground">No tournament selected</p>
 {:else if matches.length === 0}
