@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { useQuery } from 'convex-svelte';
+  import { api } from '../convex/_generated/api';
+
   const shiaijoLogo = '/shiaijologo.png';
   
   const spectator = { id: 'spectator', href: '/spectator', kanji: '観', label: 'SPECTATOR', desc: 'Watch live tournament matches' };
@@ -8,6 +11,10 @@
     { id: 'courtkeeper', href: '/courtkeeper', kanji: '審', label: 'COURT' },
     { id: 'volunteer', href: '/volunteer', kanji: '奉', label: 'VOLUNTEER' },
   ];
+
+  const tournamentsQuery = useQuery(api.tournaments.list, () => ({}));
+  let tournaments = $derived(tournamentsQuery.data ?? []);
+  let hasLiveTournament = $derived(tournaments.some(t => t.status === 'in_progress'));
 </script>
 
 <svelte:head>
@@ -37,11 +44,16 @@
       <div class="section-label">PORTALS</div>
       
       <!-- Spectator - Full width, highlighted -->
-      <a href={spectator.href} class="portal-card portal-spectator">
+      <a
+        href={hasLiveTournament ? spectator.href : undefined}
+        class={`portal-card portal-spectator ${hasLiveTournament ? '' : 'disabled'}`}
+        aria-disabled={!hasLiveTournament}
+        title={hasLiveTournament ? spectator.desc : 'No active tournaments'}
+      >
         <span class="portal-kanji">{spectator.kanji}</span>
         <div class="portal-text">
           <span class="portal-label">{spectator.label}</span>
-          <span class="portal-desc">{spectator.desc}</span>
+          <span class="portal-desc">{hasLiveTournament ? spectator.desc : 'No active tournaments'}</span>
         </div>
         <span class="portal-arrow">→</span>
       </a>
@@ -195,6 +207,12 @@
     text-decoration: none;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     animation: fadeIn 0.5s ease-out backwards;
+  }
+
+  .portal-card.disabled {
+    opacity: 0.35;
+    pointer-events: none;
+    border-style: dashed;
   }
 
   .portal-card:hover {
