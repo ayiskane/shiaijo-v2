@@ -59,6 +59,11 @@
   onDestroy(() => {
     document.documentElement.classList.remove('theme-sumi');
   });
+
+  // Debug: track tab changes and loading state
+  $effect(() => {
+    console.debug('[admin] activeTab', activeTab, { loading });
+  });
   
   // Real-time subscriptions
   const groupsQuery = useQuery(api.groups.list, () => ({}));

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import autoAnimate from '@formkit/auto-animate';
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
@@ -39,6 +40,15 @@
 
   let listContainer: HTMLElement;
   $: listContainer && autoAnimate(listContainer);
+
+  onMount(() => {
+    console.debug('[admin] MembersTab mounted', {
+      membersCount: members.length,
+      groupsCount: groups.length,
+      filteredCount: filteredMembers.length,
+      selectedTournament: selectedTournament?._id ?? null,
+    });
+  });
 </script>
 
 <!-- Sticky Search & Filter Bar -->

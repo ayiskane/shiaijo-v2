@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import autoAnimate from '@formkit/auto-animate';
   import { Badge } from '$lib/components/ui/badge';
   import { Button } from '$lib/components/ui/button';
@@ -18,6 +19,14 @@
 
   let listEl: HTMLElement;
   $: listEl && autoAnimate(listEl);
+
+  onMount(() => {
+    console.debug('[admin] GroupsTab mounted', {
+      groupsCount: groups.length,
+      expandedGroupId,
+      membersByGroupIdSize: membersByGroupId.size,
+    });
+  });
 </script>
 
 <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">

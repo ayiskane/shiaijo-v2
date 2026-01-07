@@ -86,6 +86,15 @@
   $: listEl && autoAnimate(listEl);
   // mark externally-provided props as used to satisfy runes a11y checks
   const _keepProps = [groups, pendingMatches, SCORE_LABELS];
+
+  onMount(() => {
+    console.debug('[admin] TournamentTab mounted', {
+      tournamentsCount: tournaments.length,
+      selectedTournamentId,
+      matchesCount: matches.length,
+      participantsCount: participants.length,
+    });
+  });
 </script>
 
 <!-- Header -->
