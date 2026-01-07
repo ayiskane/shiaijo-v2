@@ -26,8 +26,8 @@
 <!-- Top Bar -->
 <div class="top-bar">
   <div class="top-bar-left">
-    <div class="top-bar-breadcrumb">Admin / Shiai</div>
-    <h1 class="top-bar-title">Results & Standings</h1>
+    <span class="top-bar-breadcrumb">Admin</span>
+    <span class="top-bar-title">Results & Standings</span>
   </div>
   {#if selectedTournament}
     <div class="top-bar-center">
