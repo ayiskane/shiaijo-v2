@@ -1230,28 +1230,19 @@
     <!-- Footer -->
     <div class="sidebar-footer">
       {#if sidebarCollapsed}
-        <!-- Collapsed footer: icons only -->
+        <!-- Collapsed footer: portal icons only -->
         <div class="flex flex-col items-center gap-2">
           <a href="/" class="nav-icon-item" title="Home"><Home class="h-5 w-5" /></a>
           <a href="/courtkeeper" class="nav-icon-item" title="Courtkeeper"><Swords class="h-5 w-5" /></a>
           <a href="/spectator" class="nav-icon-item" title="Spectator"><Eye class="h-5 w-5" /></a>
-          <div class="user-icon mt-2">AD</div>
         </div>
       {:else}
-        <!-- Expanded footer: full links + user card -->
+        <!-- Expanded footer: portal links only (no user card) -->
         <p class="footer-label">Switch Portal</p>
         <div class="flex flex-col gap-2">
           <a href="/" class="portal-link home"><Home class="h-4 w-4 shrink-0" /><span>Home</span></a>
           <a href="/courtkeeper" class="portal-link court"><Swords class="h-4 w-4 shrink-0" /><span>Courtkeeper</span></a>
           <a href="/spectator" class="portal-link spec"><Eye class="h-4 w-4 shrink-0" /><span>Spectator</span></a>
-        </div>
-        <div class="user-card mt-3">
-          <div class="user-avatar">AD</div>
-          <div class="flex-1">
-            <div class="user-name">Admin</div>
-            <div class="user-role">Administrator</div>
-          </div>
-          <div class="user-status"></div>
         </div>
       {/if}
     </div>
