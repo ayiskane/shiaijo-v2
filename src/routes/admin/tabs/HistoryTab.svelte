@@ -15,27 +15,27 @@
     : completedTournaments;
 </script>
 
-<!-- Top Bar - Design 2 -->
-<div class="top-bar sticky top-0 z-10 -mx-4 sm:-mx-6 px-5 py-4 mb-5" style="background: var(--surface); border-bottom: 1px solid var(--border-subtle);">
-  <div class="flex items-center justify-between">
-    <div>
-      <div class="text-[0.6rem] uppercase tracking-widest mb-1" style="color: var(--text-faint);">Admin / Shiai</div>
-      <h1 class="font-jp text-lg font-bold" style="color: var(--text-primary);">Match History</h1>
-    </div>
-    <div class="flex items-center gap-6">
-      <div class="text-center">
-        <div class="text-xl font-bold" style="color: var(--text-primary);">{completedTournaments.length}</div>
-        <div class="text-[0.55rem] uppercase" style="color: var(--text-muted);">Tournaments</div>
+<!-- Top Bar -->
+<div class="top-bar">
+  <div class="top-bar-left">
+    <div class="top-bar-breadcrumb">Admin / Shiai</div>
+    <h1 class="top-bar-title">Match History</h1>
+  </div>
+  <div class="top-bar-center">
+    <div class="top-bar-stats">
+      <div class="top-bar-stat">
+        <div class="top-bar-stat-value">{completedTournaments.length}</div>
+        <div class="top-bar-stat-label">Tournaments</div>
       </div>
     </div>
-    <div class="flex items-center gap-2 px-3 py-1.5 rounded-md" style="background: var(--background); border: 1px solid var(--border-subtle); width: 220px;">
-      <Search class="h-3 w-3" style="color: var(--text-faint);" />
+  </div>
+  <div class="top-bar-right">
+    <div class="top-bar-search" style="width: 200px;">
+      <Search class="h-3.5 w-3.5" />
       <input 
         type="text" 
         bind:value={searchQuery}
         placeholder="Search tournaments..."
-        class="bg-transparent border-none outline-none text-xs w-full"
-        style="color: var(--text-primary);"
       />
     </div>
   </div>
