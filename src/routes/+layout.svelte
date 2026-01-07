@@ -5,7 +5,12 @@
 	import { Toaster } from '$lib/components/ui/sonner';
 	
 	// Setup Convex with the deployment URL
-	const CONVEX_URL = import.meta.env.PUBLIC_CONVEX_URL || 'https://rare-panther-467.convex.cloud';
+	const CONVEX_URL =
+		import.meta.env.PUBLIC_CONVEX_URL ||
+		import.meta.env.CONVEX_URL ||
+		// SSR safety for Vercel injected env at runtime
+		(process.env?.CONVEX_URL as string | undefined) ||
+		'https://rare-panther-467.convex.cloud';
 	setupConvex(CONVEX_URL);
 
 	let { children } = $props();

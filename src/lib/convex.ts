@@ -1,5 +1,9 @@
 // Convex client for SvelteKit
-const CONVEX_URL = import.meta.env.PUBLIC_CONVEX_URL || 'https://rare-panther-467.convex.cloud';
+const CONVEX_URL =
+  import.meta.env.PUBLIC_CONVEX_URL ||
+  import.meta.env.CONVEX_URL ||
+  (typeof process !== 'undefined' ? process.env.CONVEX_URL : undefined) ||
+  'https://rare-panther-467.convex.cloud';
 
 export async function convexQuery<T = unknown>(
   functionPath: string, 
