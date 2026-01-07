@@ -13,7 +13,11 @@
 		...restProps
 	}: ToggleGroupPrimitive.ItemProps & ToggleVariants = $props();
 
-	const ctx = getToggleGroupCtx();
+	const ctx = getToggleGroupCtx() ?? {
+		variant: variant ?? "default",
+		size: size ?? "default",
+		spacing: 0,
+	};
 </script>
 
 <ToggleGroupPrimitive.Item
