@@ -36,21 +36,19 @@
 
     <!-- Right side - Portals -->
     <div class="portals-section">
-      <!-- Spectator - Wide card -->
-      <a href={spectator.href} class="portal-card portal-wide">
-        <span class="portal-kanji">{spectator.kanji}</span>
-        <div class="portal-info">
-          <span class="portal-label">{spectator.label}</span>
-          <span class="portal-desc">{spectator.desc}</span>
-        </div>
-        <span class="portal-arrow">→</span>
-      </a>
+      <div class="staff-label">PORTALS</div>
+      <div class="portal-grid">
+        <a href={spectator.href} class="portal-card portal-spectator">
+          <div class="portal-info">
+            <span class="portal-kanji">{spectator.kanji}</span>
+            <div class="portal-text">
+              <span class="portal-label">{spectator.label}</span>
+              <span class="portal-desc">{spectator.desc}</span>
+            </div>
+          </div>
+          <span class="portal-arrow">→</span>
+        </a>
 
-      <!-- Staff label -->
-      <div class="staff-label">STAFF PORTALS</div>
-
-      <!-- Staff portals row -->
-      <div class="staff-row">
         {#each staffPortals as portal}
           <a href={portal.href} class="portal-card portal-staff">
             <span class="portal-kanji">{portal.kanji}</span>
@@ -229,29 +227,6 @@
     transform: translateX(4px);
   }
 
-  /* Wide spectator card - narrower width */
-  .portal-wide {
-    padding: 24px;
-    max-width: 280px;
-  }
-
-  .portal-wide .portal-kanji {
-    font-size: 48px;
-  }
-  
-  .portal-wide .portal-info {
-    min-width: 0;
-  }
-  
-  .portal-wide .portal-label {
-    font-size: 13px;
-  }
-  
-  .portal-wide .portal-desc {
-    font-size: 11px;
-  }
-
-  /* Staff section */
   .staff-label {
     font-size: 10px;
     letter-spacing: 0.3em;
@@ -260,19 +235,54 @@
     margin: 8px 0 4px 4px;
   }
 
-  .staff-row {
+  .portal-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    grid-auto-rows: 1fr;
+  }
+
+  .portal-spectator {
+    grid-column: 1 / -1;
+    aspect-ratio: 3 / 1; /* same height as staff squares when spanning 3 cols */
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 28px;
+    background: linear-gradient(120deg, rgba(59,130,246,0.12), rgba(99,102,241,0.10));
+  }
+
+  .portal-spectator .portal-info {
+    flex-direction: row;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .portal-spectator .portal-kanji {
+    font-size: 54px;
+  }
+
+  .portal-spectator .portal-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .portal-spectator .portal-label {
+    font-size: 14px;
+  }
+
+  .portal-spectator .portal-desc {
+    font-size: 12px;
   }
 
   .portal-staff {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 16px 12px;
+    padding: 18px 12px;
     gap: 8px;
-    aspect-ratio: 1;
+    aspect-ratio: 1 / 1;
+    min-height: 0;
   }
 
   .portal-staff .portal-kanji {
@@ -280,10 +290,10 @@
   }
 
   .portal-staff .portal-label {
-    font-size: 10px;
-    font-weight: 500;
-    color: var(--text-muted);
-    letter-spacing: 0.15em;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: 0.16em;
   }
 
   /* Footer */
@@ -343,11 +353,16 @@
 
     .portals-section {
       width: 100%;
-      max-width: 400px;
+      max-width: 420px;
     }
 
-    .staff-row {
-      grid-template-columns: repeat(3, 1fr);
+    .portal-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .portal-spectator {
+      grid-column: 1 / -1;
+      aspect-ratio: 2 / 1;
     }
   }
 
@@ -356,28 +371,20 @@
       width: 140px;
     }
 
-    .portal-wide {
+    .portal-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .portal-spectator {
+      aspect-ratio: 1.5 / 1;
       padding: 18px;
     }
 
-    .portal-wide .portal-kanji {
-      font-size: 36px;
-    }
-
-    .portal-wide .portal-label {
-      font-size: 12px;
-    }
-
-    .portal-wide .portal-desc {
-      font-size: 10px;
-    }
-
-    .staff-row {
-      gap: 8px;
-    }
-
     .portal-staff {
-      padding: 12px 8px;
+      aspect-ratio: auto;
+      flex-direction: row;
+      justify-content: flex-start;
+      gap: 12px;
     }
 
     .portal-staff .portal-kanji {
