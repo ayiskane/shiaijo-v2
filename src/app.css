@@ -645,24 +645,23 @@
     top: 0;
     z-index: 20;
     background: var(--surface);
-    border-bottom: 1px solid var(--border-subtle);
-    /* Mobile: match p-4 (16px) */
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
     padding: 12px 16px;
-    margin: -16px -16px 16px -16px;
+    margin-bottom: 16px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    min-height: 64px;
+    min-height: 56px;
   }
   
   @media (min-width: 640px) {
     .top-bar {
-      /* Desktop: match sm:p-6 (24px) */
       padding: 16px 24px;
-      margin: -24px -24px 24px -24px;
+      margin-bottom: 24px;
       gap: 24px;
-      min-height: 72px;
+      min-height: 64px;
     }
   }
   
