@@ -1051,6 +1051,13 @@
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-4px) scale(1.02); }
   }
+  @media (max-width: 640px) {
+    :global(.logo-bob) {
+      animation-play-state: running;
+      animation-duration: 2s;
+      will-change: transform;
+    }
+  }
 </style>
 
 {#if !accessUnlocked}
