@@ -84,7 +84,7 @@
     --glow: rgba(59, 130, 246, 0.3);
     
     /* Square button size - easy to change */
-    --square-size: 100px;
+    --square-size: 100px; /* 45+ accessible */
   }
 
   .landing {
