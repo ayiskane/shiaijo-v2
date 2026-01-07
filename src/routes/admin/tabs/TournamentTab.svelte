@@ -98,10 +98,43 @@
   });
 </script>
 
-<!-- Header -->
-<div class="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-  <h1 class="text-2xl font-bold">Tournament</h1>
-  <Button onclick={onOpenCreateTournament} class="w-full sm:w-auto"><Plus class="mr-2 h-4 w-4" /> New Tournament</Button>
+<!-- Top Bar - Design 2 -->
+<div class="top-bar sticky top-0 z-10 -mx-4 sm:-mx-6 px-5 py-4 mb-5" style="background: var(--surface); border-bottom: 1px solid var(--border-subtle);">
+  <div class="flex items-center justify-between">
+    <div>
+      <div class="text-[0.6rem] uppercase tracking-widest mb-1" style="color: var(--text-faint);">Admin / Shiai</div>
+      <div class="flex items-center gap-3">
+        <h1 class="font-jp text-lg font-bold" style="color: var(--text-primary);">Tournament Control</h1>
+        {#if selectedTournament?.status === 'in_progress'}
+          <span class="px-2 py-0.5 rounded text-[0.55rem] font-bold uppercase tracking-wide" style="background: rgba(74, 222, 128, 0.15); color: var(--success);">● Live</span>
+        {/if}
+      </div>
+    </div>
+    {#if selectedTournament}
+      <div class="flex items-center gap-4">
+        <div style="width: 160px;">
+          <div class="flex justify-between text-[0.6rem] mb-1.5">
+            <span style="color: var(--text-muted);">Progress</span>
+            <span class="font-semibold" style="color: var(--text-primary);">{progressPercent}%</span>
+          </div>
+          <div class="h-1.5 rounded-full" style="background: var(--background);">
+            <div class="h-full rounded-full" style="width: {progressPercent}%; background: linear-gradient(90deg, var(--indigo-primary), var(--indigo-light));"></div>
+          </div>
+        </div>
+        <div class="w-px h-8" style="background: var(--border-subtle);"></div>
+        <div class="text-center">
+          <div class="text-xl font-bold" style="color: var(--text-primary);">{matches.length - completedMatches.length}</div>
+          <div class="text-[0.55rem] uppercase" style="color: var(--text-muted);">Matches Left</div>
+        </div>
+      </div>
+    {/if}
+    <div class="flex items-center gap-3">
+      {#if selectedTournament}
+        <button class="btn-sm ghost" onclick={() => settingsSheetOpen = true}>⚙ Settings</button>
+      {/if}
+      <button class="btn-sm primary" onclick={onOpenCreateTournament}>+ New Tournament</button>
+    </div>
+  </div>
 </div>
 
 {#if tournaments.length === 0}
