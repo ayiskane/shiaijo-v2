@@ -164,48 +164,47 @@
 
 /* ===========================================
    SUMI 墨 Theme (Admin Portal)
-   Pure ink aesthetics, monochrome with subtle warmth
-   Inspired by Sumi-e ink painting
+   Katana Ai-iro variant: indigo + steel + forge accent
    =========================================== */
 .dark.theme-sumi {
-  --background: oklch(0.13 0.005 0);            /* #0c0c0c - Pure dark black */
-  --foreground: oklch(0.85 0.01 60);           /* #d6d3d1 - Warm white */
-  --card: oklch(0.15 0.005 0);
-  --card-foreground: oklch(0.85 0.01 60);
-  --popover: oklch(0.17 0.005 0);
-  --popover-foreground: oklch(0.85 0.01 60);
-  --primary: oklch(0.68 0.01 60);              /* #a8a29e - Warm gray accent */
-  --primary-foreground: oklch(0.13 0.005 0);
-  --secondary: oklch(0.40 0.01 60);            /* #57534e - Stone */
-  --secondary-foreground: oklch(0.85 0.01 60);
-  --muted: oklch(0.20 0.005 0);
-  --muted-foreground: oklch(0.52 0.01 60);     /* #78716c - Medium stone */
-  --accent: oklch(0.68 0.01 60);
-  --accent-foreground: oklch(0.13 0.005 0);
-  --destructive: oklch(0.50 0.18 25);          /* Deep red */
-  --border: oklch(1 0 0 / 8%);                 /* Subtle white border */
-  --input: oklch(1 0 0 / 6%);
-  --ring: oklch(0.68 0.01 60);
-  --chart-1: oklch(0.68 0.01 60);
-  --chart-2: oklch(0.55 0.01 60);
-  --chart-3: oklch(0.45 0.01 60);
-  --chart-4: oklch(0.60 0.01 60);
-  --chart-5: oklch(0.50 0.01 60);
-  --sidebar: oklch(0.11 0.005 0);
-  --sidebar-foreground: oklch(0.85 0.01 60);
-  --sidebar-primary: oklch(0.68 0.01 60);
-  --sidebar-primary-foreground: oklch(0.13 0.005 0);
-  --sidebar-accent: oklch(0.18 0.005 0);
-  --sidebar-accent-foreground: oklch(0.85 0.01 60);
-  --sidebar-border: oklch(1 0 0 / 6%);
-  --sidebar-ring: oklch(0.68 0.01 60);
+  --background: #0c0b09;
+  --foreground: #eaeaec;
+  --card: #141310;
+  --card-foreground: #eaeaec;
+  --popover: #1a1916;
+  --popover-foreground: #eaeaec;
+  --primary: #3b82f6;                  /* Indigo primary */
+  --primary-foreground: #0c0b09;
+  --secondary: #3d4148;                /* Steel dark */
+  --secondary-foreground: #eaeaec;
+  --muted: #141310;
+  --muted-foreground: #9ca0ad;
+  --accent: #60a5fa;                   /* Indigo light */
+  --accent-foreground: #0c0b09;
+  --destructive: #f87171;
+  --border: rgba(59, 130, 246, 0.2);
+  --input: rgba(59, 130, 246, 0.12);
+  --ring: #3b82f6;
+  --chart-1: #3b82f6;
+  --chart-2: #60a5fa;
+  --chart-3: #5c6370;
+  --chart-4: #e86f3a;                  /* Forge fire accent */
+  --chart-5: #4ade80;
+  --sidebar: #0f0e0c;
+  --sidebar-foreground: #eaeaec;
+  --sidebar-primary: #3b82f6;
+  --sidebar-primary-foreground: #0c0b09;
+  --sidebar-accent: #141310;
+  --sidebar-accent-foreground: #eaeaec;
+  --sidebar-border: rgba(59, 130, 246, 0.25);
+  --sidebar-ring: #3b82f6;
   
   /* Theme-specific colors */
-  --theme-accent: #a8a29e;
-  --theme-accent-light: #d6d3d1;
-  --theme-glow: rgba(168, 162, 158, 0.2);
-  --aka: #b91c1c;
-  --shiro: #e7e5e4;
+  --theme-accent: #3b82f6;
+  --theme-accent-light: #60a5fa;
+  --theme-glow: rgba(59, 130, 246, 0.25);
+  --aka: #e86f3a;
+  --shiro: #c8ccd4;
 }
 
 @theme inline {
