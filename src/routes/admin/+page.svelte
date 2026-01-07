@@ -532,6 +532,11 @@
     newSet.has(groupId) ? newSet.delete(groupId) : newSet.add(groupId);
     expandedNavGroups = newSet;
   }
+
+  // Expand/collapse a single group in Groups tab
+  function setExpandedGroup(groupId: string | null) {
+    expandedGroupId = groupId;
+  }
   
   function toggleGroupCollapse(groupId: string) {
     const newSet = new Set(collapsedGroups);
@@ -865,6 +870,11 @@
       const result = await client.mutation(api.participants.clearAll, { tournamentId: selectedTournament._id });
       toast.success(`Removed ${result.removedCount} participants`);
     } catch (e) { toast.error('Failed to clear participants'); }
+  }
+
+  // wrapper used by Members tab prop
+  function clearParticipants() {
+    return clearAllParticipants();
   }
   
   async function toggleMemberRegistration(memberId: string) {

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import autoAnimate from '@formkit/auto-animate';
   import { cn } from '$lib/utils';
   import { Button } from '$lib/components/ui/button';
