@@ -30,34 +30,32 @@
   });
 </script>
 
-<!-- Top Bar - Design 2 -->
-<div class="top-bar sticky top-0 z-10 -mx-4 sm:-mx-6 px-5 py-4 mb-5" style="background: var(--surface); border-bottom: 1px solid var(--border-subtle);">
-  <div class="flex items-center justify-between">
-    <div>
-      <div class="text-[0.6rem] uppercase tracking-widest mb-1" style="color: var(--text-faint);">Admin / Roster</div>
-      <h1 class="font-jp text-lg font-bold" style="color: var(--text-primary);">Group Management</h1>
-    </div>
-    <div class="flex items-center gap-6">
-      <div class="text-center">
-        <div class="text-xl font-bold" style="color: var(--text-primary);">{groups.length}</div>
-        <div class="text-[0.55rem] uppercase" style="color: var(--text-muted);">Groups</div>
+<!-- Top Bar -->
+<div class="top-bar">
+  <div class="top-bar-left">
+    <div class="top-bar-breadcrumb">Admin / Roster</div>
+    <h1 class="top-bar-title">Group Management</h1>
+  </div>
+  <div class="top-bar-center">
+    <div class="top-bar-stats">
+      <div class="top-bar-stat">
+        <div class="top-bar-stat-value">{groups.length}</div>
+        <div class="top-bar-stat-label">Groups</div>
       </div>
-      <div class="w-px h-8" style="background: var(--border-subtle);"></div>
-      <div class="text-center">
-        <div class="text-xl font-bold" style="color: var(--indigo-light);">{groups.filter(g => g.type === 'bogu').length}</div>
-        <div class="text-[0.55rem] uppercase" style="color: var(--text-muted);">Bogu</div>
+      <div class="top-bar-divider"></div>
+      <div class="top-bar-stat">
+        <div class="top-bar-stat-value" style="color: var(--indigo-light);">{groups.filter(g => g.type === 'bogu').length}</div>
+        <div class="top-bar-stat-label">Bogu</div>
       </div>
-      <div class="w-px h-8" style="background: var(--border-subtle);"></div>
-      <div class="text-center">
-        <div class="text-xl font-bold" style="color: var(--accent-fire);">{groups.filter(g => g.type === 'hantei').length}</div>
-        <div class="text-[0.55rem] uppercase" style="color: var(--text-muted);">Hantei</div>
+      <div class="top-bar-divider"></div>
+      <div class="top-bar-stat">
+        <div class="top-bar-stat-value" style="color: var(--accent-fire);">{groups.filter(g => g.type === 'hantei').length}</div>
+        <div class="top-bar-stat-label">Hantei</div>
       </div>
     </div>
-    <div class="flex items-center gap-3">
-      <Button onclick={onOpenAddGroup} variant="outline" size="sm" class="btn-sm primary">
-        + Add Group
-      </Button>
-    </div>
+  </div>
+  <div class="top-bar-right">
+    <button onclick={onOpenAddGroup} class="btn-sm primary">+ Add Group</button>
   </div>
 </div>
 
