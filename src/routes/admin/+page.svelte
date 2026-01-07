@@ -1,7 +1,3 @@
-<script lang="ts" context="module">
-  export const ssr = false;
-</script>
-
 <script lang="ts">
   // Build timestamp: 2026-01-06T03:25:00Z
   import { onMount, onDestroy } from 'svelte';
