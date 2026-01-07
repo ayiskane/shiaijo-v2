@@ -1304,6 +1304,27 @@
   .members-compact tbody tr:hover {
     background: var(--surface-elevated);
   }
+
+  /* Glass panels used in admin headers */
+  .glass-panel {
+    background: radial-gradient(circle at 15% 15%, rgba(96,165,250,0.08), rgba(20,19,16,0.9));
+    border: 1px solid rgba(92, 99, 112, 0.45);
+    box-shadow:
+      0 10px 30px rgba(0,0,0,0.35),
+      inset 0 1px 0 rgba(255,255,255,0.04);
+    border-radius: 16px;
+    backdrop-filter: blur(10px);
+  }
+  .glass-input {
+    background: rgba(20,19,16,0.85);
+    border: 1px solid rgba(92,99,112,0.35);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  .pill-soft {
+    background: rgba(92,99,112,0.12);
+    border: 1px solid rgba(92,99,112,0.25);
+    border-radius: 9999px;
+  }
   
   /* ---------------------------------------------------------------------------
      6.7 UI - Stats

@@ -38,6 +38,7 @@
   export let resetMassMembers: () => void;
 
   let listContainer: HTMLElement;
+  let addMenuOpen = false;
   $: listContainer && autoAnimate(listContainer);
 
   // Pagination state
@@ -91,114 +92,129 @@
   });
 </script>
 
-<!-- Top Bar -->
-<div class="top-bar">
-  <!-- Left: Breadcrumb + Title (inline) -->
-  <div class="top-bar-left">
-    <span class="top-bar-breadcrumb">Admin</span>
-    <span class="top-bar-title">Member Management</span>
-  </div>
-  
-  <!-- Center: Filter Tabs -->
-  <div class="top-bar-center">
-    <div class="top-bar-tabs">
-      <button 
-        onclick={() => onRegistrationFilterChange('all')}
-        class={cn("top-bar-tab", registrationFilter === 'all' && "active")}
-      >
-        All Members
-      </button>
-      {#if selectedTournament}
-        <button 
-          onclick={() => onRegistrationFilterChange('registered')}
-          class={cn("top-bar-tab", registrationFilter === 'registered' && "active")}
-        >
-          Registered
-        </button>
-        <button 
-          onclick={() => onRegistrationFilterChange('unregistered')}
-          class={cn("top-bar-tab", registrationFilter === 'unregistered' && "active")}
-        >
-          Unregistered
-        </button>
-      {/if}
-    </div>
-  </div>
-  
-  <!-- Right Side: Search + Actions -->
-  <div class="top-bar-right">
-    <div class="top-bar-search">
-      <Search class="h-3.5 w-3.5" />
-      <input 
-        type="text" 
-        value={searchQuery}
-        oninput={(e) => onSearchChange((e.target as HTMLInputElement).value)}
-        placeholder="Search..."
-      />
-    </div>
-    <button onclick={onOpenImportCSV} class="btn-sm ghost">Export</button>
-    <button onclick={onOpenAddMember} class="btn-sm primary">+ Add Member</button>
-  </div>
-</div>
+<!-- Sticky Controls -->
+<div class="sticky top-0 z-10 -mx-4 sm:-mx-6 px-4 sm:px-6 pt-3 pb-4 bg-background/95 backdrop-blur-sm space-y-3">
+  {#if selectedTournament}
+    <div class="glass-panel border border-border/70 px-4 sm:px-5 py-3.5 flex flex-wrap items-center gap-3 text-accessible-sm">
+      <span class="text-[17px] font-semibold text-foreground">Quick actions</span>
+      <Button size="sm" class="h-11 px-4 text-[15px]" onclick={onAddAllParticipants}>
+        <UserPlus class="mr-2 h-4 w-4" /> Register all
+      </Button>
+      <Button size="sm" variant="outline" class="h-11 px-4 text-[15px]" onclick={onClearAllParticipants}>
+        <X class="mr-2 h-4 w-4" /> Clear all
+      </Button>
 
-<!-- Stats Strip -->
-<div class="stats-strip">
-  <div class="stat-mini">
-    <div class="stat-mini-icon indigo">👥</div>
-    <div class="stat-mini-content">
-      <div class="stat-mini-value">{members.length}</div>
-      <div class="stat-mini-label">Total Members</div>
-    </div>
-  </div>
-  <div class="stat-mini">
-    <div class="stat-mini-icon success">✓</div>
-    <div class="stat-mini-content">
-      <div class="stat-mini-value">{participants.length}</div>
-      <div class="stat-mini-label">Registered</div>
-    </div>
-  </div>
-  <div class="stat-mini">
-    <div class="stat-mini-icon warning">⏳</div>
-    <div class="stat-mini-content">
-      <div class="stat-mini-value">{members.length - participants.length}</div>
-      <div class="stat-mini-label">Not Registered</div>
-    </div>
-  </div>
-  <div class="stat-mini">
-    <div class="stat-mini-icon fire">🔥</div>
-    <div class="stat-mini-content">
-      <div class="stat-mini-value">{filteredMembers.length}</div>
-      <div class="stat-mini-label">Showing</div>
-    </div>
-  </div>
-</div>
+      <div class="relative" role="group" onmouseleave={() => addMenuOpen = false}>
+        <div class="flex rounded-xl overflow-hidden border border-border/70 bg-card/70">
+          <Button size="sm" class="h-11 px-4 text-[15px] rounded-none" onclick={onOpenAddMember}>
+            <Plus class="mr-2 h-4 w-4" /> Add member
+          </Button>
+          <button
+            class="px-3 h-11 bg-card/60 hover:bg-accent/30 border-l border-border/70 text-muted-foreground"
+            aria-label="More add options"
+            aria-haspopup="menu"
+            aria-expanded={addMenuOpen}
+            aria-controls="add-menu-options"
+            onclick={() => addMenuOpen = !addMenuOpen}
+          >
+            <ChevronDown class="h-4 w-4" />
+          </button>
+        </div>
+        {#if addMenuOpen}
+          <div id="add-menu-options" class="absolute mt-2 w-52 rounded-xl border border-border/70 bg-popover shadow-xl glass-panel p-2 z-20" role="menu">
+            <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-accent/20 text-[15px]" role="menuitem" onclick={() => { addMenuOpen = false; onOpenAddMember(); }}>Add single</button>
+            <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-accent/20 text-[15px]" role="menuitem" onclick={() => { addMenuOpen = false; resetMassMembers(); onOpenMassAdd(); }}>Bulk add</button>
+            <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-accent/20 text-[15px]" role="menuitem" onclick={() => { addMenuOpen = false; onOpenImportCSV(); }}>Import CSV</button>
+          </div>
+        {/if}
+      </div>
 
-<!-- Quick Actions for Tournament -->
-{#if selectedTournament}
-  <div class="mb-5 p-4 rounded-xl" style="background: var(--surface); border: 1px solid var(--border-subtle);">
-    <div class="flex flex-wrap items-center gap-3">
-      <span class="text-xs font-medium" style="color: var(--text-muted);">Quick Actions:</span>
-      <button onclick={onAddAllParticipants} class="btn-sm ghost">
-        <UserPlus class="h-3.5 w-3.5" /> Register All
-      </button>
-      <button onclick={onClearAllParticipants} class="btn-sm ghost" style="color: var(--error);">
-        <X class="h-3.5 w-3.5" /> Clear All
-      </button>
+      <Button size="sm" variant="secondary" class="h-11 px-4 text-[15px]" onclick={onOpenMassEdit}>
+        <Pencil class="mr-2 h-4 w-4" /> Edit selected
+      </Button>
       {#if selectedMemberIds.size > 0}
-        <button onclick={onRegisterSelectedMembers} class="btn-sm primary">
-          <Check class="h-3.5 w-3.5" /> Register {selectedMemberIds.size} Selected
-        </button>
-        <button onclick={onClearSelection} class="text-xs hover:underline" style="color: var(--text-muted);">Clear selection</button>
+        <Button size="sm" variant="secondary" class="h-11 px-4 text-[15px]" onclick={onRegisterSelectedMembers}>
+          <Check class="mr-2 h-4 w-4" /> Register selected
+        </Button>
       {/if}
-      <div class="ml-auto flex gap-2">
-        <button onclick={onOpenMassEdit} class="btn-sm ghost">Bulk Edit</button>
-        <button onclick={() => { resetMassMembers(); onOpenMassAdd(); }} class="btn-sm ghost">Bulk Add</button>
+
+      <div class="ml-auto flex items-center gap-3 text-muted-foreground text-sm">
+        <span class="pill-soft px-3 py-1 text-[13px]">{selectedMemberIds.size} selected</span>
+        <span class="pill-soft px-3 py-1 text-[13px]">{participants.length} registered</span>
       </div>
     </div>
-  </div>
-{/if}
+  {/if}
 
-<!-- Group Registration Banner -->
+  <div class="glass-panel border border-border/70 px-4 sm:px-5 py-3.5 flex flex-wrap items-center gap-3 text-accessible-sm">
+    <div class="flex items-center gap-3 mr-4">
+      <div class="h-11 w-11 rounded-xl bg-indigo-900/60 border border-border/60 flex items-center justify-center">
+        <Users class="h-5 w-5 text-accent-foreground" />
+      </div>
+      <div>
+        <p class="text-[18px] font-semibold leading-tight">Member Directory</p>
+        <p class="text-[13px] text-muted-foreground">{filteredMembers.length} of {members.length} members</p>
+      </div>
+    </div>
+
+    <div class="relative flex-1 min-w-[260px] max-w-xl">
+      <Input
+        type="text"
+        value={searchQuery}
+        oninput={(e) => onSearchChange((e.target as HTMLInputElement).value)}
+        placeholder="Search members…"
+        class="glass-input h-11 pl-11 pr-11 text-[16px]"
+      />
+      <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      {#if searchQuery}
+        <button
+          onclick={() => onSearchChange('')}
+          class="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+        >
+          <X class="h-4 w-4" />
+        </button>
+      {/if}
+    </div>
+
+    <div class="flex items-center gap-2">
+      <div class="relative">
+        <select
+          bind:value={filterGroup}
+          onchange={(e) => onFilterGroupChange((e.target as HTMLSelectElement).value)}
+          class="glass-input h-11 appearance-none rounded-xl pl-4 pr-10 text-[15px] font-medium cursor-pointer"
+        >
+          <option value="all">All groups</option>
+          {#each groups as g}<option value={g.groupId}>{g.name}</option>{/each}
+        </select>
+        <ChevronDown class="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+      </div>
+
+      {#if selectedTournament}
+        <div class="relative">
+          <select
+            bind:value={registrationFilter}
+            onchange={(e) => onRegistrationFilterChange((e.target as HTMLSelectElement).value as any)}
+            class="glass-input h-11 appearance-none rounded-xl pl-4 pr-10 text-[15px] font-medium cursor-pointer"
+          >
+            <option value="all">All</option>
+            <option value="registered">Registered</option>
+            <option value="unregistered">Not registered</option>
+          </select>
+          <ChevronDown class="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+        </div>
+      {/if}
+
+      {#if filterGroup !== 'all' || registrationFilter !== 'all' || searchQuery}
+        <button
+          onclick={onResetFilters}
+          class="pill-soft px-3 py-2 text-[14px] font-semibold text-primary hover:text-primary/80"
+        >
+          Clear
+        </button>
+      {/if}
+    </div>
+  </div>
+</div>
+
 {#if selectedTournament && filterGroup !== 'all'}
   {@const groupMemberCount = members.filter(m => m.groupId === filterGroup).length}
   {@const registeredInGroup = members.filter(m => m.groupId === filterGroup && registeredMemberIds.has(m._id)).length}
