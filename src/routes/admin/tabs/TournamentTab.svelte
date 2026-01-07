@@ -101,13 +101,13 @@
 <!-- Top Bar -->
 <div class="top-bar">
   <div class="top-bar-left">
-    <div class="top-bar-breadcrumb">Admin / Shiai</div>
-    <div class="top-bar-title">
+    <span class="top-bar-breadcrumb">Admin</span>
+    <span class="top-bar-title">
       Tournament Control
       {#if selectedTournament?.status === 'in_progress'}
         <span class="top-bar-badge live">Live</span>
       {/if}
-    </div>
+    </span>
   </div>
   {#if selectedTournament}
     <div class="top-bar-center">
