@@ -23,18 +23,16 @@
     </div>
   </div>
 {:else}
-  <!-- Top Bar - Design 2 -->
-  <div class="top-bar sticky top-0 z-10 -mx-4 sm:-mx-6 px-5 py-4 mb-5" style="background: var(--surface); border-bottom: 1px solid var(--border-subtle);">
-    <div class="flex items-center justify-between">
-      <div>
-        <div class="text-[0.6rem] uppercase tracking-widest mb-1" style="color: var(--text-faint);">Admin</div>
-        <h1 class="font-jp text-lg font-bold" style="color: var(--text-primary);">Dashboard</h1>
-      </div>
-      <div class="flex items-center gap-3">
-        <div class="flex items-center gap-2 px-3 py-2 rounded-lg" style="background: rgba(74, 222, 128, 0.1); border: 1px solid rgba(74, 222, 128, 0.2);">
-          <span class="w-2 h-2 rounded-full" style="background: var(--success);"></span>
-          <span class="text-xs" style="color: var(--success);">All Systems Online</span>
-        </div>
+  <!-- Top Bar -->
+  <div class="top-bar">
+    <div class="top-bar-left">
+      <div class="top-bar-breadcrumb">Admin</div>
+      <h1 class="top-bar-title">Dashboard</h1>
+    </div>
+    <div class="top-bar-right">
+      <div class="top-bar-badge online">
+        <span class="w-2 h-2 rounded-full bg-current"></span>
+        All Systems Online
       </div>
     </div>
   </div>
