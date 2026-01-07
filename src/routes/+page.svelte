@@ -36,7 +36,7 @@
     <div class="portals-section">
       <div class="section-label">PORTALS</div>
       
-      <!-- Spectator - Full width, compact -->
+      <!-- Spectator - Full width -->
       <a href={spectator.href} class="portal-card portal-spectator">
         <span class="portal-kanji">{spectator.kanji}</span>
         <div class="portal-text">
@@ -82,6 +82,9 @@
     --divider: rgba(59, 130, 246, 0.08);
     --shadow: 0 20px 50px rgba(0,0,0,0.35);
     --glow: rgba(59, 130, 246, 0.3);
+    
+    /* Square button size - easy to change */
+    --square-size: 100px;
   }
 
   .landing {
@@ -107,8 +110,8 @@
   .container {
     display: flex;
     align-items: center;
-    gap: 48px;
-    max-width: 600px;
+    gap: 50px;
+    max-width: 720px;
     width: 100%;
     position: relative;
     z-index: 1;
@@ -121,28 +124,28 @@
     flex-direction: column;
     align-items: center;
     text-align: center;
-    padding-right: 32px;
+    padding-right: 36px;
   }
 
   .logo-wrapper {
-    margin-bottom: 14px;
+    margin-bottom: 16px;
   }
 
   .logo {
-    width: 140px;
+    width: 160px;
     height: auto;
     filter: drop-shadow(0 0 30px var(--glow));
   }
 
   .brand-name {
-    font-size: 12px;
+    font-size: 14px;
     letter-spacing: 0.35em;
     color: var(--text);
-    margin-bottom: 4px;
+    margin-bottom: 6px;
   }
 
   .subtitle {
-    font-size: 9px;
+    font-size: 10px;
     letter-spacing: 0.15em;
     color: var(--text-faint);
   }
@@ -150,7 +153,7 @@
   /* Divider */
   .divider {
     width: 1px;
-    height: 160px;
+    height: 200px;
     background: var(--divider);
     flex-shrink: 0;
   }
@@ -160,18 +163,18 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    width: 270px;
-    max-width: 270px;
+    gap: 12px;
+    /* Width = 3 squares + 2 gaps */
+    width: calc(var(--square-size) * 3 + 12px * 2);
   }
 
   .section-label {
-    font-size: 9px;
+    font-size: 10px;
     letter-spacing: 0.3em;
     color: var(--text-faint);
     text-transform: uppercase;
     margin-left: 2px;
-    margin-bottom: 2px;
+    margin-bottom: 4px;
   }
 
   /* Portal cards base */
@@ -180,7 +183,7 @@
     align-items: center;
     background: var(--card-bg);
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: 14px;
     text-decoration: none;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     animation: fadeIn 0.5s ease-out backwards;
@@ -208,12 +211,10 @@
   }
 
   .portal-desc {
-    font-size: 10px;
     color: var(--text-muted);
   }
 
   .portal-arrow {
-    font-size: 16px;
     color: var(--text-faint);
     transition: transform 0.3s ease;
     margin-left: auto;
@@ -223,59 +224,66 @@
     transform: translateX(3px);
   }
 
-  /* Spectator - Compact full width */
+  /* Spectator - Full width, good height */
   .portal-spectator {
-    padding: 14px 18px;
-    gap: 14px;
+    padding: 20px 24px;
+    gap: 16px;
     background: linear-gradient(120deg, rgba(59,130,246,0.08), rgba(99,102,241,0.06));
   }
 
   .portal-spectator .portal-kanji {
-    font-size: 36px;
+    font-size: 48px;
   }
 
   .portal-spectator .portal-text {
     display: flex;
     flex-direction: column;
-    gap: 1px;
+    gap: 2px;
   }
 
   .portal-spectator .portal-label {
-    font-size: 12px;
+    font-size: 16px;
+  }
+
+  .portal-spectator .portal-desc {
+    font-size: 13px;
+  }
+
+  .portal-spectator .portal-arrow {
+    font-size: 20px;
   }
 
   /* Staff row - 3 square buttons */
   .staff-row {
     display: grid;
-    grid-template-columns: repeat(3, 80px);
-    gap: 10px;
-    justify-content: space-between;
+    grid-template-columns: repeat(3, var(--square-size));
+    gap: 12px;
   }
 
   .portal-staff {
-    width: 80px;
-    height: 80px;
+    width: var(--square-size);
+    height: var(--square-size);
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     padding: 0;
     animation-delay: var(--delay, 0s);
   }
 
   .portal-staff .portal-kanji {
-    font-size: 30px;
+    font-size: 40px;
   }
 
   .portal-staff .portal-label {
-    font-size: 8px;
-    letter-spacing: 0.1em;
+    font-size: 11px;
+    letter-spacing: 0.12em;
   }
 
   /* Footer */
   .footer {
     position: absolute;
-    bottom: 20px;
+    bottom: 24px;
     left: 50%;
     transform: translateX(-50%);
   }
@@ -294,7 +302,7 @@
 
   .footer-jp {
     font-family: 'SicYubi-FudeGyosho', serif;
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text-faint);
     letter-spacing: 0.15em;
   }
@@ -305,7 +313,7 @@
   }
 
   .footer-en {
-    font-size: 9px;
+    font-size: 10px;
     color: var(--text-faint);
     letter-spacing: 0.15em;
   }
@@ -320,9 +328,13 @@
   
   /* Tablet - Stack vertically */
   @media (max-width: 700px) {
+    .landing {
+      --square-size: 90px;
+    }
+
     .container {
       flex-direction: column;
-      gap: 28px;
+      gap: 32px;
     }
 
     .title-section {
@@ -330,107 +342,117 @@
     }
 
     .logo {
-      width: 120px;
+      width: 140px;
     }
 
     .divider {
-      width: 50px;
+      width: 60px;
       height: 1px;
     }
 
     .portals-section {
-      width: 250px;
-      max-width: 250px;
+      width: calc(var(--square-size) * 3 + 10px * 2);
+      gap: 10px;
     }
 
     .portal-spectator {
-      padding: 12px 16px;
-      gap: 12px;
+      padding: 18px 20px;
+      gap: 14px;
     }
 
     .portal-spectator .portal-kanji {
-      font-size: 32px;
+      font-size: 42px;
     }
 
     .portal-spectator .portal-label {
-      font-size: 11px;
+      font-size: 15px;
     }
 
     .portal-spectator .portal-desc {
-      font-size: 9px;
+      font-size: 12px;
     }
 
     .staff-row {
-      grid-template-columns: repeat(3, 74px);
-      gap: 8px;
-    }
-
-    .portal-staff {
-      width: 74px;
-      height: 74px;
+      gap: 10px;
     }
 
     .portal-staff .portal-kanji {
-      font-size: 26px;
+      font-size: 36px;
     }
 
     .portal-staff .portal-label {
-      font-size: 7px;
+      font-size: 10px;
     }
   }
 
-  /* Small mobile */
+  /* Mobile - still comfortable for 45+ */
   @media (max-width: 400px) {
     .landing {
+      --square-size: 80px;
       padding: 32px 16px;
     }
 
     .logo {
-      width: 100px;
+      width: 120px;
     }
 
     .brand-name {
-      font-size: 10px;
+      font-size: 12px;
     }
 
     .portals-section {
-      width: 220px;
-      max-width: 220px;
+      width: calc(var(--square-size) * 3 + 8px * 2);
       gap: 8px;
     }
 
     .portal-spectator {
-      padding: 10px 14px;
-      gap: 10px;
-      border-radius: 10px;
+      padding: 16px 18px;
+      gap: 12px;
+      border-radius: 12px;
     }
 
     .portal-spectator .portal-kanji {
-      font-size: 28px;
+      font-size: 36px;
     }
 
     .portal-spectator .portal-label {
-      font-size: 10px;
+      font-size: 14px;
+    }
+
+    .portal-spectator .portal-desc {
+      font-size: 11px;
     }
 
     .staff-row {
-      grid-template-columns: repeat(3, 64px);
-      gap: 6px;
+      gap: 8px;
     }
 
     .portal-staff {
-      width: 64px;
-      height: 64px;
-      border-radius: 10px;
+      border-radius: 12px;
+      gap: 6px;
     }
 
     .portal-staff .portal-kanji {
-      font-size: 22px;
+      font-size: 32px;
     }
 
     .portal-staff .portal-label {
-      font-size: 6px;
-      letter-spacing: 0.06em;
+      font-size: 9px;
+    }
+  }
+
+  /* Very small screens - minimum usable */
+  @media (max-width: 320px) {
+    .landing {
+      --square-size: 70px;
+    }
+
+    .portal-staff .portal-kanji {
+      font-size: 28px;
+    }
+
+    .portal-staff .portal-label {
+      font-size: 8px;
     }
   }
 </style>
