@@ -168,7 +168,13 @@
       <input
         type="checkbox"
         checked={allFilteredSelected}
-        onchange={() => allFilteredSelected ? onClearSelection() : filteredMembers.forEach(m => onToggleMemberSelection(m._id))}
+        onchange={() => {
+          if (allFilteredSelected) {
+            onClearSelection();
+          } else {
+            filteredMembers.forEach(m => onToggleMemberSelection(m._id));
+          }
+        }}
         class="h-5 w-5 rounded border-2 border-muted-foreground"
       />
       <span class="text-sm text-muted-foreground">

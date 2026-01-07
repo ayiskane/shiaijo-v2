@@ -513,12 +513,6 @@
     }
   }
   
-  function selectAllFiltered() {
-    for (const m of filteredMembers) {
-      selectedMemberIds.add(m._id);
-    }
-  }
-  
   function clearSelection() {
     selectedMemberIds.clear();
   }
@@ -526,6 +520,12 @@
   let allFilteredSelected = $derived(
     filteredMembers.length > 0 && filteredMembers.every(m => selectedMemberIds.has(m._id))
   );
+
+  function selectAllFiltered() {
+    for (const m of filteredMembers) {
+      selectedMemberIds.add(m._id);
+    }
+  }
   
   function toggleNavGroup(groupId: string) {
     const newSet = new Set(expandedNavGroups);
