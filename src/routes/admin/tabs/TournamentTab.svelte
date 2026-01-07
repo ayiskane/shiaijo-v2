@@ -15,7 +15,7 @@
   import { Skeleton } from '$lib/components/ui/skeleton';
   import {
     Trophy, Users, Swords, Play, Settings, Archive, ChevronDown, GripVertical,
-    Check, Timer, Lock, RotateCcw, Trash2, UserPlus, KeyRound, RefreshCw
+    Check, Timer, Lock, RotateCcw, Trash2, UserPlus, KeyRound, RefreshCw, Plus
   } from '@lucide/svelte';
 
   export let tournaments: any[] = [];
