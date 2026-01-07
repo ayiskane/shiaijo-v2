@@ -668,8 +668,9 @@
   
   .top-bar-left {
     display: flex;
-    flex-direction: column;
-    gap: 2px;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 8px;
     min-width: 0; /* Allow text truncation */
   }
   
@@ -688,15 +689,20 @@
   }
   
   .top-bar-breadcrumb {
-    font-size: 0.6rem;
-    text-transform: uppercase;
-    letter-spacing: 0.15em;
+    font-size: 0.875rem;
+    font-weight: 400;
+    color: var(--text-muted);
+  }
+  
+  .top-bar-breadcrumb::after {
+    content: '/';
+    margin-left: 8px;
     color: var(--text-faint);
   }
   
   .top-bar-title {
     font-family: var(--font-jp);
-    font-size: 1.1rem;
+    font-size: 0.875rem;
     font-weight: 700;
     color: var(--text-primary);
     display: flex;
