@@ -16,12 +16,17 @@
   const tournamentsQuery = useQuery(api.tournaments.list, () => ({}));
   const membersQuery = useQuery(api.members.list, () => ({}));
   const groupsQuery = useQuery(api.groups.list, () => ({}));
+  const participantsQuery = useQuery(
+    api.participants.list,
+    () => tournament?._id ? { tournamentId: tournament._id } : 'skip'
+  );
   
   let tournaments = $derived(tournamentsQuery.data ?? []);
   let members = $derived(membersQuery.data ?? []);
   let groups = $derived(groupsQuery.data ?? []);
   let tournament = $derived(tournaments.find(t => t.status === 'in_progress') || null);
-  let loading = $derived(tournamentsQuery.isLoading || membersQuery.isLoading);
+  let participants = $derived(participantsQuery.data ?? []);
+  let loading = $derived(tournamentsQuery.isLoading || membersQuery.isLoading || groupsQuery.isLoading || participantsQuery.isLoading);
   
   // Conditional matches query
   const matchesQuery = useQuery(
@@ -29,6 +34,7 @@
     () => tournament?._id ? { tournamentId: tournament._id } : 'skip'
   );
   let matches = $derived(matchesQuery.data ?? []);
+  let timerDisplayMode = $derived(tournament?.timerDisplayMode ?? 'up');
   
   let membersById = $derived.by(() => {
     const map = new Map<string, typeof members[number]>();
@@ -40,6 +46,92 @@
     const map = new Map<string, typeof groups[number]>();
     for (const g of groups) map.set(g.groupId, g);
     return map;
+  });
+
+  type StandingRow = {
+    memberId: string;
+    points: number;
+    wins: number;
+    ties: number;
+    ippons: number;
+    suddenDeathWins: number;
+  };
+
+  let standingsData = $derived.by(() => {
+    const standingsByGroupId = new Map<string, StandingRow[]>();
+    const tieKeysByGroupId = new Map<string, Set<string>>();
+    const groupStats = new Map<string, Map<string, StandingRow>>();
+
+    for (const p of participants) {
+      let stats = groupStats.get(p.groupId);
+      if (!stats) {
+        stats = new Map();
+        groupStats.set(p.groupId, stats);
+      }
+      if (!stats.has(p.memberId)) {
+        stats.set(p.memberId, { memberId: p.memberId, points: 0, wins: 0, ties: 0, ippons: 0, suddenDeathWins: 0 });
+      }
+    }
+
+    for (const m of matches) {
+      const stats = groupStats.get(m.groupId);
+      if (!stats) continue;
+      const p1 = stats.get(m.player1Id);
+      const p2 = stats.get(m.player2Id);
+      if (!p1 || !p2) continue;
+
+      if (m.isSuddenDeath) {
+        if (m.status === 'completed' && m.winner) {
+          if (m.winner === m.player1Id) p1.suddenDeathWins += 1;
+          else if (m.winner === m.player2Id) p2.suddenDeathWins += 1;
+        }
+        continue;
+      }
+
+      if (m.status !== 'completed') continue;
+      const p1Ippons = m.player1Score?.length || 0;
+      const p2Ippons = m.player2Score?.length || 0;
+      p1.ippons += p1Ippons;
+      p2.ippons += p2Ippons;
+      if (m.winner === m.player1Id) {
+        p1.wins += 1;
+      } else if (m.winner === m.player2Id) {
+        p2.wins += 1;
+      } else {
+        p1.ties += 1;
+        p2.ties += 1;
+      }
+    }
+
+    for (const [groupId, stats] of groupStats) {
+      const rows = Array.from(stats.values());
+      for (const row of rows) {
+        row.points = (row.wins * 2) + row.ties;
+      }
+      rows.sort((a, b) => {
+        if (b.points !== a.points) return b.points - a.points;
+        if (b.wins !== a.wins) return b.wins - a.wins;
+        if (b.ippons !== a.ippons) return b.ippons - a.ippons;
+        if (b.suddenDeathWins !== a.suddenDeathWins) return b.suddenDeathWins - a.suddenDeathWins;
+        return a.memberId.localeCompare(b.memberId);
+      });
+      standingsByGroupId.set(groupId, rows);
+
+      const keyCounts = new Map<string, number>();
+      for (const row of rows) {
+        const key = `${row.points}-${row.wins}-${row.ippons}-${row.suddenDeathWins}`;
+        keyCounts.set(key, (keyCounts.get(key) ?? 0) + 1);
+      }
+      const tiedKeys = new Set<string>();
+      const top3 = rows.slice(0, 3);
+      for (const row of top3) {
+        const key = `${row.points}-${row.wins}-${row.ippons}-${row.suddenDeathWins}`;
+        if ((keyCounts.get(key) ?? 0) > 1) tiedKeys.add(key);
+      }
+      tieKeysByGroupId.set(groupId, tiedKeys);
+    }
+
+    return { standingsByGroupId, tieKeysByGroupId };
   });
   
   let currentTime = $state(Date.now());
@@ -109,6 +201,13 @@
     if (m.timerStartedAt) return Math.floor((currentTime - m.timerStartedAt) / 1000);
     return 0;
   }
+  function getDisplayTime(m: any): number {
+    const elapsed = getElapsedTime(m);
+    if (timerDisplayMode === 'down') {
+      return Math.max((m.timerDuration || 0) - elapsed, 0);
+    }
+    return elapsed;
+  }
   function formatTime(s: number): string { return `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`; }
 </script>
 
@@ -144,6 +243,42 @@
         <div class="flex items-center justify-between mb-2"><span class="text-sm text-muted-foreground">Tournament Progress</span><span class="text-sm font-medium">{completedCount} / {matches.length} matches</span></div>
         <Progress value={totalProgress} class="h-2" />
       </div>
+
+      <!-- Standings (Top 3) -->
+      <section>
+        <h2 class="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Standings (Top 3)</h2>
+        <div class="grid md:grid-cols-2 gap-4">
+          {#each groups as group (group._id)}
+            {@const standings = standingsData.standingsByGroupId.get(group.groupId) ?? []}
+            {@const tiedKeys = standingsData.tieKeysByGroupId.get(group.groupId) ?? new Set()}
+            {@const top3 = standings.slice(0, 3)}
+            {#if top3.length > 0}
+              <Card.Root>
+                <Card.Header class="pb-2">
+                  <Card.Title class="text-sm">{group.name}</Card.Title>
+                </Card.Header>
+                <Card.Content class="space-y-2">
+                  {#each top3 as row, idx}
+                    <div class="flex items-center justify-between text-sm">
+                      <div class="flex items-center gap-2 truncate">
+                        <span class="w-5 text-center text-muted-foreground">{idx + 1}</span>
+                        <span class="truncate">{getMemberName(row.memberId)}</span>
+                        {#if tiedKeys.has(`${row.points}-${row.wins}-${row.ippons}-${row.suddenDeathWins}`)}
+                          <Badge variant="outline" class="text-[10px] border-amber-500 text-amber-400">TIE</Badge>
+                        {/if}
+                      </div>
+                      <div class="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>{row.wins}-{row.ties}</span>
+                        <span class="font-mono">{row.points} pts</span>
+                      </div>
+                    </div>
+                  {/each}
+                </Card.Content>
+              </Card.Root>
+            {/if}
+          {/each}
+        </div>
+      </section>
       
       <!-- Live Matches -->
       <section>
@@ -153,7 +288,7 @@
             <Card.Header class="pb-2">
               <div class="flex items-center justify-between">
                 <Badge variant="outline" class="bg-amber-500/20 text-amber-400 border-amber-500/50">Court A</Badge>
-                {#if courtALive}<span class="text-xs text-muted-foreground flex items-center gap-1"><Clock class="h-3 w-3" />{formatTime(getElapsedTime(courtALive))} / {formatTime(courtALive.timerDuration)}</span>{/if}
+                {#if courtALive}<span class="text-xs text-muted-foreground flex items-center gap-1"><Clock class="h-3 w-3" />{formatTime(getDisplayTime(courtALive))} / {formatTime(courtALive.timerDuration)}</span>{/if}
               </div>
             </Card.Header>
             <Card.Content>
@@ -163,7 +298,10 @@
                   <div class="text-3xl font-mono font-bold px-4"><span class="text-red-400">{courtALive.player1Score.length}</span><span class="text-muted-foreground">:</span><span>{courtALive.player2Score.length}</span></div>
                   <div class="flex-1 text-right"><p class="font-semibold">{getMemberName(courtALive.player2Id)}</p><p class="text-xs text-slate-400">SHIRO</p></div>
                 </div>
-                <Badge variant="secondary" class="w-full justify-center mt-2">{getGroupName(courtALive.groupId)}</Badge>
+                <div class="mt-2 flex items-center justify-center gap-2">
+                  <Badge variant="secondary">{getGroupName(courtALive.groupId)}</Badge>
+                  {#if courtALive.isSuddenDeath}<Badge variant="outline" class="text-[10px] border-amber-500 text-amber-400">Sudden Death</Badge>{/if}
+                </div>
               {:else}<p class="text-muted-foreground text-center py-6">Waiting for next match...</p>{/if}
             </Card.Content>
           </Card.Root>
@@ -172,7 +310,7 @@
             <Card.Header class="pb-2">
               <div class="flex items-center justify-between">
                 <Badge variant="outline" class="bg-blue-500/20 text-blue-400 border-blue-500/50">Court B</Badge>
-                {#if courtBLive}<span class="text-xs text-muted-foreground flex items-center gap-1"><Clock class="h-3 w-3" />{formatTime(getElapsedTime(courtBLive))} / {formatTime(courtBLive.timerDuration)}</span>{/if}
+                {#if courtBLive}<span class="text-xs text-muted-foreground flex items-center gap-1"><Clock class="h-3 w-3" />{formatTime(getDisplayTime(courtBLive))} / {formatTime(courtBLive.timerDuration)}</span>{/if}
               </div>
             </Card.Header>
             <Card.Content>
@@ -182,7 +320,10 @@
                   <div class="text-3xl font-mono font-bold px-4"><span class="text-red-400">{courtBLive.player1Score.length}</span><span class="text-muted-foreground">:</span><span>{courtBLive.player2Score.length}</span></div>
                   <div class="flex-1 text-right"><p class="font-semibold">{getMemberName(courtBLive.player2Id)}</p><p class="text-xs text-slate-400">SHIRO</p></div>
                 </div>
-                <Badge variant="secondary" class="w-full justify-center mt-2">{getGroupName(courtBLive.groupId)}</Badge>
+                <div class="mt-2 flex items-center justify-center gap-2">
+                  <Badge variant="secondary">{getGroupName(courtBLive.groupId)}</Badge>
+                  {#if courtBLive.isSuddenDeath}<Badge variant="outline" class="text-[10px] border-purple-500 text-purple-400">Sudden Death</Badge>{/if}
+                </div>
               {:else}<p class="text-muted-foreground text-center py-6">Waiting for next match...</p>{/if}
             </Card.Content>
           </Card.Root>
@@ -198,7 +339,13 @@
             <Card.Content class="space-y-2">
               {#each courtAQueue as m, i}
                 <div class={cn("p-2 rounded-lg text-sm", i === 0 ? "bg-amber-500/10 border border-amber-500/30" : "bg-muted/50")}>
-                  <div class="flex justify-between items-center"><span>{getMemberName(m.player1Id)} vs {getMemberName(m.player2Id)}</span>{#if i === 0}<Badge variant="outline" class="text-xs">Next</Badge>{/if}</div>
+                  <div class="flex justify-between items-center">
+                    <span>{getMemberName(m.player1Id)} vs {getMemberName(m.player2Id)}</span>
+                    <div class="flex items-center gap-1">
+                      {#if m.isSuddenDeath}<Badge variant="outline" class="text-[10px] border-amber-500 text-amber-400">SD</Badge>{/if}
+                      {#if i === 0}<Badge variant="outline" class="text-xs">Next</Badge>{/if}
+                    </div>
+                  </div>
                 </div>
               {:else}<p class="text-sm text-muted-foreground text-center py-2">No pending matches</p>{/each}
             </Card.Content>
@@ -209,7 +356,13 @@
             <Card.Content class="space-y-2">
               {#each courtBQueue as m, i}
                 <div class={cn("p-2 rounded-lg text-sm", i === 0 ? "bg-blue-500/10 border border-blue-500/30" : "bg-muted/50")}>
-                  <div class="flex justify-between items-center"><span>{getMemberName(m.player1Id)} vs {getMemberName(m.player2Id)}</span>{#if i === 0}<Badge variant="outline" class="text-xs">Next</Badge>{/if}</div>
+                  <div class="flex justify-between items-center">
+                    <span>{getMemberName(m.player1Id)} vs {getMemberName(m.player2Id)}</span>
+                    <div class="flex items-center gap-1">
+                      {#if m.isSuddenDeath}<Badge variant="outline" class="text-[10px] border-purple-500 text-purple-400">SD</Badge>{/if}
+                      {#if i === 0}<Badge variant="outline" class="text-xs">Next</Badge>{/if}
+                    </div>
+                  </div>
                 </div>
               {:else}<p class="text-sm text-muted-foreground text-center py-2">No pending matches</p>{/each}
             </Card.Content>
@@ -224,9 +377,14 @@
           <Card.Content class="pt-4">
             {#each recentResults as m}
               {@const p1Win = m.winner === m.player1Id}
+              {@const isTie = !m.winner}
               <div class="flex items-center gap-3 p-2 rounded-lg bg-muted/30 mb-2 last:mb-0">
                 <span class={cn("flex-1", p1Win && "text-emerald-400 font-semibold")}>{getMemberName(m.player1Id)} {p1Win ? '🏆' : ''}</span>
-                <Badge variant="outline" class="font-mono">{m.player1Score.length} - {m.player2Score.length}</Badge>
+                <div class="flex items-center gap-2">
+                  <Badge variant="outline" class="font-mono">{m.player1Score.length} - {m.player2Score.length}</Badge>
+                  {#if isTie}<Badge variant="outline" class="text-[10px] border-amber-500 text-amber-400">TIE</Badge>{/if}
+                  {#if m.isSuddenDeath}<Badge variant="outline" class="text-[10px] border-purple-500 text-purple-400">SD</Badge>{/if}
+                </div>
                 <span class={cn("flex-1 text-right", !p1Win && m.winner && "text-emerald-400 font-semibold")}>{!p1Win && m.winner ? '🏆 ' : ''}{getMemberName(m.player2Id)}</span>
               </div>
             {:else}<p class="text-muted-foreground text-center py-6">No completed matches yet</p>{/each}

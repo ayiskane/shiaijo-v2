@@ -14,7 +14,7 @@
     LayoutDashboard, Users, FolderOpen, Trophy, ClipboardList, 
     ChevronLeft, ChevronDown, ChevronRight, Swords, Eye, Menu, Plus, Trash2, Pencil,
     Play, Settings, RefreshCw, RotateCcw, Archive, GripVertical, Timer, 
-    Check, X, AlertTriangle, History, UserPlus, Home
+    Check, X, AlertTriangle, History, UserPlus, Home, Lock, KeyRound, UserCheck
   } from '@lucide/svelte';
   
   // shadcn-svelte components
@@ -36,10 +36,15 @@
   
   // Convex client for mutations
   const client = useConvexClient();
+  const SENSEI_GROUP_ID = 'SEN';
+  const SETTINGS_KEYS = ['adminPasscode', 'courtkeeperPasscode'] as const;
   
   // Apply Sumi theme to admin portal
   onMount(() => {
     document.documentElement.classList.add('theme-sumi');
+    accessUnlocked = localStorage.getItem('shiaijo_admin_unlocked') === 'true';
+    accessChecked = true;
+    ensureSenseiGroup();
   });
   onDestroy(() => {
     document.documentElement.classList.remove('theme-sumi');
@@ -49,18 +54,27 @@
   const groupsQuery = useQuery(api.groups.list, () => ({}));
   const membersQuery = useQuery(api.members.list, () => ({}));
   const tournamentsQuery = useQuery(api.tournaments.list, () => ({}));
+  const settingsQuery = useQuery(api.settings.getMany, () => ({ keys: [...SETTINGS_KEYS] }));
   
   // Reactive data from queries
   let groups = $derived(groupsQuery.data ?? []);
   let members = $derived(membersQuery.data ?? []);
   let tournaments = $derived(tournamentsQuery.data ?? []);
   let loading = $derived(groupsQuery.isLoading || membersQuery.isLoading || tournamentsQuery.isLoading);
+  let settingsLoading = $derived(settingsQuery.isLoading);
+  let settings = $derived(settingsQuery.data ?? { adminPasscode: null, courtkeeperPasscode: null });
   
   // State
   let activeTab = $state('dashboard');
   let sidebarOpen = $state(false);
   let sidebarCollapsed = $state(false);
   let expandedNavGroups = $state<Set<string>>(new Set(['roster', 'shiai']));
+  let accessUnlocked = $state(false);
+  let accessChecked = $state(false);
+  let adminUnlockCode = $state('');
+  let selectedSenseiId = $state<string | null>(null);
+  let adminPasscodeInput = $state('');
+  let courtkeeperPasscodeInput = $state('');
   
   // Modal states
   let showAddGroup = $state(false);
@@ -68,6 +82,7 @@
   let showAddMember = $state(false);
   let showEditMember = $state(false);
   let showMassAddMembers = $state(false);
+  let showMassEditMembers = $state(false);
   let showImportCSV = $state(false);
   let showCreateTournament = $state(false);
   let showDeleteConfirm = $state(false);
@@ -116,6 +131,11 @@
     }
     return map;
   });
+
+  let senseiMembers = $derived(members.filter(m => m.groupId === SENSEI_GROUP_ID));
+  let adminPasscode = $derived(settings.adminPasscode ?? '');
+  let courtkeeperPasscode = $derived(settings.courtkeeperPasscode ?? '');
+  let passcodeRequired = $derived(!!adminPasscode);
   
   let matchesByStatus = $derived.by(() => {
     const pending: typeof matches = [];
@@ -181,6 +201,109 @@
     }
     return { courtA, courtB, courtACompleted, courtBCompleted };
   });
+
+  type StandingRow = {
+    memberId: string;
+    wins: number;
+    ties: number;
+    losses: number;
+    points: number;
+    ippons: number;
+    suddenDeathWins: number;
+    matches: number;
+  };
+
+  let standingsData = $derived.by(() => {
+    const standingsByGroupId = new Map<string, StandingRow[]>();
+    const tieKeysByGroupId = new Map<string, Set<string>>();
+    const groupMemberStats = new Map<string, Map<string, StandingRow>>();
+
+    for (const p of participants) {
+      let groupStats = groupMemberStats.get(p.groupId);
+      if (!groupStats) {
+        groupStats = new Map();
+        groupMemberStats.set(p.groupId, groupStats);
+      }
+        if (!groupStats.has(p.memberId)) {
+          groupStats.set(p.memberId, {
+            memberId: p.memberId,
+            wins: 0,
+            ties: 0,
+            losses: 0,
+            points: 0,
+            ippons: 0,
+            suddenDeathWins: 0,
+            matches: 0,
+          });
+        }
+      }
+    
+      for (const match of matches) {
+        const groupStats = groupMemberStats.get(match.groupId);
+        if (!groupStats) continue;
+        const p1 = groupStats.get(match.player1Id);
+        const p2 = groupStats.get(match.player2Id);
+        if (!p1 || !p2) continue;
+        if (match.isSuddenDeath) {
+          if (match.status === 'completed' && match.winner) {
+            if (match.winner === match.player1Id) p1.suddenDeathWins += 1;
+            else if (match.winner === match.player2Id) p2.suddenDeathWins += 1;
+          }
+          continue;
+        }
+        if (match.status !== 'completed') continue;
+      
+        const p1Ippons = match.player1Score?.length || 0;
+        const p2Ippons = match.player2Score?.length || 0;
+        p1.ippons += p1Ippons;
+        p2.ippons += p2Ippons;
+        p1.matches += 1;
+        p2.matches += 1;
+      
+        if (match.winner === match.player1Id) {
+          p1.wins += 1;
+          p2.losses += 1;
+        } else if (match.winner === match.player2Id) {
+          p2.wins += 1;
+          p1.losses += 1;
+        } else {
+          p1.ties += 1;
+          p2.ties += 1;
+        }
+      }
+
+    for (const [groupId, memberStats] of groupMemberStats) {
+      const rows = Array.from(memberStats.values());
+      for (const row of rows) {
+        row.points = (row.wins * 2) + row.ties;
+      }
+        rows.sort((a, b) => {
+          if (b.points !== a.points) return b.points - a.points;
+          if (b.wins !== a.wins) return b.wins - a.wins;
+          if (b.ippons !== a.ippons) return b.ippons - a.ippons;
+          if (b.suddenDeathWins !== a.suddenDeathWins) return b.suddenDeathWins - a.suddenDeathWins;
+          const nameA = membersById.get(a.memberId);
+          const nameB = membersById.get(b.memberId);
+          const sortableA = nameA ? `${nameA.lastName}, ${nameA.firstName}` : a.memberId;
+          const sortableB = nameB ? `${nameB.lastName}, ${nameB.firstName}` : b.memberId;
+          return sortableA.localeCompare(sortableB);
+      });
+      standingsByGroupId.set(groupId, rows);
+
+        const keyCounts = new Map<string, number>();
+        for (const row of rows) {
+          const key = `${row.points}-${row.wins}-${row.ippons}-${row.suddenDeathWins}`;
+          keyCounts.set(key, (keyCounts.get(key) ?? 0) + 1);
+        }
+        const tiedKeys = new Set<string>();
+      for (const [key, count] of keyCounts) {
+        if (count > 1) tiedKeys.add(key);
+      }
+      tieKeysByGroupId.set(groupId, tiedKeys);
+    }
+
+    return { standingsByGroupId, tieKeysByGroupId };
+  });
   
   // Tournament tab state
   let editTournamentOpen = $state(true);
@@ -198,6 +321,7 @@
   // Bogu settings
   let boguTimerDuration = $state(180);
   let boguMatchType = $state<'sanbon' | 'ippon'>('sanbon');
+  let timerDisplayMode = $state<'up' | 'down'>('up');
   
   // Non-bogu (Hantei) settings - kihon-waza combos
   const KIHON_WAZA_OPTIONS = [
@@ -207,6 +331,15 @@
     { id: 'KM', label: 'Kote-Men', short: 'KM' },
     { id: 'MKD', label: 'Men-Kaeshi-Do', short: 'MKD' },
   ];
+
+  const SCORE_LABELS: Record<number, string> = {
+    1: 'Men',
+    2: 'Kote',
+    3: 'Do',
+    4: 'Tsuki',
+    5: 'Hansoku',
+    6: 'Forfeit',
+  };
   
   let hanteiRound1 = $state<string[]>(['K', 'M']); // 2 combos for round 1
   let hanteiRound2 = $state<string[]>(['M', 'K', 'D']); // 3 combos for round 2
@@ -216,6 +349,9 @@
   let massMembers = $state<MemberRow[]>(
     Array(5).fill(null).map(() => ({ firstName: '', lastName: '', groupId: '' }))
   );
+  type BulkEditRow = { id: string; firstName: string; lastName: string; groupId: string };
+  let massEditMembers = $state<BulkEditRow[]>([]);
+  let massEditOriginal = new Map<string, BulkEditRow>();
   
   const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const TIMER_OPTIONS = [60, 120, 180]; // Only up to 3 minutes
@@ -240,6 +376,14 @@
   let tournamentSelectorLabel = $derived(
     selectedTournament ? `${selectedTournament.name} - ${selectedTournament.status}` : 'Select tournament'
   );
+
+  $effect(() => {
+    if (selectedTournament?.timerDisplayMode) {
+      timerDisplayMode = selectedTournament.timerDisplayMode;
+    } else {
+      timerDisplayMode = 'up';
+    }
+  });
   
   // Build a reactive map of group courts from matches
   let groupCourtMap = $derived.by(() => {
@@ -394,15 +538,82 @@
     return m ? `${m.firstName} ${m.lastName.charAt(0)}.` : 'Unknown'; 
   }
   
-  function getMemberById(memberId: string) {
-    return membersById.get(memberId);
-  }
+    function getMemberById(memberId: string) {
+      return membersById.get(memberId);
+    }
+
+    function getTieKey(row: StandingRow): string {
+      return `${row.points}-${row.wins}-${row.ippons}-${row.suddenDeathWins}`;
+    }
+
+    async function ensureSenseiGroup() {
+      try { await client.mutation(api.groups.ensureSensei, {}); } catch {}
+    }
+
+    $effect(() => {
+      if (!accessChecked) return;
+      if (!passcodeRequired) accessUnlocked = true;
+    });
+
+    function unlockAdmin() {
+      if (!passcodeRequired) {
+        accessUnlocked = true;
+        localStorage.setItem('shiaijo_admin_unlocked', 'true');
+        return;
+      }
+      if (adminUnlockCode.trim() !== adminPasscode) {
+        toast.error('Incorrect passcode');
+        return;
+      }
+      accessUnlocked = true;
+      adminUnlockCode = '';
+      localStorage.setItem('shiaijo_admin_unlocked', 'true');
+    }
+
+    function unlockAsSensei() {
+      if (!selectedSenseiId) {
+        toast.error('Select a Sensei member');
+        return;
+      }
+      accessUnlocked = true;
+      localStorage.setItem('shiaijo_admin_unlocked', 'true');
+    }
+
+    function lockAdmin() {
+      accessUnlocked = false;
+      localStorage.removeItem('shiaijo_admin_unlocked');
+    }
   
-  function formatTimer(seconds: number): string {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  }
+    function formatTimer(seconds: number): string {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    function buildScoreTimeline(match: any) {
+      const p1Times = match.player1ScoreTimes ?? [];
+      const p2Times = match.player2ScoreTimes ?? [];
+      const p1Events = (match.player1Score ?? []).map((type: number, idx: number) => ({
+        player: 'AKA',
+        playerId: match.player1Id,
+        type,
+        time: p1Times[idx],
+      }));
+      const p2Events = (match.player2Score ?? []).map((type: number, idx: number) => ({
+        player: 'SHIRO',
+        playerId: match.player2Id,
+        type,
+        time: p2Times[idx],
+      }));
+      const events = [...p1Events, ...p2Events];
+      events.sort((a, b) => {
+        if (a.time === undefined && b.time === undefined) return 0;
+        if (a.time === undefined) return 1;
+        if (b.time === undefined) return -1;
+        return a.time - b.time;
+      });
+      return events;
+    }
   
   function generateTournamentName(): string {
     const month = newTournament.month || MONTHS[new Date().getMonth()];
@@ -414,9 +625,67 @@
     massMembers = [...massMembers, ...Array(5).fill(null).map(() => ({ firstName: '', lastName: '', groupId: '' }))];
   }
   
-  function resetMassMembers() {
-    massMembers = Array(5).fill(null).map(() => ({ firstName: '', lastName: '', groupId: '' }));
-  }
+    function resetMassMembers() {
+      massMembers = Array(5).fill(null).map(() => ({ firstName: '', lastName: '', groupId: '' }));
+    }
+
+    function openMassEditMembers() {
+      const rows = filteredMembers.map(m => ({
+        id: m._id,
+        firstName: m.firstName,
+        lastName: m.lastName,
+        groupId: m.groupId,
+      }));
+      massEditMembers = rows;
+      massEditOriginal = new Map(rows.map(row => [row.id, { ...row }]));
+      showMassEditMembers = true;
+    }
+
+    async function saveMassEditMembers() {
+      const updates = massEditMembers
+        .map(row => ({
+          id: row.id,
+          firstName: row.firstName.trim(),
+          lastName: row.lastName.trim(),
+          groupId: row.groupId,
+        }))
+        .filter(row => row.firstName && row.lastName && row.groupId)
+        .filter(row => {
+          const original = massEditOriginal.get(row.id);
+          if (!original) return true;
+          return row.firstName !== original.firstName ||
+            row.lastName !== original.lastName ||
+            row.groupId !== original.groupId;
+        });
+
+      if (updates.length === 0) {
+        toast('No changes to save');
+        showMassEditMembers = false;
+        return;
+      }
+
+      try {
+        await client.mutation(api.members.bulkUpdate, { members: updates });
+        showMassEditMembers = false;
+        toast.success(`Updated ${updates.length} member${updates.length > 1 ? 's' : ''}`);
+      } catch (e) { toast.error('Failed to update members'); }
+    }
+
+    async function saveAdminPasscode() {
+      try {
+        await client.mutation(api.settings.set, { key: 'adminPasscode', value: adminPasscodeInput });
+        adminPasscodeInput = '';
+        toast.success('Admin passcode updated');
+      } catch (e) { toast.error('Failed to update passcode'); }
+    }
+
+    async function saveCourtkeeperPasscode() {
+      try {
+        await client.mutation(api.settings.set, { key: 'courtkeeperPasscode', value: courtkeeperPasscodeInput });
+        courtkeeperPasscodeInput = '';
+        toast.success('Courtkeeper passcode updated');
+      } catch (e) { toast.error('Failed to update passcode'); }
+    }
   
   // CRUD Operations
   async function createGroup() {
@@ -487,13 +756,12 @@
       return;
     }
     try {
-      await client.mutation(api.members.update, { 
-        id: editingMember._id, 
-        firstName: editingMember.firstName.trim(), 
-        lastName: editingMember.lastName.trim(), 
-        groupId: editingMember.groupId,
-        rank: editingMember.rank?.trim() || undefined
-      });
+        await client.mutation(api.members.update, { 
+          id: editingMember._id, 
+          firstName: editingMember.firstName.trim(), 
+          lastName: editingMember.lastName.trim(), 
+          groupId: editingMember.groupId
+        });
       showEditMember = false;
       editingMember = null;
       toast.success('Member updated');
@@ -661,25 +929,36 @@
     }
   }
   
-  async function applyBoguSettings() {
-    if (!selectedTournament) return;
-    try {
-      // Apply to all bogu groups
-      for (const groupId of boguGroups) {
-        await client.mutation(api.matches.setGroupTimer, { 
-          tournamentId: selectedTournament._id, 
-          groupId, 
-          timerDuration: boguTimerDuration 
+    async function applyBoguSettings() {
+      if (!selectedTournament) return;
+      try {
+        // Apply to all bogu groups
+        for (const groupId of boguGroups) {
+          await client.mutation(api.matches.setGroupTimer, { 
+            tournamentId: selectedTournament._id, 
+            groupId, 
+            timerDuration: boguTimerDuration 
+          });
+          await client.mutation(api.matches.setGroupMatchType, { 
+            tournamentId: selectedTournament._id, 
+            groupId, 
+            matchType: boguMatchType 
+          });
+        }
+        toast.success('Bogu settings applied');
+      } catch (e) { toast.error('Failed to apply settings'); }
+    }
+
+    async function applyTimerDisplayMode() {
+      if (!selectedTournament) return;
+      try {
+        await client.mutation(api.tournaments.update, {
+          id: selectedTournament._id,
+          timerDisplayMode,
         });
-        await client.mutation(api.matches.setGroupMatchType, { 
-          tournamentId: selectedTournament._id, 
-          groupId, 
-          matchType: boguMatchType 
-        });
-      }
-      toast.success('Bogu settings applied');
-    } catch (e) { toast.error('Failed to apply settings'); }
-  }
+        toast.success('Timer display updated');
+      } catch (e) { toast.error('Failed to update timer display'); }
+    }
   
   async function applyHanteiSettings() {
     if (!selectedTournament) return;
@@ -740,7 +1019,52 @@
 
 <svelte:head><title>Admin - 試合場 Shiaijo</title></svelte:head>
 
-<div class="flex min-h-screen bg-background overflow-x-hidden">
+{#if !accessUnlocked}
+  <div class="min-h-screen bg-background text-foreground flex items-center justify-center p-6">
+    <div class="w-full max-w-md rounded-2xl border border-border bg-card p-6 space-y-4">
+      <div class="flex items-center gap-3">
+        <Lock class="h-6 w-6 text-amber-400" />
+        <div>
+          <h1 class="text-xl font-bold">Admin Locked</h1>
+          <p class="text-xs text-muted-foreground">Enter the passcode or unlock as Sensei.</p>
+        </div>
+      </div>
+      {#if settingsLoading}
+        <div class="flex items-center justify-center py-8">
+          <div class="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+        </div>
+      {:else}
+        <div class="space-y-2">
+          <Label class="text-xs text-muted-foreground">Admin Passcode</Label>
+          <div class="flex gap-2">
+            <Input type="password" bind:value={adminUnlockCode} placeholder="Enter passcode" class="text-sm" />
+            <Button onclick={unlockAdmin} class="shrink-0"><KeyRound class="mr-2 h-4 w-4" /> Unlock</Button>
+          </div>
+          {#if !passcodeRequired}
+            <p class="text-[10px] text-muted-foreground">No passcode set yet. You can enter without a code.</p>
+          {/if}
+        </div>
+        <Separator />
+        <div class="space-y-2">
+          <Label class="text-xs text-muted-foreground">Sensei Quick Access</Label>
+          <div class="flex gap-2">
+            <select bind:value={selectedSenseiId} class="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm">
+              <option value="">Select Sensei</option>
+              {#each senseiMembers as m}
+                <option value={m._id}>{m.firstName} {m.lastName}</option>
+              {/each}
+            </select>
+            <Button variant="outline" onclick={unlockAsSensei} class="shrink-0"><UserCheck class="mr-2 h-4 w-4" /> Sensei</Button>
+          </div>
+          {#if senseiMembers.length === 0}
+            <p class="text-[10px] text-muted-foreground">No Sensei members found. Add members to the Sensei group.</p>
+          {/if}
+        </div>
+      {/if}
+    </div>
+  </div>
+{:else}
+  <div class="flex min-h-screen bg-background overflow-x-hidden">
   <!-- Desktop Sidebar -->
   <aside class={cn("hidden md:flex flex-col fixed inset-y-0 left-0 z-20 border-r border-sidebar-border bg-sidebar transition-all duration-300", sidebarCollapsed ? "w-[72px]" : "w-52")}>
     <div class="flex h-16 items-center gap-3 border-b border-sidebar-border px-4 overflow-hidden">
@@ -1372,10 +1696,10 @@
                     </div>
                   </div>
                   
-                  <div class="space-y-2">
-                    <Label class="text-xs text-muted-foreground">Match Type</Label>
-                    <div class="flex gap-2">
-                      <button
+                    <div class="space-y-2">
+                      <Label class="text-xs text-muted-foreground">Match Type</Label>
+                      <div class="flex gap-2">
+                        <button
                         onclick={() => boguMatchType = 'sanbon'}
                         class={cn(
                           "flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all border",
@@ -1392,15 +1716,42 @@
                             ? "bg-blue-600 text-white border-blue-600" 
                             : "bg-background text-muted-foreground border-input hover:bg-muted"
                         )}
-                      >Ippon</button>
+                        >Ippon</button>
+                      </div>
                     </div>
+                    
+                    <div class="space-y-2">
+                      <Label class="text-xs text-muted-foreground">Timer Display</Label>
+                      <div class="flex gap-2">
+                        <button
+                          onclick={() => timerDisplayMode = 'up'}
+                          class={cn(
+                            "flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all border",
+                            timerDisplayMode === 'up' 
+                              ? "bg-blue-600 text-white border-blue-600" 
+                              : "bg-background text-muted-foreground border-input hover:bg-muted"
+                          )}
+                        >Count Up</button>
+                        <button
+                          onclick={() => timerDisplayMode = 'down'}
+                          class={cn(
+                            "flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all border",
+                            timerDisplayMode === 'down' 
+                              ? "bg-blue-600 text-white border-blue-600" 
+                              : "bg-background text-muted-foreground border-input hover:bg-muted"
+                          )}
+                        >Count Down</button>
+                      </div>
+                    </div>
+                    
+                    <Button onclick={applyBoguSettings} variant="secondary" size="sm" class="w-full">
+                      <Check class="mr-2 h-4 w-4" /> Apply to Bogu
+                    </Button>
+                    <Button onclick={applyTimerDisplayMode} variant="outline" size="sm" class="w-full">
+                      <Timer class="mr-2 h-4 w-4" /> Apply Timer Display
+                    </Button>
                   </div>
-                  
-                  <Button onclick={applyBoguSettings} variant="secondary" size="sm" class="w-full">
-                    <Check class="mr-2 h-4 w-4" /> Apply to Bogu
-                  </Button>
                 </div>
-              </div>
               
               <Separator />
               
@@ -1459,13 +1810,49 @@
                     <Check class="mr-2 h-4 w-4" /> Apply Hantei
                   </Button>
                 </div>
-              </div>
-              
-              <Separator />
-              
-              <!-- Actions -->
-              <div class="space-y-3">
-                <h4 class="text-sm font-semibold">Actions</h4>
+                </div>
+                
+                <Separator />
+
+                <!-- Security -->
+                <div class="space-y-3">
+                  <h4 class="text-sm font-semibold flex items-center gap-2">
+                    <Lock class="h-4 w-4 text-amber-400" />
+                    Security
+                  </h4>
+                  <p class="text-xs text-muted-foreground">Set portal passcodes. Leave blank to clear.</p>
+                  <div class="space-y-3">
+                    <div class="space-y-2">
+                      <Label class="text-xs text-muted-foreground">Admin Passcode</Label>
+                      <div class="flex gap-2">
+                        <Input type="password" bind:value={adminPasscodeInput} placeholder={adminPasscode ? "••••••••" : "Set admin passcode"} class="text-sm" />
+                        <Button onclick={saveAdminPasscode} variant="secondary" size="sm">
+                          <KeyRound class="mr-2 h-4 w-4" /> Save
+                        </Button>
+                      </div>
+                      <p class="text-[10px] text-muted-foreground">Status: {adminPasscode ? 'Set' : 'Not set'}</p>
+                    </div>
+                    <div class="space-y-2">
+                      <Label class="text-xs text-muted-foreground">Courtkeeper Passcode</Label>
+                      <div class="flex gap-2">
+                        <Input type="password" bind:value={courtkeeperPasscodeInput} placeholder={courtkeeperPasscode ? "••••••••" : "Set courtkeeper passcode"} class="text-sm" />
+                        <Button onclick={saveCourtkeeperPasscode} variant="secondary" size="sm">
+                          <KeyRound class="mr-2 h-4 w-4" /> Save
+                        </Button>
+                      </div>
+                      <p class="text-[10px] text-muted-foreground">Status: {courtkeeperPasscode ? 'Set' : 'Not set'}</p>
+                    </div>
+                    <Button onclick={lockAdmin} variant="outline" size="sm" class="w-full">
+                      <Lock class="mr-2 h-4 w-4" /> Lock Admin
+                    </Button>
+                  </div>
+                </div>
+                
+                <Separator />
+                
+                <!-- Actions -->
+                <div class="space-y-3">
+                  <h4 class="text-sm font-semibold">Actions</h4>
                 <div class="space-y-2">
                   <Button onclick={refreshParticipants} variant="outline" size="sm" class="w-full justify-start">
                     <RefreshCw class="mr-2 h-4 w-4" /> Update Participants
@@ -1557,14 +1944,17 @@
             {/if}
             
             <!-- More Actions -->
-            <div class="ml-auto flex gap-2">
-              <Button variant="ghost" size="sm" onclick={() => showImportCSV = true} class="h-9 px-3 text-xs">
-                CSV
-              </Button>
-              <Button variant="ghost" size="sm" onclick={() => { resetMassMembers(); showMassAddMembers = true; }} class="h-9 px-3 text-xs">
-                Bulk
-              </Button>
-            </div>
+              <div class="ml-auto flex gap-2">
+                <Button variant="ghost" size="sm" onclick={() => showImportCSV = true} class="h-9 px-3 text-xs">
+                  CSV
+                </Button>
+                <Button variant="ghost" size="sm" onclick={openMassEditMembers} class="h-9 px-3 text-xs">
+                  Edit
+                </Button>
+                <Button variant="ghost" size="sm" onclick={() => { resetMassMembers(); showMassAddMembers = true; }} class="h-9 px-3 text-xs">
+                  Bulk
+                </Button>
+              </div>
           </div>
         </div>
         
@@ -1655,15 +2045,12 @@
               {/if}
               
               <!-- Member info -->
-              <div class="min-w-0 flex-1">
-                <div class="flex items-center gap-2">
-                  <span class="font-semibold text-base truncate">{member.lastName}, {member.firstName}</span>
-                  {#if member.rank}
-                    <Badge variant="outline" class="text-xs shrink-0">{member.rank}</Badge>
-                  {/if}
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-2">
+                    <span class="font-semibold text-base truncate">{member.lastName}, {member.firstName}</span>
+                  </div>
+                  <span class="text-sm text-muted-foreground block truncate">{getGroupName(member.groupId)}</span>
                 </div>
-                <span class="text-sm text-muted-foreground block truncate">{getGroupName(member.groupId)}</span>
-              </div>
               
               <!-- Edit button -->
               <button 
@@ -1826,18 +2213,79 @@
                       <Badge variant="outline" class="text-xs shrink-0">{done.length}/{gm.length}</Badge>
                     </Card.Title>
                   </Card.Header>
-                  <Card.Content>
-                    <div class="space-y-2">
-                      {#each done as match}
-                        {@const p1Win = match.winner === match.player1Id}
-                        <div class="flex items-center gap-2 rounded bg-muted/50 px-3 py-2 text-xs sm:text-sm">
-                          <span class={cn("truncate flex-1", p1Win && "font-semibold text-green-400")}>{getMemberName(match.player1Id)}{p1Win ? ' 🏆' : ''}</span>
-                          <span class="text-muted-foreground shrink-0">{match.player1Score?.length || 0} - {match.player2Score?.length || 0}</span>
-                          <span class={cn("truncate flex-1 text-right", !p1Win && match.winner && "font-semibold text-green-400")}>{!p1Win && match.winner ? '🏆 ' : ''}{getMemberName(match.player2Id)}</span>
+                    <Card.Content>
+                      {@const standings = standingsData.standingsByGroupId.get(group.groupId) ?? []}
+                      {@const tiedKeys = standingsData.tieKeysByGroupId.get(group.groupId) ?? new Set()}
+                      {@const top3 = standings.slice(0, 3)}
+                      {@const needsSuddenDeath = top3.some(row => tiedKeys.has(getTieKey(row)))}
+                      {#if standings.length > 0}
+                        <div class="mb-4 rounded-lg border border-border bg-background/40 p-3">
+                          <div class="mb-2 flex items-center justify-between">
+                            <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Standings</p>
+                            {#if needsSuddenDeath}
+                              <Badge variant="outline" class="text-[10px] border-amber-500 text-amber-400">Tie → Sudden Death Needed</Badge>
+                            {/if}
+                          </div>
+                          <div class="grid grid-cols-[1fr_70px_50px_60px] gap-2 text-[10px] uppercase text-muted-foreground">
+                            <span>Player</span>
+                            <span class="text-center">W-T-L</span>
+                            <span class="text-center">Pts</span>
+                            <span class="text-center">Ippons</span>
+                          </div>
+                          <div class="mt-2 space-y-1">
+                            {#each standings as row, idx}
+                              <div class={cn("grid grid-cols-[1fr_70px_50px_60px] gap-2 items-center rounded px-2 py-1 text-xs sm:text-sm", idx < 3 ? "bg-emerald-900/20" : "bg-muted/40")}>
+                                <div class="flex items-center gap-2 truncate">
+                                  <span class="w-5 text-center text-muted-foreground">{idx + 1}</span>
+                                  <span class="truncate">{getMemberName(row.memberId)}</span>
+                                  {#if tiedKeys.has(getTieKey(row))}
+                                    <Badge variant="outline" class="text-[10px] border-amber-500 text-amber-400">TIE</Badge>
+                                  {/if}
+                                  {#if row.suddenDeathWins > 0}
+                                    <Badge variant="outline" class="text-[10px] border-purple-500 text-purple-400">SD {row.suddenDeathWins}</Badge>
+                                  {/if}
+                                </div>
+                                <span class="text-center tabular-nums">{row.wins}-{row.ties}-{row.losses}</span>
+                                <span class="text-center tabular-nums font-semibold">{row.points}</span>
+                                <span class="text-center tabular-nums">{row.ippons}</span>
+                              </div>
+                            {/each}
+                          </div>
+                          <p class="mt-2 text-[10px] text-muted-foreground">Tiebreakers: points → wins → ippons → sudden death.</p>
                         </div>
-                      {:else}<p class="text-sm text-muted-foreground">No completed matches</p>{/each}
-                    </div>
-                  </Card.Content>
+                      {/if}
+                      <div class="space-y-2">
+                        {#each done as match}
+                          {@const p1Win = match.winner === match.player1Id}
+                          {@const isTie = !match.winner}
+                          {@const events = buildScoreTimeline(match)}
+                          <div class="rounded bg-muted/50 px-3 py-2 text-xs sm:text-sm">
+                            <div class="flex items-center gap-2">
+                              <span class={cn("truncate flex-1", p1Win && "font-semibold text-green-400")}>{getMemberName(match.player1Id)}{p1Win ? ' 🏆' : ''}</span>
+                              <span class="text-muted-foreground shrink-0 flex items-center gap-2">
+                                {match.player1Score?.length || 0} - {match.player2Score?.length || 0}
+                                {#if isTie}<Badge variant="outline" class="text-[10px] border-amber-500 text-amber-400">TIE</Badge>{/if}
+                                {#if match.isSuddenDeath}<Badge variant="outline" class="text-[10px] border-purple-500 text-purple-400">SD</Badge>{/if}
+                              </span>
+                              <span class={cn("truncate flex-1 text-right", !p1Win && match.winner && "font-semibold text-green-400")}>{!p1Win && match.winner ? '🏆 ' : ''}{getMemberName(match.player2Id)}</span>
+                            </div>
+                            {#if events.length > 0}
+                              <div class="mt-2 flex flex-wrap gap-2 text-[10px] text-muted-foreground">
+                                {#each events as event}
+                                  <span class="flex items-center gap-1 rounded bg-background/40 px-2 py-1">
+                                    <Badge variant="outline" class={cn("text-[9px] border-transparent", event.player === 'AKA' ? "text-red-400" : "text-slate-300")}>{event.player}</Badge>
+                                    <span>{SCORE_LABELS[event.type] || `Score ${event.type}`}</span>
+                                    <span class="font-mono">{event.time !== undefined ? formatTimer(event.time) : '--:--'}</span>
+                                  </span>
+                                {/each}
+                              </div>
+                            {:else if (match.player1Score?.length || 0) + (match.player2Score?.length || 0) > 0}
+                              <div class="mt-2 text-[10px] text-muted-foreground">Score timeline unavailable (missing timestamps).</div>
+                            {/if}
+                          </div>
+                        {:else}<p class="text-sm text-muted-foreground">No completed matches</p>{/each}
+                      </div>
+                    </Card.Content>
                 </Card.Root>
               {/if}
             {/each}
@@ -1931,8 +2379,6 @@
           </select>
         </div>
         <div class="space-y-2">
-          <Label for="edit-member-rank">Rank <span class="text-muted-foreground text-xs">(optional)</span></Label>
-          <Input id="edit-member-rank" bind:value={editingMember.rank} placeholder="e.g., 1-dan, 2-kyu" />
         </div>
       </div>
     {/if}
@@ -1962,9 +2408,43 @@
     </div>
     <Dialog.Footer class="flex-col sm:flex-row gap-2"><Button variant="secondary" onclick={() => showMassAddMembers = false} class="w-full sm:w-auto">Cancel</Button><Button onclick={createMassMembers} class="w-full sm:w-auto">Add ({massMembers.filter(m => m.firstName.trim() && m.lastName.trim() && m.groupId).length})</Button></Dialog.Footer>
   </Dialog.Content>
-</Dialog.Root>
-
-<Dialog.Root bind:open={showImportCSV}>
+  </Dialog.Root>
+  
+  <Dialog.Root bind:open={showMassEditMembers}>
+    <Dialog.Content class="sm:max-w-4xl max-w-[calc(100vw-2rem)]">
+      <Dialog.Header>
+        <Dialog.Title>Bulk Edit Members</Dialog.Title>
+        <Dialog.Description>Edits apply to the current filtered list.</Dialog.Description>
+      </Dialog.Header>
+      <div class="py-4 overflow-x-auto">
+        <div class="mb-2 grid grid-cols-[1fr_1fr_140px] gap-2 text-xs font-medium text-muted-foreground min-w-[360px]">
+          <span>First</span>
+          <span>Last</span>
+          <span>Group</span>
+        </div>
+        <div class="space-y-2 min-w-[360px] max-h-[60vh] overflow-y-auto pr-1" use:autoAnimate>
+          {#each massEditMembers as member (member.id)}
+            <div class="grid grid-cols-[1fr_1fr_140px] gap-2">
+              <Input bind:value={member.firstName} placeholder="First" class="text-sm" />
+              <Input bind:value={member.lastName} placeholder="Last" class="text-sm" />
+              <select bind:value={member.groupId} class="rounded-lg border border-input bg-background px-2 py-2 text-xs">
+                <option value="">-</option>
+                {#each groups as g}<option value={g.groupId}>{g.groupId}</option>{/each}
+              </select>
+            </div>
+          {:else}
+            <p class="text-sm text-muted-foreground text-center py-6">No members to edit.</p>
+          {/each}
+        </div>
+      </div>
+      <Dialog.Footer class="flex-col sm:flex-row gap-2">
+        <Button variant="secondary" onclick={() => showMassEditMembers = false} class="w-full sm:w-auto">Cancel</Button>
+        <Button onclick={saveMassEditMembers} class="w-full sm:w-auto">Save Changes</Button>
+      </Dialog.Footer>
+    </Dialog.Content>
+  </Dialog.Root>
+  
+  <Dialog.Root bind:open={showImportCSV}>
   <Dialog.Content class="sm:max-w-md max-w-[calc(100vw-2rem)]">
     <Dialog.Header><Dialog.Title>Import CSV</Dialog.Title><Dialog.Description>FirstName,LastName,GroupID</Dialog.Description></Dialog.Header>
     <div class="py-4"><textarea bind:value={csvText} placeholder="John,Doe,YUD&#10;Jane,Smith,MUD" rows="6" class="w-full rounded-lg border border-input bg-background px-3 py-2 font-mono text-xs sm:text-sm focus:border-primary focus:outline-none"></textarea></div>
@@ -2004,14 +2484,7 @@
   </Dialog.Content>
 </Dialog.Root>
 
-
-
-
-
-
-
-
-
+{/if}
 
 
 

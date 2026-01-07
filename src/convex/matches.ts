@@ -27,6 +27,14 @@ function checkWinner(
   return null;
 }
 
+function getElapsedSeconds(match: { timerStartedAt?: number; timerPausedAt?: number }, now = Date.now()): number {
+  if (match.timerPausedAt !== undefined) return match.timerPausedAt;
+  if (match.timerStartedAt !== undefined) {
+    return Math.floor((now - match.timerStartedAt) / 1000);
+  }
+  return 0;
+}
+
 export const getByTournament = query({
   args: { tournamentId: v.id("tournaments") },
   handler: async (ctx, { tournamentId }) => {
@@ -163,23 +171,34 @@ export const addScore = mutation({
     matchId: v.id("matches"),
     player: v.union(v.literal("player1"), v.literal("player2")),
     scoreType: v.number(),
+    elapsedSeconds: v.optional(v.number()),
   },
-  handler: async (ctx, { matchId, player, scoreType }) => {
+  handler: async (ctx, { matchId, player, scoreType, elapsedSeconds }) => {
     const match = await ctx.db.get(matchId);
     if (!match) throw new Error("Match not found");
     if (match.status === "completed") throw new Error("Match already completed");
     
     const p1Scores = [...match.player1Score];
     const p2Scores = [...match.player2Score];
+    const p1Times = [...(match.player1ScoreTimes ?? [])];
+    const p2Times = [...(match.player2ScoreTimes ?? [])];
+    const elapsed = typeof elapsedSeconds === "number" ? elapsedSeconds : getElapsedSeconds(match);
     
-    if (player === "player1") p1Scores.push(scoreType);
-    else p2Scores.push(scoreType);
+    if (player === "player1") {
+      p1Scores.push(scoreType);
+      p1Times.push(elapsed);
+    } else {
+      p2Scores.push(scoreType);
+      p2Times.push(elapsed);
+    }
     
     const winner = checkWinner(p1Scores, p2Scores, match.matchType);
     
     await ctx.db.patch(matchId, {
       player1Score: p1Scores,
       player2Score: p2Scores,
+      player1ScoreTimes: p1Times,
+      player2ScoreTimes: p2Times,
       ...(winner && {
         winner: winner === "player1" ? match.player1Id : match.player2Id,
         status: "completed" as const,
@@ -187,6 +206,10 @@ export const addScore = mutation({
       }),
       updatedAt: Date.now(),
     });
+    
+    if (winner) {
+      await ensureSuddenDeathMatches(ctx, match);
+    }
     
     return { winner, p1Scores, p2Scores };
   },
@@ -196,8 +219,9 @@ export const addHansoku = mutation({
   args: {
     matchId: v.id("matches"),
     player: v.union(v.literal("player1"), v.literal("player2")),
+    elapsedSeconds: v.optional(v.number()),
   },
-  handler: async (ctx, { matchId, player }) => {
+  handler: async (ctx, { matchId, player, elapsedSeconds }) => {
     const match = await ctx.db.get(matchId);
     if (!match) throw new Error("Match not found");
     if (match.status === "completed") throw new Error("Match already completed");
@@ -206,13 +230,22 @@ export const addHansoku = mutation({
     let p2Hansoku = match.player2Hansoku;
     const p1Scores = [...match.player1Score];
     const p2Scores = [...match.player2Score];
+    const p1Times = [...(match.player1ScoreTimes ?? [])];
+    const p2Times = [...(match.player2ScoreTimes ?? [])];
+    const elapsed = typeof elapsedSeconds === "number" ? elapsedSeconds : getElapsedSeconds(match);
     
     if (player === "player1") {
       p1Hansoku++;
-      if (p1Hansoku % 2 === 0) p2Scores.push(SCORE_TYPES.HANSOKU_POINT);
+      if (p1Hansoku % 2 === 0) {
+        p2Scores.push(SCORE_TYPES.HANSOKU_POINT);
+        p2Times.push(elapsed);
+      }
     } else {
       p2Hansoku++;
-      if (p2Hansoku % 2 === 0) p1Scores.push(SCORE_TYPES.HANSOKU_POINT);
+      if (p2Hansoku % 2 === 0) {
+        p1Scores.push(SCORE_TYPES.HANSOKU_POINT);
+        p1Times.push(elapsed);
+      }
     }
     
     const winner = checkWinner(p1Scores, p2Scores, match.matchType);
@@ -222,6 +255,8 @@ export const addHansoku = mutation({
       player2Hansoku: p2Hansoku,
       player1Score: p1Scores,
       player2Score: p2Scores,
+      player1ScoreTimes: p1Times,
+      player2ScoreTimes: p2Times,
       ...(winner && {
         winner: winner === "player1" ? match.player1Id : match.player2Id,
         status: "completed" as const,
@@ -229,6 +264,10 @@ export const addHansoku = mutation({
       }),
       updatedAt: Date.now(),
     });
+    
+    if (winner) {
+      await ensureSuddenDeathMatches(ctx, match);
+    }
     
     return { winner, p1Hansoku, p2Hansoku };
   },
@@ -245,15 +284,24 @@ export const undoScore = mutation({
     
     const p1Scores = [...match.player1Score];
     const p2Scores = [...match.player2Score];
+    const p1Times = [...(match.player1ScoreTimes ?? [])];
+    const p2Times = [...(match.player2ScoreTimes ?? [])];
     
-    if (player === "player1" && p1Scores.length > 0) p1Scores.pop();
-    else if (player === "player2" && p2Scores.length > 0) p2Scores.pop();
+    if (player === "player1" && p1Scores.length > 0) {
+      p1Scores.pop();
+      if (p1Times.length > 0) p1Times.pop();
+    } else if (player === "player2" && p2Scores.length > 0) {
+      p2Scores.pop();
+      if (p2Times.length > 0) p2Times.pop();
+    }
     
     const wasCompleted = match.status === "completed";
     
     await ctx.db.patch(matchId, {
       player1Score: p1Scores,
       player2Score: p2Scores,
+      player1ScoreTimes: p1Times,
+      player2ScoreTimes: p2Times,
       ...(wasCompleted && { winner: undefined, status: "in_progress" as const }),
       updatedAt: Date.now(),
     });
@@ -275,17 +323,25 @@ export const undoHansoku = mutation({
     let p2Hansoku = match.player2Hansoku;
     const p1Scores = [...match.player1Score];
     const p2Scores = [...match.player2Score];
+    const p1Times = [...(match.player1ScoreTimes ?? [])];
+    const p2Times = [...(match.player2ScoreTimes ?? [])];
     
     if (player === "player1" && p1Hansoku > 0) {
       if (p1Hansoku % 2 === 0) {
         const idx = p2Scores.lastIndexOf(SCORE_TYPES.HANSOKU_POINT);
-        if (idx >= 0) p2Scores.splice(idx, 1);
+        if (idx >= 0) {
+          p2Scores.splice(idx, 1);
+          if (p2Times.length > idx) p2Times.splice(idx, 1);
+        }
       }
       p1Hansoku--;
     } else if (player === "player2" && p2Hansoku > 0) {
       if (p2Hansoku % 2 === 0) {
         const idx = p1Scores.lastIndexOf(SCORE_TYPES.HANSOKU_POINT);
-        if (idx >= 0) p1Scores.splice(idx, 1);
+        if (idx >= 0) {
+          p1Scores.splice(idx, 1);
+          if (p1Times.length > idx) p1Times.splice(idx, 1);
+        }
       }
       p2Hansoku--;
     }
@@ -295,6 +351,8 @@ export const undoHansoku = mutation({
       player2Hansoku: p2Hansoku,
       player1Score: p1Scores,
       player2Score: p2Scores,
+      player1ScoreTimes: p1Times,
+      player2ScoreTimes: p2Times,
       updatedAt: Date.now(),
     });
     
@@ -341,6 +399,30 @@ export const toggleTimer = mutation({
   },
 });
 
+export const addTimerTime = mutation({
+  args: {
+    matchId: v.id("matches"),
+    seconds: v.number(),
+  },
+  handler: async (ctx, { matchId, seconds }) => {
+    if (seconds !== 30 && seconds !== 60) {
+      throw new Error("Invalid timer extension");
+    }
+    const match = await ctx.db.get(matchId);
+    if (!match) throw new Error("Match not found");
+    if (match.status === "completed") throw new Error("Match already completed");
+
+    const nextDuration = match.timerDuration + seconds;
+
+    await ctx.db.patch(matchId, {
+      timerDuration: nextDuration,
+      updatedAt: Date.now(),
+    });
+
+    return { timerDuration: nextDuration };
+  },
+});
+
 export const declareWinner = mutation({
   args: {
     matchId: v.id("matches"),
@@ -359,6 +441,29 @@ export const declareWinner = mutation({
         (match.timerStartedAt ? Math.floor((Date.now() - match.timerStartedAt) / 1000) : 0),
       updatedAt: Date.now(),
     });
+
+    await ensureSuddenDeathMatches(ctx, match);
+  },
+});
+
+export const declareTie = mutation({
+  args: {
+    matchId: v.id("matches"),
+  },
+  handler: async (ctx, { matchId }) => {
+    const match = await ctx.db.get(matchId);
+    if (!match) throw new Error("Match not found");
+    if (match.status === "completed") throw new Error("Match already completed");
+
+    await ctx.db.patch(matchId, {
+      winner: undefined,
+      status: "completed",
+      actualDuration: match.timerPausedAt ||
+        (match.timerStartedAt ? Math.floor((Date.now() - match.timerStartedAt) / 1000) : 0),
+      updatedAt: Date.now(),
+    });
+
+    await ensureSuddenDeathMatches(ctx, match);
   },
 });
 
@@ -366,26 +471,39 @@ export const declareForfeit = mutation({
   args: {
     matchId: v.id("matches"),
     forfeitingPlayer: v.union(v.literal("player1"), v.literal("player2")),
+    elapsedSeconds: v.optional(v.number()),
   },
-  handler: async (ctx, { matchId, forfeitingPlayer }) => {
+  handler: async (ctx, { matchId, forfeitingPlayer, elapsedSeconds }) => {
     const match = await ctx.db.get(matchId);
     if (!match) throw new Error("Match not found");
     
     const winnerId = forfeitingPlayer === "player1" ? match.player2Id : match.player1Id;
     const p1Scores = [...match.player1Score];
     const p2Scores = [...match.player2Score];
+    const p1Times = [...(match.player1ScoreTimes ?? [])];
+    const p2Times = [...(match.player2ScoreTimes ?? [])];
+    const elapsed = typeof elapsedSeconds === "number" ? elapsedSeconds : getElapsedSeconds(match);
     
-    if (forfeitingPlayer === "player1") p2Scores.push(SCORE_TYPES.FORFEIT);
-    else p1Scores.push(SCORE_TYPES.FORFEIT);
+    if (forfeitingPlayer === "player1") {
+      p2Scores.push(SCORE_TYPES.FORFEIT);
+      p2Times.push(elapsed);
+    } else {
+      p1Scores.push(SCORE_TYPES.FORFEIT);
+      p1Times.push(elapsed);
+    }
     
     await ctx.db.patch(matchId, {
       player1Score: p1Scores,
       player2Score: p2Scores,
+      player1ScoreTimes: p1Times,
+      player2ScoreTimes: p2Times,
       winner: winnerId,
       status: "completed",
       actualDuration: match.timerPausedAt || 0,
       updatedAt: Date.now(),
     });
+
+    await ensureSuddenDeathMatches(ctx, match);
   },
 });
 
@@ -485,6 +603,10 @@ export const addHanteiRound = mutation({
         (match.timerStartedAt ? Math.floor((Date.now() - match.timerStartedAt) / 1000) : 0)) : undefined,
       updatedAt: Date.now(),
     });
+
+    if (status === "completed") {
+      await ensureSuddenDeathMatches(ctx, match);
+    }
     
     return { 
       rounds, 
@@ -542,5 +664,140 @@ export const declareHanteiWinner = mutation({
         (match.timerStartedAt ? Math.floor((Date.now() - match.timerStartedAt) / 1000) : 0),
       updatedAt: Date.now(),
     });
+
+    await ensureSuddenDeathMatches(ctx, match);
   },
 });
+
+async function ensureSuddenDeathMatches(
+  ctx: { db: any },
+  match: { tournamentId: string; groupId: string; isSuddenDeath?: boolean }
+) {
+  if (match.isSuddenDeath) return;
+
+  const groupMatches = await ctx.db
+    .query("matches")
+    .withIndex("by_tournament_group", (q: any) =>
+      q.eq("tournamentId", match.tournamentId).eq("groupId", match.groupId)
+    )
+    .collect();
+
+  const regularMatches = groupMatches.filter((m: any) => !m.isSuddenDeath);
+  if (regularMatches.some((m: any) => m.status !== "completed")) return;
+
+  const participants = await ctx.db
+    .query("participants")
+    .withIndex("by_tournament_group", (q: any) =>
+      q.eq("tournamentId", match.tournamentId).eq("groupId", match.groupId)
+    )
+    .collect();
+  if (participants.length === 0) return;
+
+  const stats = new Map<string, { memberId: string; wins: number; ties: number; ippons: number; points: number }>();
+  for (const p of participants) {
+    stats.set(p.memberId, { memberId: p.memberId, wins: 0, ties: 0, ippons: 0, points: 0 });
+  }
+
+  for (const m of regularMatches) {
+    const p1 = stats.get(m.player1Id);
+    const p2 = stats.get(m.player2Id);
+    if (!p1 || !p2) continue;
+    const p1Ippons = m.player1Score?.length || 0;
+    const p2Ippons = m.player2Score?.length || 0;
+    p1.ippons += p1Ippons;
+    p2.ippons += p2Ippons;
+    if (m.winner === m.player1Id) {
+      p1.wins += 1;
+    } else if (m.winner === m.player2Id) {
+      p2.wins += 1;
+    } else {
+      p1.ties += 1;
+      p2.ties += 1;
+    }
+  }
+
+  const rows = Array.from(stats.values());
+  for (const row of rows) {
+    row.points = (row.wins * 2) + row.ties;
+  }
+  rows.sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points;
+    if (b.wins !== a.wins) return b.wins - a.wins;
+    if (b.ippons !== a.ippons) return b.ippons - a.ippons;
+    return a.memberId.localeCompare(b.memberId);
+  });
+
+  const top3 = rows.slice(0, 3);
+  const keyCounts = new Map<string, number>();
+  for (const row of rows) {
+    const key = `${row.points}-${row.wins}-${row.ippons}`;
+    keyCounts.set(key, (keyCounts.get(key) ?? 0) + 1);
+  }
+
+  const tiedKeys = new Set<string>();
+  for (const row of top3) {
+    const key = `${row.points}-${row.wins}-${row.ippons}`;
+    if ((keyCounts.get(key) ?? 0) > 1) tiedKeys.add(key);
+  }
+  if (tiedKeys.size === 0) return;
+
+  const tiedMemberIds = rows
+    .filter(row => tiedKeys.has(`${row.points}-${row.wins}-${row.ippons}`))
+    .map(row => row.memberId);
+  if (tiedMemberIds.length < 2) return;
+
+  const existingPairs = new Set<string>();
+  for (const m of groupMatches) {
+    if (!m.isSuddenDeath) continue;
+    const key = [m.player1Id, m.player2Id].sort().join("|");
+    existingPairs.add(key);
+  }
+
+  const group = await ctx.db
+    .query("groups")
+    .withIndex("by_groupId", (q: any) => q.eq("groupId", match.groupId))
+    .first();
+  const tournament = await ctx.db.get(match.tournamentId);
+  if (!tournament) return;
+
+  const isHantei = group?.isHantei || false;
+  const court = regularMatches[0]?.court ?? "A";
+  const allMatches = await ctx.db
+    .query("matches")
+    .withIndex("by_tournament", (q: any) => q.eq("tournamentId", match.tournamentId))
+    .collect();
+  let orderIndex = allMatches.length > 0
+    ? Math.max(...allMatches.map((m: any) => m.orderIndex)) + 1
+    : 0;
+  const now = Date.now();
+
+  for (let i = 0; i < tiedMemberIds.length; i++) {
+    for (let j = i + 1; j < tiedMemberIds.length; j++) {
+      const p1 = tiedMemberIds[i];
+      const p2 = tiedMemberIds[j];
+      const key = [p1, p2].sort().join("|");
+      if (existingPairs.has(key)) continue;
+      await ctx.db.insert("matches", {
+        tournamentId: match.tournamentId,
+        groupId: match.groupId,
+        player1Id: p1,
+        player2Id: p2,
+        court,
+        status: "pending",
+        player1Score: [],
+        player2Score: [],
+        player1ScoreTimes: [],
+        player2ScoreTimes: [],
+        player1Hansoku: 0,
+        player2Hansoku: 0,
+        matchType: isHantei ? "hantei" : "ippon",
+        timerDuration: isHantei ? 0 : tournament.defaultTimerDuration,
+        round: 2,
+        orderIndex: orderIndex++,
+        isSuddenDeath: true,
+        updatedAt: now,
+      });
+      existingPairs.add(key);
+    }
+  }
+}

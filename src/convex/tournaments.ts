@@ -39,6 +39,7 @@ export const create = mutation({
       hanteiConfig: { round1: "M-M", round2: "K-M" },
       timerOptions: [60, 120, 180, 240, 300],
       defaultTimerDuration: 180,
+      timerDisplayMode: "up",
       createdAt: Date.now(),
     });
   },
@@ -49,8 +50,13 @@ export const update = mutation({
     id: v.id("tournaments"),
     name: v.optional(v.string()),
     date: v.optional(v.string()),
+    hanteiConfig: v.optional(v.object({
+      round1: v.string(),
+      round2: v.string(),
+    })),
     timerOptions: v.optional(v.array(v.number())),
     defaultTimerDuration: v.optional(v.number()),
+    timerDisplayMode: v.optional(v.union(v.literal("up"), v.literal("down"))),
   },
   handler: async (ctx, { id, ...updates }) => {
     const filteredUpdates = Object.fromEntries(
@@ -175,12 +181,15 @@ export const generateMatches = mutation({
           status: "pending",
           player1Score: [],
           player2Score: [],
+          player1ScoreTimes: [],
+          player2ScoreTimes: [],
           player1Hansoku: 0,
           player2Hansoku: 0,
           matchType: isHantei ? "hantei" : "sanbon",
           timerDuration: isHantei ? 0 : tournament.defaultTimerDuration,
           round: 1,
           orderIndex: orderIndex++,
+          isSuddenDeath: false,
           updatedAt: now,
         });
       }
@@ -315,12 +324,15 @@ export const refreshParticipants = mutation({
               status: "pending",
               player1Score: [],
               player2Score: [],
+              player1ScoreTimes: [],
+              player2ScoreTimes: [],
               player1Hansoku: 0,
               player2Hansoku: 0,
               matchType: isHantei ? "hantei" : "sanbon",
               timerDuration: isHantei ? 0 : tournament.defaultTimerDuration,
               round: 1,
               orderIndex: orderIndex++,
+              isSuddenDeath: false,
               updatedAt: now,
             });
             addedCount++;
@@ -342,11 +354,20 @@ export const reset = mutation({
       .collect();
     
     const now = Date.now();
+    let resetCount = 0;
+    let deletedSuddenDeath = 0;
     for (const match of matches) {
+      if (match.isSuddenDeath) {
+        await ctx.db.delete(match._id);
+        deletedSuddenDeath++;
+        continue;
+      }
       await ctx.db.patch(match._id, {
         status: "pending",
         player1Score: [],
         player2Score: [],
+        player1ScoreTimes: [],
+        player2ScoreTimes: [],
         player1Hansoku: 0,
         player2Hansoku: 0,
         winner: undefined,
@@ -355,8 +376,9 @@ export const reset = mutation({
         actualDuration: undefined,
         updatedAt: now,
       });
+      resetCount++;
     }
     
-    return { resetCount: matches.length };
+    return { resetCount, deletedSuddenDeath };
   },
 });

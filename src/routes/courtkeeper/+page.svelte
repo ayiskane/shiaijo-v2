@@ -1,19 +1,23 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
   import { useQuery, useConvexClient } from 'convex-svelte';
   import { asset } from '$app/paths';
   import { api } from '../../convex/_generated/api';
   import { cn } from '$lib/utils';
   import { toast } from 'svelte-sonner';
   import { Button } from '$lib/components/ui/button';
+  import { Input } from '$lib/components/ui/input';
+  import { Label } from '$lib/components/ui/label';
   import * as Dialog from '$lib/components/ui/dialog';
   import { Progress } from '$lib/components/ui/progress';
   import { Badge } from '$lib/components/ui/badge';
+  import { Separator } from '$lib/components/ui/separator';
   import * as Sheet from '$lib/components/ui/sheet';
   import * as ToggleGroup from '$lib/components/ui/toggle-group';
-  import { Swords, Menu, RotateCcw, Play, Pause, Undo2, Flag, Trophy, Home, Gavel } from '@lucide/svelte';
+  import { Swords, Menu, RotateCcw, Play, Pause, Undo2, Flag, Trophy, Home, Gavel, Lock, KeyRound, UserCheck } from '@lucide/svelte';
   
   const shiaijoLogo = asset('/shiaijologo.png');
+  const SENSEI_GROUP_ID = 'SEN';
   
   const client = useConvexClient();
   
@@ -21,11 +25,14 @@
   const tournamentsQuery = useQuery(api.tournaments.list, () => ({}));
   const membersQuery = useQuery(api.members.list, () => ({}));
   const groupsQuery = useQuery(api.groups.list, () => ({}));
+  const settingsQuery = useQuery(api.settings.get, () => ({ key: 'courtkeeperPasscode' }));
   
   let tournaments = $derived(tournamentsQuery.data ?? []);
   let members = $derived(membersQuery.data ?? []);
   let groups = $derived(groupsQuery.data ?? []);
   let tournament = $derived(tournaments.find(t => t.status === 'in_progress') || null);
+  let settingsLoading = $derived(settingsQuery.isLoading);
+  let courtkeeperPasscode = $derived(settingsQuery.data ?? '');
   
   // Conditional matches query
   const matchesQuery = useQuery(
@@ -46,6 +53,8 @@
     for (const g of groups) map.set(g.groupId, g);
     return map;
   });
+
+  let senseiMembers = $derived(members.filter(m => m.groupId === SENSEI_GROUP_ID));
   
   // Score labels
   const SCORE_LABELS: Record<number, string> = { 1: 'M', 2: 'K', 3: 'D', 4: 'T', 5: 'H', 6: 'FF' };
@@ -67,6 +76,10 @@
   let showWinModal = $state(false);
   let pendingWinner = $state<'player1' | 'player2' | null>(null);
   let showQueuePanel = $state(false);
+  let accessUnlocked = $state(false);
+  let accessChecked = $state(false);
+  let courtkeeperUnlockCode = $state('');
+  let selectedSenseiId = $state<string | null>(null);
   
   // Hantei scoring state
   let hanteiRound = $state(1);
@@ -111,14 +124,19 @@
   let p2Hansoku = $derived(currentMatch?.player2Hansoku || 0);
   let winTarget = $derived(currentMatch?.matchType === 'ippon' ? 1 : 2);
   let gameOver = $derived(
-    isHanteiMatch 
-      ? (akaRoundWins >= 2 || shiroRoundWins >= 2 || currentMatch?.status === 'completed')
-      : (p1Score.length >= winTarget || p2Score.length >= winTarget)
+    currentMatch?.status === 'completed' ||
+      (isHanteiMatch 
+        ? (akaRoundWins >= 2 || shiroRoundWins >= 2)
+        : (p1Score.length >= winTarget || p2Score.length >= winTarget))
   );
   let timerDuration = $derived(currentMatch?.timerDuration || 180);
   let progress = $derived(Math.min(100, (elapsedSeconds / timerDuration) * 100));
   let timerExpired = $derived(elapsedSeconds >= timerDuration);
   let timerRunning = $derived(!!(currentMatch?.timerStartedAt && !currentMatch?.timerPausedAt));
+  let timerDisplayMode = $derived(tournament?.timerDisplayMode ?? 'up');
+  let displaySeconds = $derived(
+    timerDisplayMode === 'down' ? Math.max(timerDuration - elapsedSeconds, 0) : elapsedSeconds
+  );
   
   // Reset hantei state when match changes
   $effect(() => {
@@ -159,13 +177,42 @@
   function selectCourt(court: 'A' | 'B') { selectedCourt = court; showCourtSelect = false; }
   function getMemberName(id: string | undefined): string { if (!id) return 'Unknown'; const m = membersById.get(id); return m ? `${m.firstName} ${m.lastName.charAt(0)}.` : 'Unknown'; }
   function getGroupName(id: string): string { return groupsByGroupId.get(id)?.name || id; }
+
+  onMount(() => {
+    accessUnlocked = localStorage.getItem('shiaijo_courtkeeper_unlocked') === 'true';
+    accessChecked = true;
+  });
+
+  $effect(() => {
+    if (!accessChecked) return;
+    if (!courtkeeperPasscode) accessUnlocked = true;
+  });
+
+  function unlockCourtkeeper() {
+    if (!courtkeeperPasscode || courtkeeperUnlockCode.trim() === courtkeeperPasscode) {
+      accessUnlocked = true;
+      courtkeeperUnlockCode = '';
+      localStorage.setItem('shiaijo_courtkeeper_unlocked', 'true');
+    } else {
+      toast.error('Incorrect passcode');
+    }
+  }
+
+  function unlockAsSensei() {
+    if (!selectedSenseiId) {
+      toast.error('Select a Sensei member');
+      return;
+    }
+    accessUnlocked = true;
+    localStorage.setItem('shiaijo_courtkeeper_unlocked', 'true');
+  }
   
   // Bogu scoring
   async function addScore(player: 'player1' | 'player2', scoreType: number) {
     if (!currentMatch || gameOver || isHanteiMatch) return;
     try {
       if (currentMatch.status === 'pending') await client.mutation(api.matches.startMatch, { matchId: currentMatch._id });
-      const result = await client.mutation(api.matches.addScore, { matchId: currentMatch._id, player, scoreType });
+      const result = await client.mutation(api.matches.addScore, { matchId: currentMatch._id, player, scoreType, elapsedSeconds });
       if (result.winner) { pendingWinner = player; showWinModal = true; }
     } catch (e) { toast.error('Failed to add score'); }
   }
@@ -173,7 +220,7 @@
   async function addHansoku(player: 'player1' | 'player2') {
     if (!currentMatch || gameOver || isHanteiMatch) return;
     try {
-      const result = await client.mutation(api.matches.addHansoku, { matchId: currentMatch._id, player });
+      const result = await client.mutation(api.matches.addHansoku, { matchId: currentMatch._id, player, elapsedSeconds });
       if (result.winner) { pendingWinner = player === 'player1' ? 'player2' : 'player1'; showWinModal = true; }
     } catch (e) { toast.error('Failed to add hansoku'); }
   }
@@ -217,6 +264,24 @@
     if (!currentMatch) return;
     try { await client.mutation(api.matches.toggleTimer, { matchId: currentMatch._id }); } catch (e) { toast.error('Failed to toggle timer'); }
   }
+
+  async function addTime(seconds: number) {
+    if (!currentMatch) return;
+    try {
+      await client.mutation(api.matches.addTimerTime, { matchId: currentMatch._id, seconds });
+      toast.success(`Added ${seconds === 30 ? '0:30' : '1:00'} to timer`);
+    } catch (e) { toast.error('Failed to add time'); }
+  }
+
+  async function declareTie() {
+    if (!currentMatch) return;
+    if (currentMatch.isSuddenDeath) { toast.error('Sudden death cannot be tied'); return; }
+    if (!confirm('Declare this match a tie?')) return;
+    try {
+      await client.mutation(api.matches.declareTie, { matchId: currentMatch._id });
+      toast.success('Match recorded as tie');
+    } catch (e) { toast.error('Failed to declare tie'); }
+  }
   
   async function confirmWin() {
     if (!currentMatch || !pendingWinner) return;
@@ -230,12 +295,57 @@
   async function declareForfeit(player: 'player1' | 'player2') {
     if (!currentMatch) return;
     if (!confirm(`Declare forfeit for ${player === 'player1' ? 'AKA' : 'SHIRO'}?`)) return;
-    try { await client.mutation(api.matches.declareForfeit, { matchId: currentMatch._id, forfeitingPlayer: player }); toast.success('Forfeit recorded'); } catch (e) { toast.error('Failed to record forfeit'); }
+    try { await client.mutation(api.matches.declareForfeit, { matchId: currentMatch._id, forfeitingPlayer: player, elapsedSeconds }); toast.success('Forfeit recorded'); } catch (e) { toast.error('Failed to record forfeit'); }
   }
   
   onDestroy(() => { stopLocalTimer(); });
 </script>
 
+{#if !accessUnlocked}
+  <div class="min-h-screen bg-background text-foreground flex items-center justify-center p-6">
+    <div class="w-full max-w-md rounded-2xl border border-border bg-card p-6 space-y-4">
+      <div class="flex items-center gap-3">
+        <Lock class="h-6 w-6 text-amber-400" />
+        <div>
+          <h1 class="text-xl font-bold">Courtkeeper Locked</h1>
+          <p class="text-xs text-muted-foreground">Enter the passcode or unlock as Sensei.</p>
+        </div>
+      </div>
+      {#if settingsLoading}
+        <div class="flex items-center justify-center py-8">
+          <div class="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+        </div>
+      {:else}
+        <div class="space-y-2">
+          <Label class="text-xs text-muted-foreground">Courtkeeper Passcode</Label>
+          <div class="flex gap-2">
+            <Input type="password" bind:value={courtkeeperUnlockCode} placeholder="Enter passcode" class="text-sm" />
+            <Button onclick={unlockCourtkeeper} class="shrink-0"><KeyRound class="mr-2 h-4 w-4" /> Unlock</Button>
+          </div>
+          {#if !courtkeeperPasscode}
+            <p class="text-[10px] text-muted-foreground">No passcode set yet. You can enter without a code.</p>
+          {/if}
+        </div>
+        <Separator />
+        <div class="space-y-2">
+          <Label class="text-xs text-muted-foreground">Sensei Quick Access</Label>
+          <div class="flex gap-2">
+            <select bind:value={selectedSenseiId} class="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm">
+              <option value="">Select Sensei</option>
+              {#each senseiMembers as m}
+                <option value={m._id}>{m.firstName} {m.lastName}</option>
+              {/each}
+            </select>
+            <Button variant="outline" onclick={unlockAsSensei} class="shrink-0"><UserCheck class="mr-2 h-4 w-4" /> Sensei</Button>
+          </div>
+          {#if senseiMembers.length === 0}
+            <p class="text-[10px] text-muted-foreground">No Sensei members found. Add members to the Sensei group.</p>
+          {/if}
+        </div>
+      {/if}
+    </div>
+  </div>
+{:else}
 <Dialog.Root bind:open={showCourtSelect}>
   <Dialog.Content class="sm:max-w-sm">
     <Dialog.Header><Dialog.Title class="text-center text-xl">Select Court</Dialog.Title></Dialog.Header>
@@ -255,6 +365,7 @@
       {#if currentMatch}
         <span class="text-sm text-muted-foreground">{getGroupName(currentMatch.groupId)}</span>
         {#if isHanteiMatch}<Badge variant="outline" class="text-xs border-purple-500 text-purple-400">Hantei</Badge>{/if}
+        {#if currentMatch.isSuddenDeath}<Badge variant="outline" class="text-xs border-amber-500 text-amber-400">Sudden Death</Badge>{/if}
       {/if}
     </div>
     <div class="flex items-center gap-2">
@@ -403,8 +514,13 @@
         {#if timerExpired}<div class="bg-amber-500 text-black font-bold text-center py-2 rounded-lg mb-3">⏰ TIME!</div>{:else}<Progress value={progress} class="h-2 mb-3" />{/if}
         <div class="flex items-center justify-center gap-4">
           <Button onclick={toggleTimer} size="lg" class={cn("w-14 h-14 rounded-full font-bold text-lg", timerRunning ? "bg-amber-500 hover:bg-amber-400 text-black" : "bg-emerald-500 hover:bg-emerald-400")}>{#if timerRunning}<Pause class="h-6 w-6" />{:else}<Play class="h-6 w-6" />{/if}</Button>
-          <span class="text-4xl font-mono font-bold tabular-nums">{formatTime(elapsedSeconds)}</span>
+          <span class="text-4xl font-mono font-bold tabular-nums">{formatTime(displaySeconds)}</span>
           <Button variant="secondary" onclick={() => elapsedSeconds = 0}><RotateCcw class="h-4 w-4 mr-1" /> Reset</Button>
+        </div>
+        <div class="mt-3 flex flex-wrap items-center justify-center gap-2">
+          <Button variant="outline" size="sm" onclick={() => addTime(30)} disabled={!currentMatch || currentMatch.status === 'completed'}>+0:30</Button>
+          <Button variant="outline" size="sm" onclick={() => addTime(60)} disabled={!currentMatch || currentMatch.status === 'completed'}>+1:00</Button>
+          <Button variant="outline" size="sm" onclick={declareTie} disabled={!timerExpired || !currentMatch || currentMatch.status === 'completed' || currentMatch.isSuddenDeath} class="border-amber-500 text-amber-400">Declare Tie</Button>
         </div>
       </div>
       
@@ -417,6 +533,7 @@
             <div class="flex gap-1">
               <Badge variant="outline" class="text-xs">{getGroupName(next.groupId)}</Badge>
               {#if next.matchType === 'hantei'}<Badge variant="outline" class="text-xs border-purple-500 text-purple-400">H</Badge>{/if}
+              {#if next.isSuddenDeath}<Badge variant="outline" class="text-xs border-amber-500 text-amber-400">SD</Badge>{/if}
             </div>
           </div>
         </div>
@@ -451,6 +568,7 @@
             <div class="flex gap-1 mt-1">
               <Badge variant="outline" class="text-xs">{getGroupName(m.groupId)}</Badge>
               {#if m.matchType === 'hantei'}<Badge variant="outline" class="text-xs border-purple-500 text-purple-400">Hantei</Badge>{/if}
+              {#if m.isSuddenDeath}<Badge variant="outline" class="text-xs border-amber-500 text-amber-400">SD</Badge>{/if}
             </div>
           </div>
         {:else}<p class="text-muted-foreground text-sm text-center py-4">No pending matches</p>{/each}
@@ -459,4 +577,5 @@
     </div>
   </Sheet.Content>
 </Sheet.Root>
+{/if}
 {/if}

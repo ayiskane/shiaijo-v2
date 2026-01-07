@@ -7,8 +7,8 @@ export default defineSchema({
     firstName: v.string(),
     lastName: v.string(),
     groupId: v.string(), // Reference to group by custom ID (e.g., "YUD", "MUD")
-    rank: v.optional(v.string()),
     isGuest: v.boolean(),
+    isAdmin: v.optional(v.boolean()),
     createdAt: v.number(),
   }).index("by_lastName", ["lastName"])
     .index("by_groupId", ["groupId"]),
@@ -39,6 +39,7 @@ export default defineSchema({
     })),
     timerOptions: v.array(v.number()),
     defaultTimerDuration: v.number(),
+    timerDisplayMode: v.optional(v.union(v.literal("up"), v.literal("down"))),
     createdAt: v.number(),
   }).index("by_status", ["status"])
     .index("by_date", ["date"]),
@@ -68,6 +69,8 @@ export default defineSchema({
     // Bogu match scores
     player1Score: v.array(v.number()),
     player2Score: v.array(v.number()),
+    player1ScoreTimes: v.optional(v.array(v.number())),
+    player2ScoreTimes: v.optional(v.array(v.number())),
     player1Hansoku: v.number(),
     player2Hansoku: v.number(),
     // Hantei match rounds (for non-bogu)
@@ -85,6 +88,7 @@ export default defineSchema({
     actualDuration: v.optional(v.number()),
     round: v.number(),
     orderIndex: v.number(),
+    isSuddenDeath: v.optional(v.boolean()),
     updatedAt: v.number(),
   }).index("by_tournament", ["tournamentId"])
     .index("by_tournament_court", ["tournamentId", "court"])
