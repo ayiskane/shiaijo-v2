@@ -1664,6 +1664,7 @@ function selectAllFiltered() {
             onStartTournament={startTournament}
             onCompleteTournament={completeTournament}
             onOpenSettings={() => settingsSheetOpen = true}
+            onCloseSettings={() => settingsSheetOpen = false}
             onResetTournament={resetTournament}
             onDeleteTournament={() => { settingsSheetOpen = false; showDeleteConfirm = true; }}
             onSetGroupCourt={setGroupCourt}
@@ -2038,6 +2039,7 @@ function selectAllFiltered() {
 </Dialog.Root>
 
 {/if}
+
 
 
 
