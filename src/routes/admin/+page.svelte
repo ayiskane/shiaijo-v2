@@ -1504,20 +1504,20 @@ function selectAllFiltered() {
           { id: 'history', label: 'History', icon: History },
         ] as tab (tab.id)}
           {@const Icon = tab.icon}
-          <button onclick={() => { activeTab = tab.id; sidebarOpen = false; }} class={cn("flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors", activeTab === tab.id ? "bg-sidebar-accent text-sidebar-primary" : "text-sidebar-foreground hover:bg-sidebar-accent")}><Icon class="h-4 w-4" />{tab.label}</button>
+          <button onclick={() => { activeTab = tab.id; sidebarOpen = false; }} class={cn("flex w-full items-center gap-3 rounded-lg px-3 py-3 text-base transition-colors", activeTab === tab.id ? "bg-sidebar-accent text-sidebar-primary" : "text-sidebar-foreground hover:bg-sidebar-accent")}><Icon class="h-5 w-5" />{tab.label}</button>
         {/each}
       </nav>
       <div class="p-2 border-t border-sidebar-border">
         <button
           onclick={() => { activeTab = 'settings'; sidebarOpen = false; }}
-          class={cn("flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors", activeTab === 'settings' ? "bg-sidebar-accent text-sidebar-primary" : "text-sidebar-foreground hover:bg-sidebar-accent")}
+          class={cn("flex w-full items-center gap-3 rounded-lg px-3 py-3 text-base transition-colors", activeTab === 'settings' ? "bg-sidebar-accent text-sidebar-primary" : "text-sidebar-foreground hover:bg-sidebar-accent")}
         >
-          <Settings class="h-4 w-4" /> Settings
+          <Settings class="h-5 w-5" /> Settings
         </button>
       </div>
       <div class="absolute inset-x-4 bottom-4 flex flex-col gap-2">
-        <a href="/courtkeeper" class="flex items-center justify-center gap-2 rounded-lg bg-sky-900/50 py-2 text-sm text-sky-300 transition-colors hover:bg-sky-900/70"><Swords class="h-4 w-4" /> Courtkeeper</a>
-        <a href="/spectator" class="flex items-center justify-center gap-2 rounded-lg bg-emerald-900/50 py-2 text-sm text-emerald-300 transition-colors hover:bg-emerald-900/70"><Eye class="h-4 w-4" /> Spectator</a>
+        <a href="/courtkeeper" class="flex items-center justify-center gap-2 rounded-lg bg-sky-900/50 py-2.5 text-base text-sky-300 transition-colors hover:bg-sky-900/70"><Swords class="h-5 w-5" /> Courtkeeper</a>
+        <a href="/spectator" class="flex items-center justify-center gap-2 rounded-lg bg-emerald-900/50 py-2.5 text-base text-emerald-300 transition-colors hover:bg-emerald-900/70"><Eye class="h-5 w-5" /> Spectator</a>
       </div>
     </Sheet.Content>
   </Sheet.Root>
@@ -2033,6 +2033,7 @@ function selectAllFiltered() {
 </Dialog.Root>
 
 {/if}
+
 
 
 
