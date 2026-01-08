@@ -104,7 +104,16 @@
   })();
   
   $: totalRegistered = participants.length;
+  $: totalUnregistered = members.filter(m => !m.archived).length - totalRegistered;
+  $: totalAll = members.filter(m => !m.archived).length;
   $: pageSelected = paginatedMembers.length > 0 && paginatedMembers.every((m) => selectedMemberIds.has(m._id));
+  
+  // Create a map of groupId to group for quick lookup
+  $: groupsMap = new Map(groups.map(g => [g.groupId, g]));
+  
+  function isHanteiGroup(groupId: string): boolean {
+    return groupsMap.get(groupId)?.hantei === true;
+  }
   
   function getInitials(firstName: string, lastName: string): string {
     return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
@@ -368,9 +377,14 @@
                   </div>
                 </td>
                 <td class="px-3 py-2">
-                  <Badge variant="outline" class="text-xs">
-                    {getGroupName(member.groupId)}
-                  </Badge>
+                  <div class="flex items-center gap-1.5">
+                    <Badge variant="outline" class="text-xs">
+                      {getGroupName(member.groupId)}
+                    </Badge>
+                    {#if isHanteiGroup(member.groupId)}
+                      <Badge variant="outline" class="text-xs text-amber-500 border-amber-500">Non-bogu</Badge>
+                    {/if}
+                  </div>
                 </td>
                 <td class="px-3 py-2 text-center">
                   {#if member.archived}
@@ -556,7 +570,7 @@
                 class="h-8 text-xs"
                 onclick={() => onRegistrationFilterChange('all')}
               >
-                All
+                All ({totalAll})
               </Button>
               <Button 
                 variant={registrationFilter === 'registered' ? "default" : "outline"}
@@ -564,7 +578,7 @@
                 class="h-8 text-xs"
                 onclick={() => onRegistrationFilterChange('registered')}
               >
-                Registered
+                Registered ({totalRegistered})
               </Button>
               <Button 
                 variant={registrationFilter === 'unregistered' ? "default" : "outline"}
@@ -572,7 +586,7 @@
                 class="h-8 text-xs"
                 onclick={() => onRegistrationFilterChange('unregistered')}
               >
-                Unregistered
+                Unregistered ({totalUnregistered})
               </Button>
             </div>
           {/if}
@@ -589,6 +603,7 @@
             {#each paginatedMembers as member (member._id)}
               {@const canRegister = selectedTournament && selectedTournament.status !== 'completed' && !member.archived}
               {@const isRegistered = registeredMemberIds.has(member._id)}
+              {@const isNonBogu = isHanteiGroup(member.groupId)}
               <Card.Root 
                 class={cn(
                   "p-2.5 transition-colors",
@@ -607,8 +622,11 @@
                   </div>
                   <div class="flex-1 min-w-0">
                     <div class="font-medium text-sm leading-tight">{member.firstName} {member.lastName}</div>
-                    <div class="flex items-center gap-1.5 mt-0.5">
+                    <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
                       <Badge variant="outline" class="text-[10px] px-1.5 py-0">{getGroupName(member.groupId)}</Badge>
+                      {#if isNonBogu}
+                        <Badge variant="outline" class="text-[10px] px-1.5 py-0 text-amber-500 border-amber-500">Non-bogu</Badge>
+                      {/if}
                       {#if member.archived}
                         <Badge variant="secondary" class="text-[10px] px-1.5 py-0">Archived</Badge>
                       {:else if selectedTournament && isRegistered}
@@ -703,6 +721,7 @@
     border-collapse: collapse;
   }
 </style>
+
 
 
 
