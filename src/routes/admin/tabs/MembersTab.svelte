@@ -94,72 +94,64 @@
 
 <!-- Sticky Controls -->
 <div class="sticky top-0 z-10 -mx-4 sm:-mx-6 px-4 sm:px-6 pt-3 pb-4 bg-background/95 backdrop-blur-sm space-y-3">
-  {#if selectedTournament}
-    <div class="glass-panel border border-border/70 px-4 sm:px-5 py-3 flex flex-wrap items-center gap-3 text-accessible-sm">
-      <div class="flex items-center gap-3 pr-3 border-r border-border/60">
-        <div class="h-10 w-10 rounded-xl bg-indigo-900/50 border border-border/70 flex items-center justify-center shadow-sm">
-          <Users class="h-5 w-5 text-indigo-200" />
-        </div>
-        <div class="leading-tight">
-          <div class="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/90">Admin / Members</div>
-          <div class="flex items-center gap-2">
-            <span class="text-[15px] font-semibold text-foreground">Quick actions</span>
-            {#if selectedTournament?.name}
-              <span class="pill-soft px-2.5 py-1 text-[12px]">{selectedTournament.name}</span>
-            {/if}
-          </div>
-        </div>
+{#if selectedTournament}
+  <div class="glass-panel border border-border/70 px-4 sm:px-5 py-3 flex flex-wrap items-center gap-3 text-accessible-sm">
+    <div class="flex items-center gap-3 pr-3 border-r border-border/60">
+      <div class="h-10 w-10 rounded-lg bg-indigo-900/70 border border-indigo-700/60 flex items-center justify-center shadow-glow-indigo">
+        <RefreshCw class="h-4 w-4 text-indigo-100" />
       </div>
+      <div class="text-[15px] font-semibold text-foreground">Quick Actions</div>
+    </div>
 
-      <div class="flex flex-wrap items-center gap-2 flex-1">
-        <Button size="sm" variant="secondary" class="h-10 px-3 text-[14px] rounded-lg border border-border/70 bg-surface/70 hover:bg-accent/10" onclick={onAddAllParticipants}>
-          <UserPlus class="mr-2 h-4 w-4" /> Register all
-        </Button>
-        <Button size="sm" variant="outline" class="h-10 px-3 text-[14px] rounded-lg border-border/70" onclick={onClearAllParticipants}>
-          <X class="mr-2 h-4 w-4" /> Clear all
-        </Button>
+    <div class="flex flex-wrap items-center gap-2 flex-1">
+      <Button size="sm" variant="secondary" class="h-10 px-3 text-[14px] rounded-lg border border-border/70 bg-surface/70 hover:bg-accent/10" onclick={onAddAllParticipants}>
+        <UserPlus class="mr-2 h-4 w-4" /> Register all
+      </Button>
+      <Button size="sm" variant="outline" class="h-10 px-3 text-[14px] rounded-lg border-border/70" onclick={onClearAllParticipants}>
+        <X class="mr-2 h-4 w-4" /> Clear all
+      </Button>
 
-        <div class="relative" role="group" onmouseleave={() => addMenuOpen = false}>
-          <div class="flex rounded-lg overflow-hidden border border-border/70 bg-card/70">
-            <Button size="sm" class="h-10 px-3 text-[14px] rounded-none" onclick={onOpenAddMember}>
-              <Plus class="mr-2 h-4 w-4" /> Add member
-            </Button>
-            <button
-              class="px-3 h-10 bg-card/60 hover:bg-accent/30 border-l border-border/70 text-muted-foreground"
-              aria-label="More add options"
-              aria-haspopup="menu"
-              aria-expanded={addMenuOpen}
-              aria-controls="add-menu-options"
-              onclick={() => addMenuOpen = !addMenuOpen}
-            >
-              <ChevronDown class="h-4 w-4" />
-            </button>
-          </div>
-          {#if addMenuOpen}
-            <div id="add-menu-options" class="absolute mt-2 w-52 rounded-xl border border-border/70 bg-popover shadow-xl glass-panel p-2 z-20" role="menu">
-              <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-accent/20 text-[14px]" role="menuitem" onclick={() => { addMenuOpen = false; onOpenAddMember(); }}>Add single</button>
-              <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-accent/20 text-[14px]" role="menuitem" onclick={() => { addMenuOpen = false; resetMassMembers(); onOpenMassAdd(); }}>Bulk add</button>
-              <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-accent/20 text-[14px]" role="menuitem" onclick={() => { addMenuOpen = false; onOpenImportCSV(); }}>Import CSV</button>
-            </div>
-          {/if}
-        </div>
-
-        <Button size="sm" variant="secondary" class="h-10 px-3 text-[14px] rounded-lg border border-border/70 bg-surface/70 hover:bg-accent/10" onclick={onOpenMassEdit}>
-          <Pencil class="mr-2 h-4 w-4" /> Edit selected
-        </Button>
-        {#if selectedMemberIds.size > 0}
-          <Button size="sm" variant="secondary" class="h-10 px-3 text-[14px] rounded-lg border border-border/70 bg-surface/70 hover:bg-accent/10" onclick={onRegisterSelectedMembers}>
-            <Check class="mr-2 h-4 w-4" /> Register selected
+      <div class="relative" role="group" onmouseleave={() => addMenuOpen = false}>
+        <div class="flex rounded-lg overflow-hidden border border-border/70 bg-card/70">
+          <Button size="sm" class="h-10 px-3 text-[14px] rounded-none" onclick={onOpenAddMember}>
+            <Plus class="mr-2 h-4 w-4" /> Add member
           </Button>
+          <button
+            class="px-3 h-10 bg-card/60 hover:bg-accent/30 border-l border-border/70 text-muted-foreground"
+            aria-label="More add options"
+            aria-haspopup="menu"
+            aria-expanded={addMenuOpen}
+            aria-controls="add-menu-options"
+            onclick={() => addMenuOpen = !addMenuOpen}
+          >
+            <ChevronDown class="h-4 w-4" />
+          </button>
+        </div>
+        {#if addMenuOpen}
+          <div id="add-menu-options" class="absolute mt-2 w-52 rounded-xl border border-border/70 bg-popover shadow-xl glass-panel p-2 z-20" role="menu">
+            <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-accent/20 text-[14px]" role="menuitem" onclick={() => { addMenuOpen = false; onOpenAddMember(); }}>Add single</button>
+            <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-accent/20 text-[14px]" role="menuitem" onclick={() => { addMenuOpen = false; resetMassMembers(); onOpenMassAdd(); }}>Bulk add</button>
+            <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-accent/20 text-[14px]" role="menuitem" onclick={() => { addMenuOpen = false; onOpenImportCSV(); }}>Import CSV</button>
+          </div>
         {/if}
       </div>
 
-      <div class="hidden sm:flex items-center gap-2 text-muted-foreground text-xs">
-        <span class="pill-soft px-2.5 py-1 text-[12px]">{selectedMemberIds.size} selected</span>
-        <span class="pill-soft px-2.5 py-1 text-[12px]">{participants.length} registered</span>
-      </div>
+      <Button size="sm" variant="secondary" class="h-10 px-3 text-[14px] rounded-lg border border-border/70 bg-surface/70 hover:bg-accent/10" onclick={onOpenMassEdit}>
+        <Pencil class="mr-2 h-4 w-4" /> Edit selected
+      </Button>
+      {#if selectedMemberIds.size > 0}
+        <Button size="sm" variant="secondary" class="h-10 px-3 text-[14px] rounded-lg border border-border/70 bg-surface/70 hover:bg-accent/10" onclick={onRegisterSelectedMembers}>
+          <Check class="mr-2 h-4 w-4" /> Register selected
+        </Button>
+      {/if}
     </div>
-  {/if}
+
+    <div class="hidden sm:flex items-center gap-2 text-muted-foreground text-xs">
+      <span class="pill-soft px-2.5 py-1 text-[12px]">{selectedMemberIds.size} selected</span>
+      <span class="pill-soft px-2.5 py-1 text-[12px]">{participants.length} registered</span>
+    </div>
+  </div>
+{/if}
 
   <div class="glass-panel border border-border/70 px-4 sm:px-5 py-3.5 flex flex-wrap items-center gap-3 text-accessible-sm">
     <div class="flex items-center gap-3 mr-4">
@@ -245,7 +237,7 @@
 {/if}
 
 <!-- Data Table Card -->
-<div class="table-card" bind:this={listContainer}>
+<div class="table-card -mt-1" bind:this={listContainer}>
   <!-- Table -->
   <div class="overflow-x-auto">
     <table class="data-table">
