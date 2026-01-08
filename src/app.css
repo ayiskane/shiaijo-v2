@@ -601,8 +601,8 @@
   
   /* Nav sections */
   .nav-section {
-    margin-bottom: 24px;
-    margin-top: 8px;
+    margin-bottom: 16px;
+    margin-top: 16px;
   }
   
   .nav-section:first-of-type {
