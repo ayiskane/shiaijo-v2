@@ -8,12 +8,13 @@
   import { Badge } from '$lib/components/ui/badge';
   import * as Select from '$lib/components/ui/select';
   import * as Card from '$lib/components/ui/card';
-  import * as ScrollArea from '$lib/components/ui/scroll-area';
+  import * as Tabs from '$lib/components/ui/tabs';
+  import { Input } from '$lib/components/ui/input';
   import { Separator } from '$lib/components/ui/separator';
   
   import { 
     Users, FolderOpen, Search, Plus, Pencil, Trash2, 
-    Check, X, ChevronDown, ChevronLeft, ChevronRight, UserPlus
+    Check, X, ChevronDown, ChevronLeft, ChevronRight, UserPlus, RefreshCw
   } from '@lucide/svelte';
   
   export let members: any[] = [];
@@ -49,42 +50,41 @@
   export let getGroupName: (groupId: string) => string;
   export let resetMassMembers: () => void;
   
+  // Group callbacks
   export let onOpenAddGroup: () => void;
-  export let onEditGroup: (group: any) => void;
+  export let onOpenEditGroup: (group: any) => void;
   export let onDeleteGroup: (id: string) => void;
-  export let onAddMemberToGroup: (groupId: string) => void;
+  export let expandedGroupId: string | null = null;
+  export let onToggleGroupExpansion: (id: string) => void;
   
   const isMobile = new IsMobile();
-  
   let listContainer: HTMLElement;
-  let addMenuOpen = $state(false);
-  let mobileSubTab = $state<'members' | 'groups'>('members');
-  let selectedGroupIdForFilter = $state<string | null>(null);
+  let addMenuOpen = false;
+  let selectedGroupIdForFilter: string | null = null;
+  let mobileTab = 'members';
   
-  $effect(() => {
-    if (listContainer) autoAnimate(listContainer);
-  });
+  $: listContainer && autoAnimate(listContainer);
   
-  let currentPage = $state(1);
-  let itemsPerPage = $state(10);
+  // Pagination state
+  let currentPage = 1;
+  let itemsPerPage = 10;
   
-  $effect(() => {
-    if (filteredMembers) currentPage = 1;
-  });
+  // Filter members by selected group
+  $: displayedMembers = selectedGroupIdForFilter 
+    ? filteredMembers.filter(m => m.groupId === selectedGroupIdForFilter)
+    : filteredMembers;
   
-  let displayedMembers = $derived.by(() => {
-    if (selectedGroupIdForFilter && selectedGroupIdForFilter !== 'all') {
-      return filteredMembers.filter(m => m.groupId === selectedGroupIdForFilter);
-    }
-    return filteredMembers;
-  });
+  // Reset to page 1 when filters change
+  $: if (displayedMembers) currentPage = 1;
   
-  let totalPages = $derived(Math.ceil(displayedMembers.length / itemsPerPage));
-  let startIndex = $derived((currentPage - 1) * itemsPerPage);
-  let endIndex = $derived(Math.min(startIndex + itemsPerPage, displayedMembers.length));
-  let paginatedMembers = $derived(displayedMembers.slice(startIndex, endIndex));
+  // Calculate pagination
+  $: totalPages = Math.ceil(displayedMembers.length / itemsPerPage);
+  $: startIndex = (currentPage - 1) * itemsPerPage;
+  $: endIndex = Math.min(startIndex + itemsPerPage, displayedMembers.length);
+  $: paginatedMembers = displayedMembers.slice(startIndex, endIndex);
   
-  let pageNumbers = $derived.by(() => {
+  // Generate page numbers
+  $: pageNumbers = (() => {
     const pages: (number | string)[] = [];
     if (totalPages <= 7) {
       for (let i = 1; i <= totalPages; i++) pages.push(i);
@@ -98,15 +98,13 @@
       }
     }
     return pages;
-  });
+  })();
   
-  let boguGroups = $derived(groups.filter(g => !g.isHantei));
-  let hanteiGroups = $derived(groups.filter(g => g.isHantei));
-  let totalRegistered = $derived(participants.length);
-  let pageSelected = $derived(paginatedMembers.length > 0 && paginatedMembers.every((m) => selectedMemberIds.has(m._id)));
+  $: totalRegistered = participants.length;
+  $: pageSelected = paginatedMembers.length > 0 && paginatedMembers.every((m) => selectedMemberIds.has(m._id));
   
   function getInitials(firstName: string, lastName: string): string {
-    return \`\${firstName?.[0] || ''}\${lastName?.[0] || ''}\`.toUpperCase();
+    return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
   }
   
   function goToPage(page: number) {
@@ -118,8 +116,12 @@
     currentPage = 1;
   }
   
+  function getGroupMemberCount(groupId: string): number {
+    return membersByGroupId.get(groupId)?.length || 0;
+  }
+  
   onMount(() => {
-    console.debug('[admin] RosterTab mounted', { membersCount: members.length, groupsCount: groups.length, isMobile: isMobile.current });
+    console.debug('[admin] RosterTab mounted', { membersCount: members.length, groupsCount: groups.length });
   });
 </script>
 
@@ -128,265 +130,515 @@
 <div class="h-full flex flex-col">
   <div class="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/50">
     <div class="px-4 py-3 flex items-center justify-between">
-      <div class="flex items-center gap-4">
-        <div class="text-[0.7rem] text-muted-foreground">Admin / <span class="text-foreground font-medium">Roster</span></div>
-        <Separator orientation="vertical" class="h-4" />
-        <div class="flex items-center gap-3 text-xs">
-          <span class="flex items-center gap-1.5"><Users class="h-3.5 w-3.5 text-muted-foreground" /><span class="font-medium">{members.length}</span><span class="text-muted-foreground">members</span></span>
-          <span class="flex items-center gap-1.5"><FolderOpen class="h-3.5 w-3.5 text-muted-foreground" /><span class="font-medium">{groups.length}</span><span class="text-muted-foreground">groups</span></span>
-          {#if selectedTournament}<Badge variant="secondary" class="text-[0.65rem]"><Check class="h-3 w-3 mr-1" /> {totalRegistered} registered</Badge>{/if}
-        </div>
+      <div class="flex items-center gap-3">
+        <h2 class="text-lg font-semibold">Roster</h2>
+        <Badge variant="secondary">{members.length} members</Badge>
+        <Badge variant="outline">{groups.length} groups</Badge>
       </div>
-      <Button size="sm" variant="outline" onclick={onOpenAddGroup} class="h-8 text-xs"><Plus class="h-3.5 w-3.5 mr-1" /> Group</Button>
+      <div class="flex items-center gap-2">
+        <div class="relative">
+          <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input 
+            type="text" 
+            placeholder="Search members..." 
+            class="pl-8 w-[200px] h-8"
+            value={searchQuery}
+            oninput={(e) => onSearchChange(e.currentTarget.value)}
+          />
+        </div>
+        <Select.Root 
+          type="single"
+          value={registrationFilter}
+          onValueChange={(v) => v && onRegistrationFilterChange(v)}
+        >
+          <Select.Trigger class="w-[130px] h-8">
+            {registrationFilter === 'all' ? 'All Status' : registrationFilter === 'registered' ? 'Registered' : 'Unregistered'}
+          </Select.Trigger>
+          <Select.Content>
+            <Select.Item value="all">All Status</Select.Item>
+            <Select.Item value="registered">Registered</Select.Item>
+            <Select.Item value="unregistered">Unregistered</Select.Item>
+          </Select.Content>
+        </Select.Root>
+        <Button variant="outline" size="sm" onclick={onResetFilters}>
+          <RefreshCw class="w-3.5 h-3.5 mr-1" />
+          Reset
+        </Button>
+      </div>
     </div>
   </div>
   
-  <div class="flex-1 flex min-h-0">
-    <!-- Left Panel: Groups -->
-    <div class="w-[280px] flex-shrink-0 border-r border-border/50 flex flex-col bg-surface/30">
-      <div class="px-4 py-3 border-b border-border/30">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Groups</span>
-          <div class="flex items-center gap-1 text-[0.65rem]">
-            <span class="px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400">{boguGroups.length} Bogu</span>
-            <span class="px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400">{hanteiGroups.length} Hantei</span>
-          </div>
-        </div>
+  <div class="flex-1 flex overflow-hidden">
+    <!-- Groups Panel (Left) -->
+    <div class="w-[260px] border-r border-border/50 flex flex-col bg-muted/20">
+      <div class="p-3 border-b border-border/50 flex items-center justify-between">
+        <span class="text-sm font-medium text-muted-foreground">Groups</span>
+        <Button variant="ghost" size="sm" class="h-7 w-7 p-0" onclick={onOpenAddGroup}>
+          <Plus class="w-4 h-4" />
+        </Button>
       </div>
-      
-      <ScrollArea.Root class="flex-1">
-        <div class="p-2 space-y-1">
-          <button onclick={() => selectGroup(null)} class={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all", !selectedGroupIdForFilter ? "bg-primary/10 border border-primary/30 text-primary" : "hover:bg-accent/50 text-foreground")}>
-            <div class={cn("w-8 h-8 rounded-lg flex items-center justify-center", !selectedGroupIdForFilter ? "bg-primary/20" : "bg-muted")}><Users class="h-4 w-4" /></div>
-            <div class="flex-1 min-w-0"><div class="text-sm font-medium truncate">All Members</div><div class="text-[0.65rem] text-muted-foreground">{members.length} total</div></div>
-            {#if !selectedGroupIdForFilter}<Check class="h-4 w-4 text-primary" />{/if}
-          </button>
-          
-          <Separator class="my-2" />
-          
-          {#each groups as group (group._id)}
-            {@const groupMembers = membersByGroupId.get(group.groupId) ?? []}
-            {@const isSelected = selectedGroupIdForFilter === group.groupId}
-            <div class={cn("group relative rounded-lg transition-all", isSelected ? "bg-primary/10 border border-primary/30" : "hover:bg-accent/50 border border-transparent")}>
-              <button onclick={() => selectGroup(group.groupId)} class="w-full flex items-center gap-3 px-3 py-2.5 text-left">
-                <div class={cn("w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold", group.isHantei ? "bg-orange-500/20 text-orange-400" : "bg-indigo-500/20 text-indigo-400")}>{group.groupId.slice(0, 2)}</div>
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-2"><span class="text-sm font-medium truncate">{group.name}</span>{#if group.isHantei}<Badge variant="outline" class="text-[0.5rem] px-1 py-0 border-orange-500/50 text-orange-400">H</Badge>{/if}</div>
-                  <div class="text-[0.65rem] text-muted-foreground">{groupMembers.length} members</div>
-                </div>
-                {#if isSelected}<Check class="h-4 w-4 text-primary" />{/if}
-              </button>
-              <div class="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                <button onclick={(e) => { e.stopPropagation(); onEditGroup({ ...group }); }} class="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground"><Pencil class="h-3 w-3" /></button>
-                <button onclick={(e) => { e.stopPropagation(); onDeleteGroup(group._id); }} class="p-1.5 rounded-md hover:bg-destructive/20 text-muted-foreground hover:text-destructive"><Trash2 class="h-3 w-3" /></button>
-              </div>
-            </div>
-          {/each}
+      <div class="flex-1 overflow-y-auto p-2 space-y-1">
+        <!-- All Members option -->
+        <div 
+          role="button"
+          tabindex="0"
+          class={cn(
+            "flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer transition-colors",
+            selectedGroupIdForFilter === null ? "bg-primary/10 text-primary" : "hover:bg-muted"
+          )}
+          onclick={() => selectGroup(null)}
+          onkeydown={(e) => e.key === 'Enter' && selectGroup(null)}
+        >
+          <Users class="w-4 h-4" />
+          <span class="flex-1 text-sm font-medium">All Members</span>
+          <Badge variant="secondary" class="text-xs">{members.length}</Badge>
         </div>
-      </ScrollArea.Root>
-    </div>
-    
-    <!-- Right Panel: Members Table -->
-    <div class="flex-1 flex flex-col min-w-0">
-      <div class="px-4 py-2.5 border-b border-border/30 bg-surface/20">
-        <div class="flex items-center gap-3">
-          <div class="flex items-center gap-2 text-sm">
-            <span class="text-muted-foreground">Showing:</span>
-            <span class="font-medium">{selectedGroupIdForFilter ? groups.find(g => g.groupId === selectedGroupIdForFilter)?.name || 'Unknown' : 'All Members'}</span>
-            <Badge variant="secondary" class="text-[0.65rem]">{displayedMembers.length}</Badge>
-          </div>
-          <div class="flex-1"></div>
-          
-          <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-background border border-border/50 w-48">
-            <Search class="h-3.5 w-3.5 text-muted-foreground/60" />
-            <input type="text" placeholder="Search..." value={searchQuery} oninput={(e) => onSearchChange((e.target as HTMLInputElement).value)} class="bg-transparent border-none outline-none text-xs text-foreground w-full placeholder:text-muted-foreground/50" />
-            {#if searchQuery}<button onclick={() => onSearchChange('')} class="text-muted-foreground hover:text-foreground"><X class="h-3 w-3" /></button>{/if}
-          </div>
-          
-          {#if selectedTournament}
-            <div class="flex items-center gap-1 p-0.5 rounded-lg bg-muted/50">
-              {#each [{value:'all',label:'All'},{value:'registered',label:'Registered'},{value:'unregistered',label:'Unregistered'}] as filter}
-                <button onclick={() => onRegistrationFilterChange(filter.value as any)} class={cn("px-2.5 py-1 rounded text-[0.65rem] font-medium transition-colors", registrationFilter === filter.value ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>{filter.label}</button>
-              {/each}
-            </div>
-            <Separator orientation="vertical" class="h-5" />
-            <div class="flex items-center gap-1.5">
-              <Button size="sm" variant="outline" class="h-7 px-2 text-[0.65rem]" onclick={onAddAllParticipants}><UserPlus class="h-3 w-3 mr-1" /> Register All</Button>
-              {#if selectedMemberIds.size > 0}<Button size="sm" class="h-7 px-2 text-[0.65rem]" onclick={onRegisterSelectedMembers}><Check class="h-3 w-3 mr-1" /> Register ({selectedMemberIds.size})</Button>{/if}
-            </div>
-          {/if}
-          
-          <div class="relative" role="group" onmouseleave={() => addMenuOpen = false}>
-            <div class="flex rounded-md overflow-hidden border border-border/60">
-              <Button size="sm" class="h-7 px-2 text-[0.65rem] rounded-none" onclick={onOpenAddMember}><Plus class="h-3 w-3 mr-1" /> Add</Button>
-              <button class="px-1.5 h-7 bg-primary/90 hover:bg-primary border-l border-primary-foreground/20 text-primary-foreground" onclick={() => addMenuOpen = !addMenuOpen}><ChevronDown class="h-3 w-3" /></button>
-            </div>
-            {#if addMenuOpen}
-              <div class="absolute right-0 mt-1 w-36 rounded-lg border border-border/60 bg-popover shadow-xl p-1 z-20">
-                <button class="w-full text-left px-2.5 py-1.5 rounded hover:bg-accent/20 text-xs" onclick={() => { addMenuOpen = false; onOpenAddMember(); }}>Add single</button>
-                <button class="w-full text-left px-2.5 py-1.5 rounded hover:bg-accent/20 text-xs" onclick={() => { addMenuOpen = false; resetMassMembers(); onOpenMassAdd(); }}>Bulk add</button>
-                <button class="w-full text-left px-2.5 py-1.5 rounded hover:bg-accent/20 text-xs" onclick={() => { addMenuOpen = false; onOpenImportCSV(); }}>Import CSV</button>
+        
+        <Separator class="my-2" />
+        
+        <!-- Group List -->
+        {#each groups as group (group._id)}
+          <div 
+            role="button"
+            tabindex="0"
+            class={cn(
+              "group flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer transition-colors",
+              selectedGroupIdForFilter === group._id ? "bg-primary/10 text-primary" : "hover:bg-muted",
+              group.hantei && "border-l-2 border-orange-500"
+            )}
+            onclick={() => selectGroup(group._id)}
+            onkeydown={(e) => e.key === 'Enter' && selectGroup(group._id)}
+          >
+            <FolderOpen class="w-4 h-4 shrink-0" />
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium truncate">{group.name}</div>
+              <div class="text-xs text-muted-foreground">
+                {getGroupMemberCount(group._id)} members
+                {#if group.hantei}
+                  <span class="text-orange-500 ml-1">• Hantei</span>
+                {/if}
               </div>
+            </div>
+            <div class="hidden group-hover:flex items-center gap-1">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                class="h-6 w-6 p-0"
+                onclick={(e) => { e.stopPropagation(); onOpenEditGroup(group); }}
+              >
+                <Pencil class="w-3 h-3" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                class="h-6 w-6 p-0 text-destructive"
+                onclick={(e) => { e.stopPropagation(); onDeleteGroup(group._id); }}
+              >
+                <Trash2 class="w-3 h-3" />
+              </Button>
+            </div>
+            {#if selectedTournament}
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                class="h-6 px-2 text-xs hidden group-hover:flex"
+                onclick={(e) => { e.stopPropagation(); onRegisterGroupMembers(group._id); }}
+              >
+                <UserPlus class="w-3 h-3 mr-1" />
+                Register
+              </Button>
             {/if}
           </div>
+        {/each}
+      </div>
+    </div>
+    
+    <!-- Members Table (Right) -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+      <!-- Action Bar -->
+      <div class="px-4 py-2 border-b border-border/50 flex items-center justify-between bg-muted/10">
+        <div class="flex items-center gap-2">
+          {#if selectedMemberIds.size > 0}
+            <Badge variant="secondary">{selectedMemberIds.size} selected</Badge>
+            <Button variant="ghost" size="sm" onclick={onClearSelection}>
+              <X class="w-3.5 h-3.5 mr-1" />
+              Clear
+            </Button>
+            {#if selectedTournament}
+              <Button variant="outline" size="sm" onclick={onRegisterSelectedMembers}>
+                <UserPlus class="w-3.5 h-3.5 mr-1" />
+                Register Selected
+              </Button>
+            {/if}
+          {:else}
+            <span class="text-sm text-muted-foreground">
+              {selectedGroupIdForFilter ? getGroupName(selectedGroupIdForFilter) : 'All Members'}
+              ({displayedMembers.length})
+            </span>
+          {/if}
+        </div>
+        <div class="relative">
+          <Button variant="default" size="sm" onclick={() => addMenuOpen = !addMenuOpen}>
+            <Plus class="w-3.5 h-3.5 mr-1" />
+            Add
+            <ChevronDown class="w-3.5 h-3.5 ml-1" />
+          </Button>
+          {#if addMenuOpen}
+            <div class="absolute right-0 top-full mt-1 bg-popover border rounded-md shadow-lg py-1 z-50 min-w-[160px]">
+              <button class="w-full px-3 py-1.5 text-sm text-left hover:bg-muted" onclick={() => { onOpenAddMember(); addMenuOpen = false; }}>
+                Add Member
+              </button>
+              <button class="w-full px-3 py-1.5 text-sm text-left hover:bg-muted" onclick={() => { onOpenMassAdd(); addMenuOpen = false; }}>
+                Mass Add
+              </button>
+              <button class="w-full px-3 py-1.5 text-sm text-left hover:bg-muted" onclick={() => { onOpenImportCSV(); addMenuOpen = false; }}>
+                Import CSV
+              </button>
+            </div>
+          {/if}
         </div>
       </div>
       
+      <!-- Table -->
       <div class="flex-1 overflow-auto">
-        <table class="data-table w-full">
-          <thead class="sticky top-0 bg-background z-5">
-            <tr>
-              {#if selectedTournament}<th class="w-10"><input type="checkbox" checked={pageSelected} onchange={() => { if (pageSelected) { paginatedMembers.forEach((m) => { if (selectedMemberIds.has(m._id)) onToggleMemberSelection(m._id); }); } else { paginatedMembers.forEach((m) => { if (!selectedMemberIds.has(m._id)) onToggleMemberSelection(m._id); }); } }} class="h-4 w-4 rounded" style="accent-color: var(--indigo-primary);" /></th>{/if}
-              <th>Member</th>
-              <th>Group</th>
-              {#if selectedTournament}<th>Status</th>{/if}
-              <th class="w-20"></th>
+        <table class="w-full text-sm">
+          <thead class="sticky top-0 bg-muted/50 backdrop-blur-sm">
+            <tr class="border-b">
+              <th class="w-10 px-3 py-2">
+                <input 
+                  type="checkbox" 
+                  checked={pageSelected}
+                  onchange={() => {
+                    if (pageSelected) {
+                      paginatedMembers.forEach(m => selectedMemberIds.delete(m._id));
+                    } else {
+                      paginatedMembers.forEach(m => selectedMemberIds.add(m._id));
+                    }
+                    selectedMemberIds = selectedMemberIds;
+                  }}
+                  class="rounded border-input"
+                />
+              </th>
+              <th class="px-3 py-2 text-left font-medium">Name</th>
+              <th class="px-3 py-2 text-left font-medium">Group</th>
+              {#if selectedTournament}
+                <th class="px-3 py-2 text-center font-medium w-28">Registered</th>
+              {/if}
+              <th class="px-3 py-2 text-right font-medium w-24">Actions</th>
             </tr>
           </thead>
           <tbody bind:this={listContainer}>
-            {#if displayedMembers.length === 0}
-              <tr><td colspan={selectedTournament ? 5 : 3} class="py-16 text-center text-muted-foreground"><Users class="h-12 w-12 mx-auto mb-4 opacity-40" /><p class="text-base mb-3">No members found</p>{#if searchQuery || selectedGroupIdForFilter}<button onclick={() => { onSearchChange(''); selectGroup(null); }} class="text-sm text-primary hover:underline">Clear filters</button>{:else}<Button size="sm" onclick={onOpenAddMember}>Add your first member</Button>{/if}</td></tr>
-            {:else}
-              {#each paginatedMembers as member (member._id)}
-                {@const isRegistered = registeredMemberIds.has(member._id)}
-                {@const isSelected = selectedMemberIds.has(member._id)}
-                <tr class={cn(isRegistered && "bg-emerald-950/10")}>
-                  {#if selectedTournament}<td><input type="checkbox" checked={isSelected} onchange={() => onToggleMemberSelection(member._id)} class="h-4 w-4 rounded" style="accent-color: var(--indigo-primary);" /></td>{/if}
-                  <td><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium">{getInitials(member.firstName, member.lastName)}</div><span class="font-medium">{member.lastName}, {member.firstName}</span></div></td>
-                  <td><Badge variant="outline" class={cn("text-[0.65rem]", getGroupName(member.groupId).includes('Dan') && "border-indigo-500/50 text-indigo-400", getGroupName(member.groupId).includes('Kyu') && "border-blue-500/50 text-blue-400")}>{getGroupName(member.groupId)}</Badge></td>
-                  {#if selectedTournament}<td><button onclick={() => onToggleMemberRegistration(member._id)} class={cn("inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[0.65rem] font-semibold uppercase tracking-wide transition-all", isRegistered ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/40" : "bg-muted text-muted-foreground border border-border/50")}>{#if isRegistered}<Check class="h-3 w-3" /> Registered{:else}<Plus class="h-3 w-3" /> Register{/if}</button></td>{/if}
-                  <td><div class="flex items-center gap-1 justify-end"><button onclick={() => onOpenEditMember(member)} class="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"><Pencil class="h-3.5 w-3.5" /></button><button onclick={() => onDeleteMember(member._id)} class="p-1.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive"><Trash2 class="h-3.5 w-3.5" /></button></div></td>
-                </tr>
-              {/each}
-            {/if}
+            {#each paginatedMembers as member (member._id)}
+              <tr class="border-b hover:bg-muted/30 transition-colors">
+                <td class="px-3 py-2">
+                  <input 
+                    type="checkbox" 
+                    checked={selectedMemberIds.has(member._id)}
+                    onchange={() => onToggleMemberSelection(member._id)}
+                    class="rounded border-input"
+                  />
+                </td>
+                <td class="px-3 py-2">
+                  <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary">
+                      {getInitials(member.firstName, member.lastName)}
+                    </div>
+                    <div>
+                      <div class="font-medium">{member.firstName} {member.lastName}</div>
+                      {#if member.japaneseFirstName || member.japaneseLastName}
+                        <div class="text-xs text-muted-foreground">
+                          {member.japaneseLastName || ''} {member.japaneseFirstName || ''}
+                        </div>
+                      {/if}
+                    </div>
+                  </div>
+                </td>
+                <td class="px-3 py-2">
+                  <Badge variant="outline" class="text-xs">
+                    {getGroupName(member.groupId)}
+                  </Badge>
+                </td>
+                {#if selectedTournament}
+                  <td class="px-3 py-2 text-center">
+                    <Button 
+                      variant={registeredMemberIds.has(member._id) ? "default" : "outline"}
+                      size="sm"
+                      class="h-7 w-20"
+                      onclick={() => onToggleMemberRegistration(member._id)}
+                    >
+                      {#if registeredMemberIds.has(member._id)}
+                        <Check class="w-3.5 h-3.5 mr-1" />
+                        Yes
+                      {:else}
+                        <X class="w-3.5 h-3.5 mr-1" />
+                        No
+                      {/if}
+                    </Button>
+                  </td>
+                {/if}
+                <td class="px-3 py-2">
+                  <div class="flex items-center justify-end gap-1">
+                    <Button variant="ghost" size="sm" class="h-7 w-7 p-0" onclick={() => onOpenEditMember(member)}>
+                      <Pencil class="w-3.5 h-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="sm" class="h-7 w-7 p-0 text-destructive" onclick={() => onDeleteMember(member._id)}>
+                      <Trash2 class="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            {/each}
           </tbody>
         </table>
       </div>
       
-      {#if displayedMembers.length > 0}
-        <div class="px-4 py-2.5 border-t border-border/30 bg-surface/20 flex items-center justify-between text-xs">
-          <span class="text-muted-foreground">Showing {startIndex + 1}–{endIndex} of {displayedMembers.length}</span>
-          {#if totalPages > 1}
-            <div class="flex items-center gap-2">
-              <span class="text-muted-foreground">Rows:</span>
-              <select bind:value={itemsPerPage} class="px-2 py-1 rounded border border-border/50 bg-background text-xs"><option value={10}>10</option><option value={25}>25</option><option value={50}>50</option></select>
-              <div class="flex items-center gap-1 ml-4">
-                <button onclick={() => goToPage(currentPage - 1)} disabled={currentPage === 1} class="p-1 rounded hover:bg-muted disabled:opacity-50"><ChevronLeft class="h-4 w-4" /></button>
-                {#each pageNumbers as page}{#if page === '...'}<span class="px-2">...</span>{:else}<button onclick={() => goToPage(page as number)} class={cn("w-7 h-7 rounded text-xs font-medium", currentPage === page ? "bg-primary text-primary-foreground" : "hover:bg-muted")}>{page}</button>{/if}{/each}
-                <button onclick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages} class="p-1 rounded hover:bg-muted disabled:opacity-50"><ChevronRight class="h-4 w-4" /></button>
-              </div>
-            </div>
-          {/if}
+      <!-- Pagination Footer -->
+      <div class="px-4 py-2 border-t border-border/50 flex items-center justify-between bg-muted/10">
+        <div class="flex items-center gap-2">
+          <span class="text-sm text-muted-foreground">
+            Showing {startIndex + 1}-{endIndex} of {displayedMembers.length}
+          </span>
+          <Select.Root 
+            type="single"
+            value={String(itemsPerPage)}
+            onValueChange={(v) => { itemsPerPage = Number(v); currentPage = 1; }}
+          >
+            <Select.Trigger class="w-[70px] h-7 text-xs">
+              {itemsPerPage}
+            </Select.Trigger>
+            <Select.Content>
+              <Select.Item value="10">10</Select.Item>
+              <Select.Item value="25">25</Select.Item>
+              <Select.Item value="50">50</Select.Item>
+            </Select.Content>
+          </Select.Root>
         </div>
-      {/if}
+        <div class="flex items-center gap-1">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            class="h-7 w-7 p-0"
+            disabled={currentPage === 1}
+            onclick={() => goToPage(currentPage - 1)}
+          >
+            <ChevronLeft class="w-4 h-4" />
+          </Button>
+          {#each pageNumbers as page}
+            {#if page === '...'}
+              <span class="px-2 text-muted-foreground">...</span>
+            {:else}
+              <Button 
+                variant={currentPage === page ? "default" : "ghost"}
+                size="sm"
+                class="h-7 w-7 p-0 text-xs"
+                onclick={() => goToPage(page as number)}
+              >
+                {page}
+              </Button>
+            {/if}
+          {/each}
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            class="h-7 w-7 p-0"
+            disabled={currentPage === totalPages}
+            onclick={() => goToPage(currentPage + 1)}
+          >
+            <ChevronRight class="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
 {:else}
 <!-- Mobile: Tabbed Interface -->
-<div class="flex flex-col h-full">
-  <div class="px-4 py-3 bg-background/95 border-b border-border/50">
-    <div class="flex items-center justify-between mb-3">
-      <h2 class="text-lg font-semibold">Roster</h2>
-      <div class="flex items-center gap-2">
-        <Badge variant="secondary" class="text-[0.65rem]"><Users class="h-3 w-3 mr-1" /> {members.length}</Badge>
-        <Badge variant="secondary" class="text-[0.65rem]"><FolderOpen class="h-3 w-3 mr-1" /> {groups.length}</Badge>
+<div class="h-full flex flex-col">
+  <Tabs.Root value={mobileTab} onValueChange={(v) => mobileTab = v} class="flex-1 flex flex-col">
+    <div class="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b">
+      <div class="px-4 py-2">
+        <Tabs.List class="w-full grid grid-cols-2">
+          <Tabs.Trigger value="members" class="flex items-center gap-2">
+            <Users class="w-4 h-4" />
+            Members ({members.length})
+          </Tabs.Trigger>
+          <Tabs.Trigger value="groups" class="flex items-center gap-2">
+            <FolderOpen class="w-4 h-4" />
+            Groups ({groups.length})
+          </Tabs.Trigger>
+        </Tabs.List>
       </div>
     </div>
-    <div class="flex gap-1 p-1 bg-muted/50 rounded-lg">
-      <button onclick={() => mobileSubTab = 'members'} class={cn("flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-all", mobileSubTab === 'members' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground")}><Users class="h-4 w-4" />Members<Badge variant="outline" class="text-[0.6rem] px-1.5">{members.length}</Badge></button>
-      <button onclick={() => mobileSubTab = 'groups'} class={cn("flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-all", mobileSubTab === 'groups' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground")}><FolderOpen class="h-4 w-4" />Groups<Badge variant="outline" class="text-[0.6rem] px-1.5">{groups.length}</Badge></button>
-    </div>
-  </div>
-  
-  {#if mobileSubTab === 'members'}
-    <div class="flex-1 flex flex-col min-h-0">
-      <div class="px-4 py-2.5 border-b border-border/30 space-y-2">
-        <div class="flex items-center gap-2">
-          <div class="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 border border-border/30">
-            <Search class="h-4 w-4 text-muted-foreground" />
-            <input type="text" placeholder="Search members..." value={searchQuery} oninput={(e) => onSearchChange((e.target as HTMLInputElement).value)} class="flex-1 bg-transparent border-none outline-none text-sm" />
-            {#if searchQuery}<button onclick={() => onSearchChange('')}><X class="h-4 w-4 text-muted-foreground" /></button>{/if}
-          </div>
-          <Button size="icon" variant="outline" class="h-10 w-10" onclick={onOpenAddMember}><Plus class="h-4 w-4" /></Button>
+    
+    <Tabs.Content value="members" class="flex-1 flex flex-col mt-0">
+      <!-- Search and filters -->
+      <div class="px-4 py-3 space-y-2 border-b">
+        <div class="relative">
+          <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input 
+            type="text" 
+            placeholder="Search members..." 
+            class="pl-9"
+            value={searchQuery}
+            oninput={(e) => onSearchChange(e.currentTarget.value)}
+          />
         </div>
-        <div class="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4">
-          <Select.Root onSelectedChange={(v) => v && onFilterGroupChange(v.value as string)}>
-            <Select.Trigger class="h-8 text-xs min-w-[100px]"><Select.Value placeholder="All Groups" /></Select.Trigger>
-            <Select.Content><Select.Item value="all">All Groups</Select.Item>{#each groups as group}<Select.Item value={group.groupId}>{group.name}</Select.Item>{/each}</Select.Content>
-          </Select.Root>
-          {#if selectedTournament}{#each [{value:'all',label:'All'},{value:'registered',label:'✓ Reg'},{value:'unregistered',label:'○ Unreg'}] as filter}<button onclick={() => onRegistrationFilterChange(filter.value as any)} class={cn("px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all", registrationFilter === filter.value ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>{filter.label}</button>{/each}{/if}
+        <div class="flex gap-2 overflow-x-auto pb-1">
+          <Button 
+            variant={registrationFilter === 'all' ? "default" : "outline"}
+            size="sm"
+            onclick={() => onRegistrationFilterChange('all')}
+          >
+            All
+          </Button>
+          <Button 
+            variant={registrationFilter === 'registered' ? "default" : "outline"}
+            size="sm"
+            onclick={() => onRegistrationFilterChange('registered')}
+          >
+            Registered
+          </Button>
+          <Button 
+            variant={registrationFilter === 'unregistered' ? "default" : "outline"}
+            size="sm"
+            onclick={() => onRegistrationFilterChange('unregistered')}
+          >
+            Unregistered
+          </Button>
         </div>
       </div>
-      <div class="flex-1 overflow-auto">
-        <div class="p-4 space-y-2">
-          {#if displayedMembers.length === 0}
-            <div class="text-center py-12"><Users class="h-12 w-12 mx-auto mb-4 text-muted-foreground/40" /><p class="text-muted-foreground mb-4">No members found</p><Button size="sm" onclick={onOpenAddMember}>Add Member</Button></div>
-          {:else}
-            {#each paginatedMembers as member (member._id)}
-              {@const isRegistered = registeredMemberIds.has(member._id)}
-              <div class={cn("p-3 rounded-xl border transition-all", isRegistered ? "bg-emerald-500/5 border-emerald-500/20" : "bg-card border-border/50")}>
-                <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-sm font-medium">{getInitials(member.firstName, member.lastName)}</div>
-                  <div class="flex-1 min-w-0">
-                    <div class="font-medium truncate">{member.lastName}, {member.firstName}</div>
-                    <div class="flex items-center gap-2 mt-0.5"><Badge variant="outline" class="text-[0.6rem]">{getGroupName(member.groupId)}</Badge>{#if isRegistered}<span class="flex items-center gap-1 text-[0.6rem] text-emerald-500"><Check class="h-3 w-3" /> Registered</span>{/if}</div>
-                  </div>
-                  <div class="flex items-center gap-1">
-                    {#if selectedTournament}<button onclick={() => onToggleMemberRegistration(member._id)} class={cn("p-2 rounded-lg transition-all", isRegistered ? "bg-emerald-500/20 text-emerald-400" : "bg-muted text-muted-foreground")}>{#if isRegistered}<Check class="h-4 w-4" />{:else}<Plus class="h-4 w-4" />{/if}</button>{/if}
-                    <button onclick={() => onOpenEditMember(member)} class="p-2 rounded-lg hover:bg-muted text-muted-foreground"><Pencil class="h-4 w-4" /></button>
-                  </div>
+      
+      <!-- Member Cards -->
+      <div class="flex-1 overflow-auto p-4 space-y-2" bind:this={listContainer}>
+        {#each paginatedMembers as member (member._id)}
+          <Card.Root class="p-3">
+            <div class="flex items-center gap-3">
+              <input 
+                type="checkbox" 
+                checked={selectedMemberIds.has(member._id)}
+                onchange={() => onToggleMemberSelection(member._id)}
+                class="rounded border-input"
+              />
+              <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium text-primary">
+                {getInitials(member.firstName, member.lastName)}
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="font-medium">{member.firstName} {member.lastName}</div>
+                <div class="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Badge variant="outline" class="text-xs">{getGroupName(member.groupId)}</Badge>
+                  {#if selectedTournament && registeredMemberIds.has(member._id)}
+                    <Badge variant="default" class="text-xs">
+                      <Check class="w-3 h-3 mr-0.5" />
+                      Registered
+                    </Badge>
+                  {/if}
                 </div>
               </div>
-            {/each}
-          {/if}
+              <div class="flex items-center gap-1">
+                <Button variant="ghost" size="sm" class="h-8 w-8 p-0" onclick={() => onOpenEditMember(member)}>
+                  <Pencil class="w-4 h-4" />
+                </Button>
+                <Button variant="ghost" size="sm" class="h-8 w-8 p-0 text-destructive" onclick={() => onDeleteMember(member._id)}>
+                  <Trash2 class="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </Card.Root>
+        {/each}
+      </div>
+      
+      <!-- Mobile pagination -->
+      <div class="px-4 py-3 border-t flex items-center justify-between">
+        <span class="text-sm text-muted-foreground">{startIndex + 1}-{endIndex} of {displayedMembers.length}</span>
+        <div class="flex items-center gap-1">
+          <Button variant="ghost" size="sm" disabled={currentPage === 1} onclick={() => goToPage(currentPage - 1)}>
+            <ChevronLeft class="w-4 h-4" />
+          </Button>
+          <span class="text-sm px-2">{currentPage} / {totalPages || 1}</span>
+          <Button variant="ghost" size="sm" disabled={currentPage === totalPages} onclick={() => goToPage(currentPage + 1)}>
+            <ChevronRight class="w-4 h-4" />
+          </Button>
         </div>
       </div>
-      {#if totalPages > 1}<div class="px-4 py-3 border-t border-border/30 flex items-center justify-between"><span class="text-xs text-muted-foreground">{startIndex + 1}–{endIndex} of {displayedMembers.length}</span><div class="flex items-center gap-2"><Button size="sm" variant="outline" onclick={() => goToPage(currentPage - 1)} disabled={currentPage === 1}><ChevronLeft class="h-4 w-4" /></Button><span class="text-sm font-medium">{currentPage} / {totalPages}</span><Button size="sm" variant="outline" onclick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages}><ChevronRight class="h-4 w-4" /></Button></div></div>{/if}
-    </div>
-  {:else}
-    <div class="flex-1 overflow-auto">
-      <div class="p-4 space-y-3">
-        <Button class="w-full" variant="outline" onclick={onOpenAddGroup}><Plus class="h-4 w-4 mr-2" /> Add Group</Button>
-        {#if groups.length === 0}<div class="text-center py-12"><FolderOpen class="h-12 w-12 mx-auto mb-4 text-muted-foreground/40" /><p class="text-muted-foreground">No groups yet</p></div>
-        {:else}
-          {#each groups as group (group._id)}
-            {@const groupMembers = membersByGroupId.get(group.groupId) ?? []}
-            <Card.Root class={cn("overflow-hidden", group.isHantei ? "border-orange-500/30" : "border-border")}>
-              <Card.Header class="py-3 px-4">
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center gap-3">
-                    <div class={cn("w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold", group.isHantei ? "bg-orange-500/20 text-orange-400" : "bg-indigo-500/20 text-indigo-400")}>{group.groupId.slice(0, 2)}</div>
-                    <div><div class="flex items-center gap-2"><span class="font-semibold">{group.name}</span>{#if group.isHantei}<Badge variant="outline" class="text-[0.55rem] border-orange-500/50 text-orange-400">HANTEI</Badge>{/if}</div><div class="text-xs text-muted-foreground">{groupMembers.length} members</div></div>
-                  </div>
-                  <div class="flex items-center gap-1">
-                    <button onclick={() => onAddMemberToGroup(group.groupId)} class="p-2 rounded-lg hover:bg-muted text-muted-foreground"><UserPlus class="h-4 w-4" /></button>
-                    <button onclick={() => onEditGroup({ ...group })} class="p-2 rounded-lg hover:bg-muted text-muted-foreground"><Pencil class="h-4 w-4" /></button>
-                    <button onclick={() => onDeleteGroup(group._id)} class="p-2 rounded-lg hover:bg-destructive/20 text-destructive"><Trash2 class="h-4 w-4" /></button>
-                  </div>
+      
+      <!-- FAB for add -->
+      <Button 
+        class="fixed bottom-20 right-4 h-14 w-14 rounded-full shadow-lg"
+        onclick={onOpenAddMember}
+      >
+        <Plus class="w-6 h-6" />
+      </Button>
+    </Tabs.Content>
+    
+    <Tabs.Content value="groups" class="flex-1 flex flex-col mt-0">
+      <div class="flex-1 overflow-auto p-4 space-y-2">
+        {#each groups as group (group._id)}
+          <Card.Root class={cn("p-3", group.hantei && "border-l-4 border-orange-500")}>
+            <div class="flex items-center gap-3">
+              <FolderOpen class="w-5 h-5 text-muted-foreground shrink-0" />
+              <div class="flex-1 min-w-0">
+                <div class="font-medium">{group.name}</div>
+                <div class="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span>{getGroupMemberCount(group._id)} members</span>
+                  {#if group.hantei}
+                    <Badge variant="outline" class="text-orange-500 border-orange-500 text-xs">Hantei</Badge>
+                  {/if}
+                  {#if group.court}
+                    <Badge variant="secondary" class="text-xs">Court {group.court}</Badge>
+                  {/if}
                 </div>
-              </Card.Header>
-              {#if groupMembers.length > 0}
-                <Card.Content class="py-2 px-4 border-t border-border/30">
-                  <div class="space-y-1">
-                    {#each groupMembers.slice(0, 5) as member}<div class="flex items-center gap-2 py-1.5 text-sm"><div class="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-[0.6rem] font-medium">{getInitials(member.firstName, member.lastName)}</div><span class="flex-1 truncate">{member.lastName}, {member.firstName}</span></div>{/each}
-                    {#if groupMembers.length > 5}<div class="text-xs text-muted-foreground py-1">+{groupMembers.length - 5} more members</div>{/if}
-                  </div>
-                </Card.Content>
-              {/if}
-            </Card.Root>
-          {/each}
-        {/if}
+              </div>
+              <div class="flex items-center gap-1">
+                {#if selectedTournament}
+                  <Button variant="outline" size="sm" onclick={() => onRegisterGroupMembers(group._id)}>
+                    <UserPlus class="w-4 h-4" />
+                  </Button>
+                {/if}
+                <Button variant="ghost" size="sm" class="h-8 w-8 p-0" onclick={() => onOpenEditGroup(group)}>
+                  <Pencil class="w-4 h-4" />
+                </Button>
+                <Button variant="ghost" size="sm" class="h-8 w-8 p-0 text-destructive" onclick={() => onDeleteGroup(group._id)}>
+                  <Trash2 class="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </Card.Root>
+        {/each}
       </div>
+      
+      <!-- FAB for add group -->
+      <Button 
+        class="fixed bottom-20 right-4 h-14 w-14 rounded-full shadow-lg"
+        onclick={onOpenAddGroup}
+      >
+        <Plus class="w-6 h-6" />
+      </Button>
+    </Tabs.Content>
+  </Tabs.Root>
+  
+  <!-- Bottom stats bar -->
+  <div class="sticky bottom-0 px-4 py-2 border-t bg-muted/50 flex items-center justify-around text-center">
+    <div>
+      <div class="text-lg font-semibold">{members.length}</div>
+      <div class="text-xs text-muted-foreground">Members</div>
     </div>
-  {/if}
+    {#if selectedTournament}
+      <div>
+        <div class="text-lg font-semibold">{totalRegistered}</div>
+        <div class="text-xs text-muted-foreground">Registered</div>
+      </div>
+    {/if}
+    <div>
+      <div class="text-lg font-semibold">{groups.length}</div>
+      <div class="text-xs text-muted-foreground">Groups</div>
+    </div>
+  </div>
 </div>
 {/if}
 
 <style>
-  .data-table { border-collapse: separate; border-spacing: 0; }
-  .data-table th { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted-foreground); padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid var(--border); }
-  .data-table td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
-  .data-table tbody tr:hover { background: var(--accent); }
+  table {
+    border-collapse: collapse;
+  }
 </style>

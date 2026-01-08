@@ -43,8 +43,7 @@ import {
   let dashboardModulePromise: Promise<any> | null = null;
 
   // Eager-loaded admin tabs to avoid lazy-load stalls in production
-  import MembersTab from './tabs/MembersTab.svelte';
-  import GroupsTab from './tabs/GroupsTab.svelte';
+  import RosterTab from './tabs/RosterTab.svelte';
   import TournamentTab from './tabs/TournamentTab.svelte';
   
   // Apply Sumi theme to admin portal
@@ -504,8 +503,7 @@ import {
   const navItems = [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }];
   const navGroups = [
     { id: 'roster', label: 'Roster', items: [
-      { id: 'members', label: 'Members', icon: Users },
-      { id: 'groups', label: 'Groups', icon: FolderOpen },
+      { id: 'roster', label: 'Roster', icon: Users },
     ]},
     { id: 'shiai', label: 'Shiai', items: [
       { id: 'tournament', label: 'Tournament', icon: Trophy },
@@ -1334,7 +1332,7 @@ function selectAllFiltered() {
     <aside class="fixed inset-y-0 left-0 z-50 w-64 border-r border-sidebar-border bg-sidebar md:hidden" transition:slide={{ axis: 'x' }}>
       <div class="flex h-14 items-center gap-3 border-b border-sidebar-border px-4"><img src="/shiaijologo.png" alt="Shiaijo" class="h-10 w-10 object-contain logo-bob" /><span class="font-jp text-xl">試合場</span></div>
       <nav class="p-2">
-        {#each [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }, { id: 'members', label: 'Members', icon: Users }, { id: 'groups', label: 'Groups', icon: FolderOpen }, { id: 'tournament', label: 'Tournament', icon: Trophy }, { id: 'results', label: 'Results', icon: ClipboardList }, { id: 'history', label: 'History', icon: History }] as tab (tab.id)}
+        {#each [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }, { id: 'roster', label: 'Roster', icon: Users }, { id: 'tournament', label: 'Tournament', icon: Trophy }, { id: 'results', label: 'Results', icon: ClipboardList }, { id: 'history', label: 'History', icon: History }] as tab (tab.id)}
           {@const Icon = tab.icon}
           <button onclick={() => { activeTab = tab.id; sidebarOpen = false; }} class={cn("flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm", activeTab === tab.id ? "bg-sidebar-accent text-sidebar-primary" : "text-sidebar-foreground hover:bg-sidebar-accent")}><Icon class="h-4 w-4" />{tab.label}</button>
         {/each}
@@ -1379,8 +1377,8 @@ function selectAllFiltered() {
           <div class="text-destructive text-sm">Failed to load dashboard</div>
         {/await}
       
-      {:else if activeTab === 'members'}
-        <MembersTab
+      {:else if activeTab === 'roster'}
+        <RosterTab
           {members}
           {groups}
           {participants}
@@ -1392,6 +1390,7 @@ function selectAllFiltered() {
           {selectedMemberIds}
           {allFilteredSelected}
           {selectedTournament}
+          {membersByGroupId}
           onSearchChange={(v) => searchQuery = v}
           onFilterGroupChange={(v) => filterGroup = v}
           onRegistrationFilterChange={(v) => registrationFilter = v}
@@ -1411,19 +1410,10 @@ function selectAllFiltered() {
           onDeleteMember={deleteMember}
           {getGroupName}
           resetMassMembers={resetMassMembers}
-        />
-
-      {:else if activeTab === 'groups'}
-        <GroupsTab
-          {groups}
-          {membersByGroupId}
-          expandedGroupId={expandedGroupId}
-          onExpand={setExpandedGroup}
           onOpenAddGroup={() => showAddGroup = true}
           onEditGroup={(g) => { editingGroup = g; showEditGroup = true; }}
           onDeleteGroup={deleteGroup}
           onAddMemberToGroup={(groupId) => { newMember.groupId = groupId; showAddMember = true; }}
-          onDeleteMember={deleteMember}
         />
 
       {:else if activeTab === 'tournament'}
