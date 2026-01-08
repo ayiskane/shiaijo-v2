@@ -11,6 +11,13 @@ export const list = query({
   },
 });
 
+export const listAll = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("participants").collect();
+  },
+});
+
 export const listByGroup = query({
   args: { 
     tournamentId: v.id("tournaments"),
