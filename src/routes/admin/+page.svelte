@@ -103,6 +103,7 @@ import {
   let showImportCSV = $state(false);
   let showCreateTournament = $state(false);
   let showDeleteConfirm = $state(false);
+  let seeding = $state(false);
   
   let editingGroup = $state<any>(null);
   let editingMember = $state<any>(null);
@@ -739,6 +740,37 @@ function selectAllFiltered() {
         toast.success('Courtkeeper passcode updated');
       } catch (e) { toast.error('Failed to update passcode'); }
     }
+
+    async function seedDemoData() {
+      seeding = true;
+      try {
+        const result = await client.mutation(api.seed.seedDemoData, {});
+        if (result.skipped) {
+          toast.info('Demo data already exists');
+        } else {
+          toast.success(`Seeded ${result.tournaments} tournaments, ${result.members} members`);
+        }
+      } catch (e) { 
+        console.error('Seed error:', e);
+        toast.error('Failed to seed demo data'); 
+      } finally {
+        seeding = false;
+      }
+    }
+
+    async function clearDemoData() {
+      if (!confirm('Clear all demo data? This will delete demo tournaments, matches, and participants.')) return;
+      seeding = true;
+      try {
+        const result = await client.mutation(api.seed.clearDemoData, {});
+        toast.success(`Cleared ${result.deletedTournaments} tournaments, ${result.deletedMatches} matches`);
+      } catch (e) { 
+        console.error('Clear error:', e);
+        toast.error('Failed to clear demo data'); 
+      } finally {
+        seeding = false;
+      }
+    }
   
   // CRUD Operations
   async function createGroup() {
@@ -1344,6 +1376,9 @@ function selectAllFiltered() {
             {matches}
             {participants}
             progressPercent={progressPercent}
+            onSeedDemoData={seedDemoData}
+            onClearDemoData={clearDemoData}
+            {seeding}
           />
         {:catch error}
           <div class="text-destructive text-sm">Failed to load dashboard</div>
