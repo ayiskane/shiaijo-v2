@@ -9,6 +9,7 @@ export default defineSchema({
     groupId: v.string(), // Reference to group by custom ID (e.g., "YUD", "MUD")
     isGuest: v.boolean(),
     isAdmin: v.optional(v.boolean()),
+    archived: v.optional(v.boolean()),
     createdAt: v.number(),
   }).index("by_lastName", ["lastName"])
     .index("by_groupId", ["groupId"]),
@@ -141,3 +142,4 @@ export default defineSchema({
     value: v.string(),
   }).index("by_key", ["key"]),
 });
+
