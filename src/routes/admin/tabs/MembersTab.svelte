@@ -4,7 +4,7 @@
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
   import { cn } from '$lib/utils';
-  import { Check, Plus, UserPlus, X, ChevronDown, ChevronLeft, ChevronRight, Trash2, Pencil, Users, Search, Filter } from '@lucide/svelte';
+  import { Check, Plus, UserPlus, X, ChevronDown, ChevronLeft, ChevronRight, Trash2, Pencil, Users, Search, Filter, RefreshCw } from '@lucide/svelte';
 
   export let members: any[] = [];
   export let groups: any[] = [];
