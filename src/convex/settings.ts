@@ -47,3 +47,31 @@ export const set = mutation({
     return { created: true };
   },
 });
+
+// Danger zone: wipe all operational data (keeps settings)
+export const resetAllData = mutation({
+  args: {},
+  handler: async (ctx) => {
+    // Order matters because of references
+    const tables: Array<keyof typeof ctx.db.tables> = [
+      "matches",
+      "participants",
+      "courtState",
+      "tournaments",
+      "volunteerSignups",
+      "volunteerHours",
+      "volunteers",
+      "members",
+      "groups",
+    ];
+
+    for (const table of tables) {
+      const rows = await ctx.db.query(table).collect();
+      for (const row of rows) {
+        await ctx.db.delete(row._id as any);
+      }
+    }
+
+    return { cleared: true, tables };
+  },
+});

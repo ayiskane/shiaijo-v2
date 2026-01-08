@@ -14,7 +14,7 @@ import {
   LayoutDashboard, Users, FolderOpen, Trophy, ClipboardList, 
   ChevronLeft, ChevronDown, ChevronRight, Swords, Eye, Menu, Plus, Trash2, Pencil,
   Play, Settings, RefreshCw, RotateCcw, Archive, GripVertical, Timer, 
-  Check, X, AlertTriangle, History, UserPlus, Home, Lock, KeyRound, UserCheck
+  Check, X, AlertTriangle, History, UserPlus, Home, Lock, KeyRound, UserCheck, Loader2
 } from '@lucide/svelte';
   import { parseDate } from '@internationalized/date';
   
@@ -111,10 +111,17 @@ import {
   let csvText = $state('');
   let newTournament = $state({ name: '', date: '', month: '', year: new Date().getFullYear() });
   let tournamentDateValue = $state(null as import('@internationalized/date').DateValue | null);
+  let resettingData = $state(false);
 
   $effect(() => {
     // keep calendar value in sync when dialog resets
     tournamentDateValue = newTournament.date ? parseDate(newTournament.date) : null;
+  });
+
+  // Pre-fill passcode inputs once settings arrive (without overwriting manual edits)
+  $effect(() => {
+    if (!settingsLoading && !adminPasscodeInput) adminPasscodeInput = adminPasscode;
+    if (!settingsLoading && !courtkeeperPasscodeInput) courtkeeperPasscodeInput = courtkeeperPasscode;
   });
   let selectedTournamentId = $state<string | null>(null);
   
@@ -498,9 +505,12 @@ import {
       boguMatchType = (firstBoguMatch.matchType as 'sanbon' | 'ippon') || 'sanbon';
     }
   });
-  
+
   // Navigation
-  const navItems = [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }];
+  const navItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'settings', label: 'Settings', icon: Settings },
+  ];
   const navGroups = [
     { id: 'roster', label: 'Roster', items: [
       { id: 'roster', label: 'Roster', icon: Users },
@@ -762,6 +772,20 @@ function selectAllFiltered() {
         toast.error('Failed to clear demo data'); 
       } finally {
         seeding = false;
+      }
+    }
+
+    async function resetAllData() {
+      if (!confirm('This will permanently delete all groups, members, tournaments, matches, volunteers, and signups. Continue?')) return;
+      resettingData = true;
+      try {
+        await client.mutation(api.settings.resetAllData, {});
+        toast.success('All data has been cleared.');
+      } catch (e) {
+        console.error('Reset error:', e);
+        toast.error('Failed to reset data');
+      } finally {
+        resettingData = false;
       }
     }
   
@@ -1332,7 +1356,14 @@ function selectAllFiltered() {
     <aside class="fixed inset-y-0 left-0 z-50 w-64 border-r border-sidebar-border bg-sidebar md:hidden" transition:slide={{ axis: 'x' }}>
       <div class="flex h-14 items-center gap-3 border-b border-sidebar-border px-4"><img src="/shiaijologo.png" alt="Shiaijo" class="h-10 w-10 object-contain logo-bob" /><span class="font-jp text-xl">試合場</span></div>
       <nav class="p-2">
-        {#each [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }, { id: 'roster', label: 'Roster', icon: Users }, { id: 'tournament', label: 'Tournament', icon: Trophy }, { id: 'results', label: 'Results', icon: ClipboardList }, { id: 'history', label: 'History', icon: History }] as tab (tab.id)}
+        {#each [
+          { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+          { id: 'roster', label: 'Roster', icon: Users },
+          { id: 'tournament', label: 'Tournament', icon: Trophy },
+          { id: 'results', label: 'Results', icon: ClipboardList },
+          { id: 'history', label: 'History', icon: History },
+          { id: 'settings', label: 'Settings', icon: Settings },
+        ] as tab (tab.id)}
           {@const Icon = tab.icon}
           <button onclick={() => { activeTab = tab.id; sidebarOpen = false; }} class={cn("flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm", activeTab === tab.id ? "bg-sidebar-accent text-sidebar-primary" : "text-sidebar-foreground hover:bg-sidebar-accent")}><Icon class="h-4 w-4" />{tab.label}</button>
         {/each}
@@ -1533,6 +1564,54 @@ function selectAllFiltered() {
         {:catch error}
           <div class="text-destructive text-sm">Failed to load history</div>
         {/await}
+
+      {:else if activeTab === 'settings'}
+        <div class="grid gap-4 lg:grid-cols-2">
+          <div class="glass-panel border border-border/70 px-5 py-4 rounded-xl space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-[11px] tracking-[0.2em] text-muted-foreground uppercase">Access</p>
+                <h2 class="text-lg font-semibold">Portal Passcodes</h2>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <Label class="text-xs text-muted-foreground">Admin passcode</Label>
+              <div class="flex flex-col sm:flex-row gap-2">
+                <Input type="password" placeholder="Set admin passcode" bind:value={adminPasscodeInput} class="flex-1" />
+                <Button onclick={saveAdminPasscode} class="shrink-0">Save</Button>
+              </div>
+              <p class="text-[11px] text-muted-foreground">Leave blank to clear the passcode.</p>
+            </div>
+            <Separator />
+            <div class="space-y-3">
+              <Label class="text-xs text-muted-foreground">Courtkeeper passcode</Label>
+              <div class="flex flex-col sm:flex-row gap-2">
+                <Input type="password" placeholder="Set courtkeeper passcode" bind:value={courtkeeperPasscodeInput} class="flex-1" />
+                <Button onclick={saveCourtkeeperPasscode} class="shrink-0">Save</Button>
+              </div>
+              <p class="text-[11px] text-muted-foreground">Leave blank to clear the passcode.</p>
+            </div>
+          </div>
+
+          <div class="glass-panel border border-destructive/50 bg-destructive/10 px-5 py-4 rounded-xl space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-[11px] tracking-[0.2em] text-destructive uppercase">Danger</p>
+                <h2 class="text-lg font-semibold text-destructive-foreground">Reset Convex data</h2>
+              </div>
+            </div>
+            <p class="text-sm text-destructive-foreground/90">Deletes all groups, members, tournaments, matches, volunteers, signups, and court state. This cannot be undone.</p>
+            <Button
+              variant="destructive"
+              class="w-full"
+              disabled={resettingData}
+              onclick={resetAllData}
+            >
+              {#if resettingData}<Loader2 class="mr-2 h-4 w-4 animate-spin" />{/if}
+              Empty all data
+            </Button>
+          </div>
+        </div>
       {/if}
     </div>
   </main>
