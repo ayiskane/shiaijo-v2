@@ -268,12 +268,14 @@
           <div class="tournament-card">
             <div>
               <p class="muted text-xs">Date</p>
-              <p class="strong">{activeTournament.date}</p>
+              <p class="strong">{activeTournament?.date ?? 'TBD'}</p>
             </div>
             <Separator orientation="vertical" />
             <div>
               <p class="muted text-xs">Status</p>
-              <p class="strong capitalize">{activeTournament.status.replace('_', ' ')}</p>
+              <p class="strong capitalize">
+                {activeTournament?.status ? activeTournament.status.replace('_', ' ') : 'pending'}
+              </p>
             </div>
           </div>
 
