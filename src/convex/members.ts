@@ -67,6 +67,7 @@ export const bulkCreate = mutation({
       lastName: v.string(),
       groupId: v.string(),
       isGuest: v.boolean(),
+      archived: v.optional(v.boolean()),
     })),
   },
   handler: async (ctx, { members }) => {
@@ -105,4 +106,5 @@ export const bulkUpdate = mutation({
     return { updatedCount: members.length };
   },
 });
+
 
