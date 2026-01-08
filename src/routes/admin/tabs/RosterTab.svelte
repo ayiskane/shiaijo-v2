@@ -363,17 +363,10 @@
       
       <!-- Table -->
       <div class="flex-1 overflow-auto">
-        <table class="w-full table-fixed">
-          <colgroup>
-            <col class="w-12" />
-            <col class="w-auto" />
-            <col class="w-44" />
-            <col class="w-28" />
-            <col class="w-36" />
-          </colgroup>
+        <table class="w-full min-w-[700px]">
           <thead class="sticky top-0 bg-muted/50 backdrop-blur-sm">
             <tr class="border-b">
-              <th class="px-3 py-2.5">
+              <th class="w-10 px-3 py-2.5">
                 <input 
                   type="checkbox" 
                   checked={pageSelected}
@@ -389,9 +382,9 @@
                 />
               </th>
               <th class="px-3 py-2.5 text-left font-medium">Name</th>
-              <th class="px-3 py-2.5 text-left font-medium">Group</th>
-              <th class="px-3 py-2.5 text-center font-medium">Status</th>
-              <th class="px-3 py-2.5 text-right font-medium">Actions</th>
+              <th class="w-40 px-3 py-2.5 text-left font-medium">Group</th>
+              <th class="w-28 px-3 py-2.5 text-center font-medium">Status</th>
+              <th class="w-32 px-3 py-2.5 text-right font-medium">Actions</th>
             </tr>
           </thead>
           <tbody bind:this={listContainer}>
@@ -407,13 +400,13 @@
                 </td>
                 <td class="px-3 py-2.5">
                   <div class="flex items-center gap-2">
-                    <div class="cell-avatar-gradient">
+                    <div class="cell-avatar-gradient shrink-0">
                       {getInitials(member.firstName, member.lastName)}
                     </div>
-                    <div>
-                      <div class="font-medium">{member.firstName} {member.lastName}</div>
+                    <div class="min-w-0">
+                      <div class="font-medium truncate">{member.firstName} {member.lastName}</div>
                       {#if member.japaneseFirstName || member.japaneseLastName}
-                        <div class="text-xs text-muted-foreground">
+                        <div class="text-xs text-muted-foreground truncate">
                           {member.japaneseLastName || ''} {member.japaneseFirstName || ''}
                         </div>
                       {/if}
@@ -421,20 +414,20 @@
                   </div>
                 </td>
                 <td class="px-3 py-2.5">
-                  <div class="flex items-center gap-1.5">
-                    <Badge variant="outline" class="text-xs">
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <Badge variant="outline" class="text-xs whitespace-nowrap">
                       {getGroupName(member.groupId)}
                     </Badge>
                     {#if isHanteiGroup(member.groupId)}
-                      <Badge variant="outline" class="text-xs text-amber-500 border-amber-500">Non-bogu</Badge>
+                      <Badge variant="outline" class="text-xs text-amber-500 border-amber-500 whitespace-nowrap">Non-bogu</Badge>
                     {/if}
                   </div>
                 </td>
                 <td class="px-3 py-2.5 text-center">
                   {#if member.archived}
-                    <Badge variant="secondary" class="text-xs text-muted-foreground">Archived</Badge>
+                    <Badge variant="secondary" class="text-xs text-muted-foreground whitespace-nowrap">Archived</Badge>
                   {:else if selectedTournament && registeredMemberIds.has(member._id)}
-                    <Badge variant="outline" class="text-xs text-green-500 border-green-500/30">
+                    <Badge variant="outline" class="text-xs text-green-500 border-green-500/30 whitespace-nowrap">
                       <Check class="w-3 h-3 mr-1" />
                       Registered
                     </Badge>
@@ -763,9 +756,9 @@
 <style>
   table {
     border-collapse: collapse;
-    table-layout: fixed;
   }
 </style>
+
 
 
 
