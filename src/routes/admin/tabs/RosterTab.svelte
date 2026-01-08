@@ -258,6 +258,9 @@
                 </Button>
               </div>
             {:else}
+              {#if group.hantei}
+                <Badge variant="outline" class="text-[10px] px-1.5 py-0 text-[var(--accent-fire)] border-[var(--accent-fire)]/30 shrink-0">H</Badge>
+              {/if}
               <span class="group-item-count">{getGroupMemberCount(group.groupId)}</span>
             {/if}
           </div>
@@ -333,10 +336,8 @@
               </th>
               <th class="px-3 py-2 text-left font-medium">Name</th>
               <th class="px-3 py-2 text-left font-medium">Group</th>
-              {#if selectedTournament}
-                <th class="px-3 py-2 text-center font-medium w-28">Registered</th>
-              {/if}
-              <th class="px-3 py-2 text-right font-medium w-24">Actions</th>
+              <th class="px-3 py-2 text-center font-medium w-24">Status</th>
+              <th class="px-3 py-2 text-right font-medium w-28">Actions</th>
             </tr>
           </thead>
           <tbody bind:this={listContainer}>
@@ -369,6 +370,13 @@
                   <Badge variant="outline" class="text-xs">
                     {getGroupName(member.groupId)}
                   </Badge>
+                </td>
+                <td class="px-3 py-2 text-center">
+                  {#if member.archived}
+                    <Badge variant="secondary" class="text-xs text-muted-foreground">Archived</Badge>
+                  {:else}
+                    <Badge variant="outline" class="text-xs text-green-500 border-green-500/30">Active</Badge>
+                  {/if}
                 </td>
                 {#if selectedTournament}
                   <td class="px-3 py-2 text-center">
@@ -663,5 +671,6 @@
     border-collapse: collapse;
   }
 </style>
+
 
 
