@@ -374,28 +374,15 @@
                 <td class="px-3 py-2 text-center">
                   {#if member.archived}
                     <Badge variant="secondary" class="text-xs text-muted-foreground">Archived</Badge>
+                  {:else if selectedTournament && registeredMemberIds.has(member._id)}
+                    <Badge variant="outline" class="text-xs text-green-500 border-green-500/30">
+                      <Check class="w-3 h-3 mr-1" />
+                      Registered
+                    </Badge>
                   {:else}
-                    <Badge variant="outline" class="text-xs text-green-500 border-green-500/30">Active</Badge>
+                    <span class="text-xs text-muted-foreground">—</span>
                   {/if}
                 </td>
-                {#if selectedTournament}
-                  <td class="px-3 py-2 text-center">
-                    <Button 
-                      variant={registeredMemberIds.has(member._id) ? "default" : "outline"}
-                      size="sm"
-                      class="h-7 w-20"
-                      onclick={() => onToggleMemberRegistration(member._id)}
-                    >
-                      {#if registeredMemberIds.has(member._id)}
-                        <Check class="w-3.5 h-3.5 mr-1" />
-                        Yes
-                      {:else}
-                        <X class="w-3.5 h-3.5 mr-1" />
-                        No
-                      {/if}
-                    </Button>
-                  </td>
-                {/if}
                 <td class="px-3 py-2">
                   <div class="flex items-center justify-end gap-1">
                     <Button 
@@ -671,6 +658,7 @@
     border-collapse: collapse;
   }
 </style>
+
 
 
 
