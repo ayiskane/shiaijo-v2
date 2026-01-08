@@ -1999,17 +1999,22 @@ function selectAllFiltered() {
         </div>
       </div>
       <div class="space-y-2"><Label for="tournament-name" class="text-xs">Name <span class="text-muted-foreground">(optional)</span></Label><Input id="tournament-name" bind:value={newTournament.name} placeholder={generateTournamentName()} class="text-sm" /></div>
-      <div class="space-y-2">
-        <Label for="tournament-date" class="text-xs">Date</Label>
-        <div class="rounded-lg border border-input bg-background p-3">
-          <Calendar.Calendar
-            bind:value={tournamentDateValue}
-            captionLayout="dropdown"
-            locale="en-US"
-            on:change={() => { newTournament.date = tournamentDateValue ? tournamentDateValue.toString() : ''; }}
-          />
+        <div class="space-y-2">
+          <Label for="tournament-date" class="text-xs">Date</Label>
+          <div class="rounded-lg border border-input bg-background p-3">
+            <Calendar.Calendar
+              type="single"
+              bind:value={tournamentDateValue}
+              captionLayout="dropdown"
+              locale="en-US"
+              initialFocus
+              onValueChange={(v) => {
+                tournamentDateValue = v;
+                newTournament.date = v ? v.toString() : '';
+              }}
+            />
+          </div>
         </div>
-      </div>
     </div>
     <Dialog.Footer class="flex-col sm:flex-row gap-2"><Button variant="secondary" onclick={() => showCreateTournament = false} class="w-full sm:w-auto">Cancel</Button><Button onclick={createTournament} class="w-full sm:w-auto">Create</Button></Dialog.Footer>
   </Dialog.Content>
