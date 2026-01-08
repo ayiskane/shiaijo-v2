@@ -1384,10 +1384,10 @@ function selectAllFiltered() {
   </Sheet.Root>
   
   <!-- Main Content -->
-  <main class={cn("flex-1 pt-14 transition-all duration-300 md:pt-0 w-full min-w-0 overflow-x-hidden h-[calc(100vh-56px)] md:h-screen", sidebarCollapsed ? "md:ml-16" : "md:ml-[220px]")}>
+  <main class={cn("flex-1 pt-14 transition-all duration-300 md:pt-0 w-full min-w-0 overflow-x-hidden h-[100dvh] md:h-screen", sidebarCollapsed ? "md:ml-16" : "md:ml-[220px]")}>
     {#if activeTab === 'roster'}
       <!-- Roster tab uses full width without padding constraints -->
-      <div class="h-full w-full relative">
+      <div class="h-[calc(100dvh-56px)] md:h-full w-full relative">
         <RosterTab
           {members}
           {groups}
@@ -1874,6 +1874,7 @@ function selectAllFiltered() {
 </Dialog.Root>
 
 {/if}
+
 
 
 
