@@ -483,173 +483,179 @@
   </div>
 </div>
 
+
 {:else}
 <!-- Mobile: Tabbed Interface -->
-<div class="flex flex-col h-full min-h-0">
-  <Tabs.Root value={mobileTab} onValueChange={(v) => mobileTab = v} class="flex-1 flex flex-col min-h-0">
-    <div class="shrink-0 bg-background border-b">
-      <div class="px-4 py-2">
-        <Tabs.List class="w-full grid grid-cols-2">
-          <Tabs.Trigger value="members" class="flex items-center justify-center gap-2">
-            <Users class="w-4 h-4" />
-            Members ({members.length})
-          </Tabs.Trigger>
-          <Tabs.Trigger value="groups" class="flex items-center justify-center gap-2">
-            <FolderOpen class="w-4 h-4" />
-            Groups ({groups.length})
-          </Tabs.Trigger>
-        </Tabs.List>
-      </div>
+<div class="absolute inset-0 flex flex-col">
+  <!-- Tab Header -->
+  <div class="shrink-0 bg-background border-b px-4 py-2">
+    <div class="grid grid-cols-2 bg-muted rounded-lg p-1">
+      <button 
+        class={cn(
+          "flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors",
+          mobileTab === 'members' ? "bg-background shadow-sm" : "text-muted-foreground"
+        )}
+        onclick={() => mobileTab = 'members'}
+      >
+        <Users class="w-4 h-4" />
+        Members ({members.length})
+      </button>
+      <button 
+        class={cn(
+          "flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors",
+          mobileTab === 'groups' ? "bg-background shadow-sm" : "text-muted-foreground"
+        )}
+        onclick={() => mobileTab = 'groups'}
+      >
+        <FolderOpen class="w-4 h-4" />
+        Groups ({groups.length})
+      </button>
     </div>
-    
-    <Tabs.Content value="members" class="flex-1 flex flex-col min-h-0 data-[state=inactive]:hidden">
-      <!-- Search and filters -->
-      <div class="shrink-0 px-4 py-3 space-y-2 border-b">
-        <div class="relative">
-          <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input 
-            type="text" 
-            placeholder="Search members..." 
-            class="pl-9"
-            value={searchQuery}
-            oninput={(e) => onSearchChange(e.currentTarget.value)}
-          />
+  </div>
+  
+  <!-- Tab Content -->
+  <div class="flex-1 min-h-0 overflow-hidden">
+    {#if mobileTab === 'members'}
+      <div class="h-full flex flex-col">
+        <!-- Search and filters -->
+        <div class="shrink-0 px-4 py-3 space-y-2 border-b bg-background">
+          <div class="relative">
+            <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input 
+              type="text" 
+              placeholder="Search members..." 
+              class="pl-9"
+              value={searchQuery}
+              oninput={(e) => onSearchChange(e.currentTarget.value)}
+            />
+          </div>
+          <div class="flex gap-2 overflow-x-auto pb-1">
+            <Button 
+              variant={registrationFilter === 'all' ? "default" : "outline"}
+              size="sm"
+              onclick={() => onRegistrationFilterChange('all')}
+            >
+              All
+            </Button>
+            <Button 
+              variant={registrationFilter === 'registered' ? "default" : "outline"}
+              size="sm"
+              onclick={() => onRegistrationFilterChange('registered')}
+            >
+              Registered
+            </Button>
+            <Button 
+              variant={registrationFilter === 'unregistered' ? "default" : "outline"}
+              size="sm"
+              onclick={() => onRegistrationFilterChange('unregistered')}
+            >
+              Unregistered
+            </Button>
+          </div>
         </div>
-        <div class="flex gap-2 overflow-x-auto pb-1">
-          <Button 
-            variant={registrationFilter === 'all' ? "default" : "outline"}
-            size="sm"
-            onclick={() => onRegistrationFilterChange('all')}
-          >
-            All
-          </Button>
-          <Button 
-            variant={registrationFilter === 'registered' ? "default" : "outline"}
-            size="sm"
-            onclick={() => onRegistrationFilterChange('registered')}
-          >
-            Registered
-          </Button>
-          <Button 
-            variant={registrationFilter === 'unregistered' ? "default" : "outline"}
-            size="sm"
-            onclick={() => onRegistrationFilterChange('unregistered')}
-          >
-            Unregistered
-          </Button>
-        </div>
-      </div>
-      
-      <!-- Member Cards -->
-      <div class="flex-1 overflow-y-auto p-4 space-y-2" bind:this={listContainer}>
-        {#each paginatedMembers as member (member._id)}
-          <Card.Root class="p-3">
-            <div class="flex items-center gap-3">
-              <input 
-                type="checkbox" 
-                checked={selectedMemberIds.has(member._id)}
-                onchange={() => onToggleMemberSelection(member._id)}
-                class="rounded border-input"
-              />
-              <div class="cell-avatar-gradient" style="width: 40px; height: 40px; font-size: 14px;">
-                {getInitials(member.firstName, member.lastName)}
-              </div>
-              <div class="flex-1 min-w-0">
-                <div class="font-medium">{member.firstName} {member.lastName}</div>
-                <div class="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Badge variant="outline" class="text-xs">{getGroupName(member.groupId)}</Badge>
-                  {#if selectedTournament && registeredMemberIds.has(member._id)}
-                    <Badge variant="default" class="text-xs">
-                      <Check class="w-3 h-3 mr-0.5" />
-                      Registered
-                    </Badge>
-                  {/if}
-                </div>
-              </div>
-              <div class="flex items-center gap-1">
-                <Button variant="ghost" size="sm" class="h-8 w-8 p-0" onclick={() => onOpenEditMember(member)}>
-                  <Pencil class="w-4 h-4" />
-                </Button>
-                <Button variant="ghost" size="sm" class="h-8 w-8 p-0 text-destructive" onclick={() => onDeleteMember(member._id)}>
-                  <Trash2 class="w-4 h-4" />
-                </Button>
-              </div>
+        
+        <!-- Member Cards -->
+        <div class="flex-1 overflow-y-auto p-4 space-y-2" bind:this={listContainer}>
+          {#if paginatedMembers.length === 0}
+            <div class="flex flex-col items-center justify-center py-12 text-muted-foreground">
+              <Users class="w-12 h-12 mb-3 opacity-50" />
+              <p class="text-sm">No members found</p>
             </div>
-          </Card.Root>
-        {/each}
-      </div>
-      
-      <!-- Mobile pagination -->
-      <div class="px-4 py-3 border-t flex items-center justify-between">
-        <span class="text-sm text-muted-foreground">{startIndex + 1}-{endIndex} of {displayedMembers.length}</span>
-        <div class="flex items-center gap-1">
-          <Button variant="ghost" size="sm" disabled={currentPage === 1} onclick={() => goToPage(currentPage - 1)}>
-            <ChevronLeft class="w-4 h-4" />
-          </Button>
-          <span class="text-sm px-2">{currentPage} / {totalPages || 1}</span>
-          <Button variant="ghost" size="sm" disabled={currentPage === totalPages} onclick={() => goToPage(currentPage + 1)}>
-            <ChevronRight class="w-4 h-4" />
-          </Button>
+          {:else}
+            {#each paginatedMembers as member (member._id)}
+              <Card.Root class={cn("p-3", member.archived && "opacity-50")}>
+                <div class="flex items-center gap-3">
+                  <input 
+                    type="checkbox" 
+                    checked={selectedMemberIds.has(member._id)}
+                    onchange={() => onToggleMemberSelection(member._id)}
+                    class="rounded border-input"
+                  />
+                  <div class="cell-avatar-gradient" style="width: 40px; height: 40px; font-size: 14px;">
+                    {getInitials(member.firstName, member.lastName)}
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="font-medium">{member.firstName} {member.lastName}</div>
+                    <div class="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Badge variant="outline" class="text-xs">{getGroupName(member.groupId)}</Badge>
+                      {#if member.archived}
+                        <Badge variant="secondary" class="text-xs">Archived</Badge>
+                      {:else if selectedTournament && registeredMemberIds.has(member._id)}
+                        <Badge variant="default" class="text-xs bg-green-600">
+                          <Check class="w-3 h-3 mr-0.5" />
+                          Registered
+                        </Badge>
+                      {/if}
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <Button variant="ghost" size="sm" class="h-8 w-8 p-0" onclick={() => onOpenEditMember(member)}>
+                      <Pencil class="w-4 h-4" />
+                    </Button>
+                    <Button variant="ghost" size="sm" class="h-8 w-8 p-0 text-destructive" onclick={() => onDeleteMember(member._id)}>
+                      <Trash2 class="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </Card.Root>
+            {/each}
+          {/if}
+        </div>
+        
+        <!-- Mobile pagination -->
+        <div class="shrink-0 px-4 py-3 border-t bg-background flex items-center justify-between">
+          <span class="text-sm text-muted-foreground">{startIndex + 1}-{endIndex} of {displayedMembers.length}</span>
+          <div class="flex items-center gap-1">
+            <Button variant="ghost" size="sm" disabled={currentPage === 1} onclick={() => goToPage(currentPage - 1)}>
+              <ChevronLeft class="w-4 h-4" />
+            </Button>
+            <span class="text-sm px-2">{currentPage} / {totalPages || 1}</span>
+            <Button variant="ghost" size="sm" disabled={currentPage === totalPages} onclick={() => goToPage(currentPage + 1)}>
+              <ChevronRight class="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </div>
-      
-      <!-- FAB for add -->
-      <Button 
-        class="fixed bottom-20 right-4 h-14 w-14 rounded-full shadow-lg z-20"
-        onclick={onOpenAddMember}
-      >
-        <Plus class="w-6 h-6" />
-      </Button>
-    </Tabs.Content>
-    
-    <Tabs.Content value="groups" class="flex-1 flex flex-col min-h-0 data-[state=inactive]:hidden">
-      <div class="flex-1 overflow-y-auto p-4 space-y-2">
-        {#each groups as group (group._id)}
-          <Card.Root class={cn("p-3", group.hantei && "border-l-4 border-orange-500")}>
-            <div class="flex items-center gap-3">
-              <FolderOpen class="w-5 h-5 text-muted-foreground shrink-0" />
-              <div class="flex-1 min-w-0">
-                <div class="font-medium">{group.name}</div>
-                <div class="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span>{getGroupMemberCount(group.groupId)} members</span>
-                  {#if group.hantei}
-                    <Badge variant="outline" class="text-orange-500 border-orange-500 text-xs">Hantei</Badge>
-                  {/if}
-                  {#if group.court}
-                    <Badge variant="secondary" class="text-xs">Court {group.court}</Badge>
-                  {/if}
+    {:else}
+      <!-- Groups Tab -->
+      <div class="h-full overflow-y-auto p-4 space-y-2">
+        {#if groups.length === 0}
+          <div class="flex flex-col items-center justify-center py-12 text-muted-foreground">
+            <FolderOpen class="w-12 h-12 mb-3 opacity-50" />
+            <p class="text-sm">No groups found</p>
+          </div>
+        {:else}
+          {#each groups as group (group._id)}
+            <Card.Root class={cn("p-3", group.hantei && "border-l-4 border-orange-500")}>
+              <div class="flex items-center gap-3">
+                <FolderOpen class="w-5 h-5 text-muted-foreground shrink-0" />
+                <div class="flex-1 min-w-0">
+                  <div class="font-medium">{group.name}</div>
+                  <div class="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span>{getGroupMemberCount(group.groupId)} members</span>
+                    {#if group.hantei}
+                      <Badge variant="outline" class="text-orange-500 border-orange-500 text-xs">Hantei</Badge>
+                    {/if}
+                  </div>
                 </div>
-              </div>
-              <div class="flex items-center gap-1">
-                {#if selectedTournament}
-                  <Button variant="outline" size="sm" onclick={() => onRegisterGroupMembers(group.groupId)}>
-                    <UserPlus class="w-4 h-4" />
+                <div class="flex items-center gap-1">
+                  <Button variant="ghost" size="sm" class="h-8 w-8 p-0" onclick={() => onOpenEditGroup(group)}>
+                    <Pencil class="w-4 h-4" />
                   </Button>
-                {/if}
-                <Button variant="ghost" size="sm" class="h-8 w-8 p-0" onclick={() => onOpenEditGroup(group)}>
-                  <Pencil class="w-4 h-4" />
-                </Button>
-                <Button variant="ghost" size="sm" class="h-8 w-8 p-0 text-destructive" onclick={() => onDeleteGroup(group._id)}>
-                  <Trash2 class="w-4 h-4" />
-                </Button>
+                  <Button variant="ghost" size="sm" class="h-8 w-8 p-0 text-destructive" onclick={() => onDeleteGroup(group._id)}>
+                    <Trash2 class="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
-            </div>
-          </Card.Root>
-        {/each}
+            </Card.Root>
+          {/each}
+        {/if}
       </div>
-      
-      <!-- FAB for add group -->
-      <Button 
-        class="fixed bottom-20 right-4 h-14 w-14 rounded-full shadow-lg z-20"
-        onclick={onOpenAddGroup}
-      >
-        <Plus class="w-6 h-6" />
-      </Button>
-    </Tabs.Content>
-  </Tabs.Root>
+    {/if}
+  </div>
   
   <!-- Bottom stats bar -->
-  <div class="shrink-0 flex items-center justify-around py-3 px-4 bg-surface border-t border-border">
+  <div class="shrink-0 flex items-center justify-around py-3 px-4 bg-background border-t">
     <div class="text-center">
       <div class="text-lg font-bold">{members.length}</div>
       <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Members</div>
@@ -665,6 +671,14 @@
       <div class="text-[10px] uppercase tracking-wide text-muted-foreground">Groups</div>
     </div>
   </div>
+  
+  <!-- FAB -->
+  <Button 
+    class="absolute bottom-20 right-4 h-14 w-14 rounded-full shadow-lg z-20"
+    onclick={() => mobileTab === 'members' ? onOpenAddMember() : onOpenAddGroup()}
+  >
+    <Plus class="w-6 h-6" />
+  </Button>
 </div>
 {/if}
 
@@ -673,8 +687,3 @@
     border-collapse: collapse;
   }
 </style>
-
-
-
-
-
