@@ -467,205 +467,283 @@
       side="bottom"
       class="sheet-panel h-[85vh] rounded-t-3xl bg-background/98 border-t border-border z-[130] shadow-[0_-24px_60px_rgba(0,0,0,0.55)] text-foreground transition-transform duration-200 data-[state=closed]:translate-y-full data-[state=open]:translate-y-0 data-[state=closed]:opacity-0 data-[state=open]:opacity-100"
     >
-    <div class="flex justify-center pt-2 pb-4"><div class="w-10 h-1 bg-muted-foreground/30 rounded-full"></div></div>
-    <Sheet.Header class="px-6 pb-4">
-      <Sheet.Title>Tournament Settings</Sheet.Title>
-      <Sheet.Description>Configure groups, courts, and match settings</Sheet.Description>
-    </Sheet.Header>
+      <div class="flex justify-center pt-2 pb-4"><div class="w-10 h-1 bg-muted-foreground/30 rounded-full"></div></div>
+      <Sheet.Header class="px-6 pb-4">
+        <Sheet.Title>Tournament Settings</Sheet.Title>
+        <Sheet.Description>Configure groups, courts, and match settings</Sheet.Description>
+      </Sheet.Header>
 
-    <div class="px-6 pb-6 space-y-6 overflow-y-auto max-h-[calc(85vh-120px)]">
-      <div class="space-y-3">
-        <h4 class="text-sm font-semibold flex items-center gap-2"><GripVertical class="h-4 w-4 text-muted-foreground" />Group Order & Courts</h4>
-        <p class="text-xs text-muted-foreground">Drag to reorder. Tap court badge to change.</p>
-        {#if groupOrder.length > 0}
-          <div class="rounded-xl border border-border overflow-hidden" bind:this={listEl}>
-            {#each groupOrder as groupId, idx (groupId)}
-              {@const group = getGroupById(groupId)}
-              {@const court = getEffectiveCourt(groupId)}
-              {@const groupMatches = matchesByGroupId.get(groupId) ?? []}
-              {@const groupStats = matchStatsByGroup.get(groupId) ?? { total: 0, completed: 0, inProgress: 0, pending: 0 }}
-              <div
-                draggable="true"
-                role="listitem"
-                ondragstart={(e) => onDragStart(e, groupId)}
-                ondragover={(e) => onDragOver(e, groupId)}
-                ondragleave={onDragLeave}
-                ondrop={(e) => onDrop(e, groupId)}
-                ondragend={onDragEnd}
-                class="flex items-center gap-2 px-3 py-3 border-b border-border last:border-b-0 transition-all min-h-[56px]"
-              >
-                <button class="cursor-grab text-muted-foreground hover:text-foreground active:cursor-grabbing touch-none shrink-0"><GripVertical class="h-5 w-5" /></button>
-                <span class="w-6 text-center text-sm font-mono text-muted-foreground shrink-0">{idx + 1}</span>
-                <div class="flex-1 min-w-0">
-                  <div class="font-medium truncate">{group?.name || groupId}</div>
-                  <span class="text-xs text-muted-foreground">{groupStats.completed}/{groupStats.total} matches</span>
+      <div class="px-6 pb-6 max-h-[calc(85vh-120px)] overflow-y-auto">
+        <div class="flex flex-col lg:flex-row gap-5">
+          <!-- Left column -->
+          <div class="lg:w-[420px] flex-shrink-0 space-y-6">
+            <div class="space-y-3">
+              <h4 class="text-sm font-semibold flex items-center gap-2"><GripVertical class="h-4 w-4 text-muted-foreground" />Group Order & Courts</h4>
+              <p class="text-xs text-muted-foreground">Drag to reorder. Tap court badge to change.</p>
+              {#if groupOrder.length > 0}
+                <div class="rounded-xl border border-border overflow-hidden" bind:this={listEl}>
+                  {#each groupOrder as groupId, idx (groupId)}
+                    {@const group = getGroupById(groupId)}
+                    {@const court = getEffectiveCourt(groupId)}
+                    {@const groupStats = matchStatsByGroup.get(groupId) ?? { total: 0, completed: 0, inProgress: 0, pending: 0 }}
+                    <div
+                      draggable="true"
+                      role="listitem"
+                      ondragstart={(e) => onDragStart(e, groupId)}
+                      ondragover={(e) => onDragOver(e, groupId)}
+                      ondragleave={onDragLeave}
+                      ondrop={(e) => onDrop(e, groupId)}
+                      ondragend={onDragEnd}
+                      class="flex items-center gap-2 px-3 py-3 border-b border-border last:border-b-0 transition-all min-h-[56px]"
+                    >
+                      <button class="cursor-grab text-muted-foreground hover:text-foreground active:cursor-grabbing touch-none shrink-0"><GripVertical class="h-5 w-5" /></button>
+                      <span class="w-6 text-center text-sm font-mono text-muted-foreground shrink-0">{idx + 1}</span>
+                      <div class="flex-1 min-w-0">
+                        <div class="font-medium truncate">{group?.name || groupId}</div>
+                        <span class="text-xs text-muted-foreground">{groupStats.completed}/{groupStats.total} matches</span>
+                      </div>
+                      <ToggleGroup.Root type="single" value={court} onValueChange={(value) => value && onSetGroupCourt(groupId, value)} class="court-toggle-root">
+                        <ToggleGroup.Item value="A" aria-label="Court A" class="court-toggle-item">A</ToggleGroup.Item>
+                        <ToggleGroup.Item value="A+B" aria-label="Both Courts" class="court-toggle-item">+</ToggleGroup.Item>
+                        <ToggleGroup.Item value="B" aria-label="Court B" class="court-toggle-item">B</ToggleGroup.Item>
+                      </ToggleGroup.Root>
+                    </div>
+                  {/each}
                 </div>
-                <ToggleGroup.Root type="single" value={court} onValueChange={(value) => value && onSetGroupCourt(groupId, value)} class="court-toggle-root">
-                  <ToggleGroup.Item value="A" aria-label="Court A" class="court-toggle-item">A</ToggleGroup.Item>
-                  <ToggleGroup.Item value="A+B" aria-label="Both Courts" class="court-toggle-item">+</ToggleGroup.Item>
-                  <ToggleGroup.Item value="B" aria-label="Court B" class="court-toggle-item">B</ToggleGroup.Item>
-                </ToggleGroup.Root>
+              {:else}
+                <p class="text-sm text-muted-foreground py-4 text-center">No groups yet.</p>
+              {/if}
+            </div>
+
+            <Separator />
+
+            <div class="space-y-3">
+              <h4 class="text-sm font-semibold flex items-center gap-2"><Swords class="h-4 w-4 text-blue-400" />Bogu Matches</h4>
+              <div class="space-y-3">
+                <div class="space-y-2">
+                  <Label class="text-xs text-muted-foreground">Timer</Label>
+                  <div class="flex gap-2">
+                    {#each TIMER_OPTIONS as secs}
+                      <button
+                        onclick={() => (boguTimerDuration = secs)}
+                        class={cn('flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all border', boguTimerDuration === secs ? 'bg-blue-600 text-white border-blue-600' : 'bg-background text-muted-foreground border-input hover:bg-muted')}
+                      >
+                        {formatTimer(secs)}
+                      </button>
+                    {/each}
+                  </div>
+                </div>
+
+                <div class="space-y-2">
+                  <Label class="text-xs text-muted-foreground">Match Type</Label>
+                  <div class="flex gap-2">
+                    <button onclick={() => (boguMatchType = 'sanbon')} class={cn('flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all border', boguMatchType === 'sanbon' ? 'bg-blue-600 text-white border-blue-600' : 'bg-background text-muted-foreground border-input hover:bg-muted')}>Sanbon</button>
+                    <button onclick={() => (boguMatchType = 'ippon')} class={cn('flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all border', boguMatchType === 'ippon' ? 'bg-blue-600 text-white border-blue-600' : 'bg-background text-muted-foreground border-input hover:bg-muted')}>Ippon</button>
+                  </div>
+                </div>
+
+                <div class="space-y-2">
+                  <Label class="text-xs text-muted-foreground">Timer Display</Label>
+                  <div class="flex gap-2">
+                    <button onclick={() => (timerDisplayMode = 'up')} class={cn('flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all border', timerDisplayMode === 'up' ? 'bg-blue-600 text-white border-blue-600' : 'bg-background text-muted-foreground border-input hover:bg-muted')}>Count Up</button>
+                    <button onclick={() => (timerDisplayMode = 'down')} class={cn('flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all border', timerDisplayMode === 'down' ? 'bg-blue-600 text-white border-blue-600' : 'bg-background text-muted-foreground border-input hover:bg-muted')}>Count Down</button>
+                  </div>
+                </div>
+
+                <Button onclick={onApplyBoguSettings} variant="secondary" size="sm" class="w-full"><Check class="mr-2 h-4 w-4" /> Apply to Bogu</Button>
+                <Button onclick={onApplyTimerDisplayMode} variant="outline" size="sm" class="w-full"><Timer class="mr-2 h-4 w-4" /> Apply Timer Display</Button>
               </div>
-            {/each}
-          </div>
-        {:else}
-          <p class="text-sm text-muted-foreground py-4 text-center">No groups yet.</p>
-        {/if}
-      </div>
-
-      <Separator />
-
-      <div class="space-y-3">
-        <h4 class="text-sm font-semibold flex items-center gap-2"><Swords class="h-4 w-4 text-blue-400" />Bogu Matches</h4>
-        <div class="space-y-3">
-          <div class="space-y-2">
-            <Label class="text-xs text-muted-foreground">Timer</Label>
-            <div class="flex gap-2">
-              {#each TIMER_OPTIONS as secs}
-                <button
-                  onclick={() => (boguTimerDuration = secs)}
-                  class={cn('flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all border', boguTimerDuration === secs ? 'bg-blue-600 text-white border-blue-600' : 'bg-background text-muted-foreground border-input hover:bg-muted')}
-                >
-                  {formatTimer(secs)}
-                </button>
-              {/each}
             </div>
-          </div>
 
-          <div class="space-y-2">
-            <Label class="text-xs text-muted-foreground">Match Type</Label>
-            <div class="flex gap-2">
-              <button onclick={() => (boguMatchType = 'sanbon')} class={cn('flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all border', boguMatchType === 'sanbon' ? 'bg-blue-600 text-white border-blue-600' : 'bg-background text-muted-foreground border-input hover:bg-muted')}>Sanbon</button>
-              <button onclick={() => (boguMatchType = 'ippon')} class={cn('flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all border', boguMatchType === 'ippon' ? 'bg-blue-600 text-white border-blue-600' : 'bg-background text-muted-foreground border-input hover:bg-muted')}>Ippon</button>
-            </div>
-          </div>
+            <Separator />
 
-          <div class="space-y-2">
-            <Label class="text-xs text-muted-foreground">Timer Display</Label>
-            <div class="flex gap-2">
-              <button onclick={() => (timerDisplayMode = 'up')} class={cn('flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all border', timerDisplayMode === 'up' ? 'bg-blue-600 text-white border-blue-600' : 'bg-background text-muted-foreground border-input hover:bg-muted')}>Count Up</button>
-              <button onclick={() => (timerDisplayMode = 'down')} class={cn('flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all border', timerDisplayMode === 'down' ? 'bg-blue-600 text-white border-blue-600' : 'bg-background text-muted-foreground border-input hover:bg-muted')}>Count Down</button>
-            </div>
-          </div>
-
-          <Button onclick={onApplyBoguSettings} variant="secondary" size="sm" class="w-full"><Check class="mr-2 h-4 w-4" /> Apply to Bogu</Button>
-          <Button onclick={onApplyTimerDisplayMode} variant="outline" size="sm" class="w-full"><Timer class="mr-2 h-4 w-4" /> Apply Timer Display</Button>
-        </div>
-      </div>
-
-      <Separator />
-
-      <div class="space-y-3">
-        <h4 class="text-sm font-semibold flex items-center gap-2"><Users class="h-4 w-4 text-orange-400" />Non-Bogu (Hantei)</h4>
-        <p class="text-xs text-muted-foreground">Kihon-waza for each round.</p>
-        <div class="space-y-3">
-          <div class="space-y-2">
-            <Label class="text-xs text-muted-foreground">Round 1 (2 waza)</Label>
-            <div class="grid grid-cols-2 gap-2">
-              {#each [0, 1] as i}
-                <Select.Root
-                  value={hanteiRound1[i] || ''}
-                  onValueChange={(v) => {
-                    const newVal = [...hanteiRound1];
-                    newVal[i] = v;
-                    hanteiRound1 = newVal;
-                  }}
-                >
-                  <Select.Trigger class="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm">
-                    <Select.Value placeholder="Select" />
-                    <Select.Icon class="ml-auto">
-                      <ChevronDown class="h-4 w-4 text-muted-foreground" />
-                    </Select.Icon>
-                  </Select.Trigger>
-                  <Select.Content class="z-40">
-                    {#each KIHON_WAZA_OPTIONS as opt}
-                      <Select.Item value={opt.id}>{opt.short}</Select.Item>
+            <div class="space-y-3">
+              <h4 class="text-sm font-semibold flex items-center gap-2"><Users class="h-4 w-4 text-orange-400" />Non-Bogu (Hantei)</h4>
+              <p class="text-xs text-muted-foreground">Kihon-waza for each round.</p>
+              <div class="space-y-3">
+                <div class="space-y-2">
+                  <Label class="text-xs text-muted-foreground">Round 1 (2 waza)</Label>
+                  <div class="grid grid-cols-2 gap-2">
+                    {#each [0, 1] as i}
+                      <Select.Root
+                        value={hanteiRound1[i] || ''}
+                        onValueChange={(v) => {
+                          const newVal = [...hanteiRound1];
+                          newVal[i] = v;
+                          hanteiRound1 = newVal;
+                        }}
+                      >
+                        <Select.Trigger class="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm">
+                          <Select.Value placeholder="Select" />
+                          <Select.Icon class="ml-auto">
+                            <ChevronDown class="h-4 w-4 text-muted-foreground" />
+                          </Select.Icon>
+                        </Select.Trigger>
+                        <Select.Content class="z-40">
+                          {#each KIHON_WAZA_OPTIONS as opt}
+                            <Select.Item value={opt.id}>{opt.short}</Select.Item>
+                          {/each}
+                        </Select.Content>
+                      </Select.Root>
                     {/each}
-                  </Select.Content>
-                </Select.Root>
-              {/each}
-            </div>
-          </div>
-          <div class="space-y-2">
-            <Label class="text-xs text-muted-foreground">Round 2 (3 waza)</Label>
-            <div class="grid grid-cols-3 gap-2">
-              {#each [0, 1, 2] as i}
-                <Select.Root
-                  value={hanteiRound2[i] || ''}
-                  onValueChange={(v) => {
-                    const newVal = [...hanteiRound2];
-                    newVal[i] = v;
-                    hanteiRound2 = newVal;
-                  }}
-                >
-                  <Select.Trigger class="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm">
-                    <Select.Value placeholder="Select" />
-                    <Select.Icon class="ml-auto">
-                      <ChevronDown class="h-4 w-4 text-muted-foreground" />
-                    </Select.Icon>
-                  </Select.Trigger>
-                  <Select.Content class="z-40">
-                    {#each KIHON_WAZA_OPTIONS as opt}
-                      <Select.Item value={opt.id}>{opt.short}</Select.Item>
+                  </div>
+                </div>
+                <div class="space-y-2">
+                  <Label class="text-xs text-muted-foreground">Round 2 (3 waza)</Label>
+                  <div class="grid grid-cols-3 gap-2">
+                    {#each [0, 1, 2] as i}
+                      <Select.Root
+                        value={hanteiRound2[i] || ''}
+                        onValueChange={(v) => {
+                          const newVal = [...hanteiRound2];
+                          newVal[i] = v;
+                          hanteiRound2 = newVal;
+                        }}
+                      >
+                        <Select.Trigger class="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm">
+                          <Select.Value placeholder="Select" />
+                          <Select.Icon class="ml-auto">
+                            <ChevronDown class="h-4 w-4 text-muted-foreground" />
+                          </Select.Icon>
+                        </Select.Trigger>
+                        <Select.Content class="z-40">
+                          {#each KIHON_WAZA_OPTIONS as opt}
+                            <Select.Item value={opt.id}>{opt.short}</Select.Item>
+                          {/each}
+                        </Select.Content>
+                      </Select.Root>
                     {/each}
-                  </Select.Content>
-                </Select.Root>
-              {/each}
+                  </div>
+                </div>
+                <Button onclick={onApplyHanteiSettings} variant="secondary" size="sm" class="w-full"><Check class="mr-2 h-4 w-4" /> Apply Hantei</Button>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div class="space-y-3">
+              <h4 class="text-sm font-semibold flex items-center gap-2"><Lock class="h-4 w-4 text-red-400" />Security</h4>
+              <p class="text-xs text-muted-foreground">Set portal passcodes. Leave blank to clear.</p>
+              <div class="space-y-3">
+                <div class="space-y-2">
+                  <Label class="text-xs text-muted-foreground">Admin Passcode</Label>
+                  <div class="flex gap-2">
+                    <Input type="password" bind:value={adminPasscodeInput} placeholder={adminPasscode ? "????????" : "Set admin passcode"} class="text-sm" />
+                    <Button onclick={onSaveAdminPasscode} variant="secondary" size="sm">
+                      <KeyRound class="mr-2 h-4 w-4" /> Save
+                    </Button>
+                  </div>
+                  <p class="text-[10px] text-muted-foreground">Status: {adminPasscode ? 'Set' : 'Not set'}</p>
+                </div>
+                <div class="space-y-2">
+                  <Label class="text-xs text-muted-foreground">Courtkeeper Passcode</Label>
+                  <div class="flex gap-2">
+                    <Input type="password" bind:value={courtkeeperPasscodeInput} placeholder={courtkeeperPasscode ? "????????" : "Set courtkeeper passcode"} class="text-sm" />
+                    <Button onclick={onSaveCourtkeeperPasscode} variant="secondary" size="sm">
+                      <KeyRound class="mr-2 h-4 w-4" /> Save
+                    </Button>
+                  </div>
+                  <p class="text-[10px] text-muted-foreground">Status: {courtkeeperPasscode ? 'Set' : 'Not set'}</p>
+                </div>
+                <Button onclick={onLockAdmin} variant="outline" size="sm" class="w-full">
+                  <Lock class="mr-2 h-4 w-4" /> Lock Admin
+                </Button>
+
+                <Separator />
+
+                <div class="space-y-3">
+                  <h4 class="text-sm font-semibold flex items-center gap-2"><RefreshCw class="h-4 w-4 text-muted-foreground" /> Actions</h4>
+                  <div class="space-y-2">
+                    <Button onclick={onRefreshParticipants} variant="outline" size="sm" class="w-full justify-start">
+                      <RefreshCw class="mr-2 h-4 w-4" /> Update Participants
+                    </Button>
+                    <Button onclick={onResetTournament} variant="outline" size="sm" class="w-full justify-start border-amber-700/60 text-amber-400 hover:bg-amber-900/20">
+                      <RotateCcw class="mr-2 h-4 w-4" /> Reset All Scores
+                    </Button>
+                    <Button onclick={onDeleteTournament} variant="outline" size="sm" class="w-full justify-start border-red-700/60 text-red-400 hover:bg-red-900/20">
+                      <Trash2 class="mr-2 h-4 w-4" /> Delete Tournament
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-          <Button onclick={onApplyHanteiSettings} variant="secondary" size="sm" class="w-full"><Check class="mr-2 h-4 w-4" /> Apply Hantei</Button>
+
+          <!-- Right column -->
+          <div class="flex-1 min-w-0 space-y-4">
+            <div class="rounded-2xl border border-border bg-card/70 backdrop-blur-sm p-4 h-full flex flex-col">
+              <div class="flex items-center justify-between mb-3">
+                <div>
+                  <h3 class="font-semibold">Match Timeline</h3>
+                  <p class="text-xs text-muted-foreground">Live view of completed, in-progress, and pending matches</p>
+                </div>
+                <div class="text-xs text-muted-foreground flex items-center gap-2">
+                  <span>{matches.length} total</span>
+                  <span class="w-1 h-1 rounded-full bg-border"></span>
+                  <span class="text-emerald-400">{completedMatches.length} done</span>
+                </div>
+              </div>
+
+              <div class="relative flex-1 overflow-y-auto pr-2">
+                <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-border/70"></div>
+                <div class="space-y-4 relative">
+                  {#each completedMatches as match (match._id)}
+                    {@const p1 = getMemberById(match.player1Id)}
+                    {@const p2 = getMemberById(match.player2Id)}
+                    <div class="flex gap-4 items-start">
+                      <div class="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white z-10">
+                        <Check class="h-4 w-4" />
+                      </div>
+                      <div class="flex-1 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+                        <div class="flex items-center justify-between mb-1">
+                          <span class="text-sm font-medium">{p1?.firstName} {p1?.lastName?.charAt(0)}. vs {p2?.firstName} {p2?.lastName?.charAt(0)}.</span>
+                          <span class="text-xs text-emerald-400">{match.player1Score.length}-{match.player2Score.length}</span>
+                        </div>
+                        <div class="text-xs text-muted-foreground">Court {match.court ?? 'A/B'} ? Completed</div>
+                      </div>
+                    </div>
+                  {/each}
+
+                  {#each matches.filter((m) => m.status === 'in_progress') as match (match._id)}
+                    {@const p1 = getMemberById(match.player1Id)}
+                    {@const p2 = getMemberById(match.player2Id)}
+                    <div class="flex gap-4 items-start">
+                      <div class="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center text-white z-10 animate-pulse">
+                        <Play class="h-4 w-4" />
+                      </div>
+                      <div class="flex-1 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                        <div class="flex items-center justify-between mb-1">
+                          <span class="text-sm font-medium text-amber-100">{p1?.firstName} {p1?.lastName?.charAt(0)}. vs {p2?.firstName} {p2?.lastName?.charAt(0)}.</span>
+                          <span class="text-xs text-amber-400 font-mono">{match.timer ?? 'LIVE'}</span>
+                        </div>
+                        <div class="text-xs text-amber-300/80">Court {match.court ?? 'A/B'} ? In Progress</div>
+                      </div>
+                    </div>
+                  {/each}
+
+                  {#each matches.filter((m) => m.status !== 'completed' && m.status !== 'in_progress') as match, idx (match._id)}
+                    {@const p1 = getMemberById(match.player1Id)}
+                    {@const p2 = getMemberById(match.player2Id)}
+                    <div class="flex gap-4 items-start">
+                      <div class="w-8 h-8 rounded-full bg-border flex items-center justify-center text-zinc-200 z-10">
+                        <span class="text-xs font-medium">{idx + 1}</span>
+                      </div>
+                      <div class="flex-1 p-3 rounded-lg bg-card/60 border border-border/70 border-dashed">
+                        <div class="flex items=center justify-between mb-1">
+                          <span class="text-sm text-foreground/90">{p1?.firstName} {p1?.lastName?.charAt(0)}. vs {p2?.firstName} {p2?.lastName?.charAt(0)}.</span>
+                          <span class="text-xs text-muted-foreground">Pending</span>
+                        </div>
+                        <div class="text-xs text-muted-foreground">Court {match.court ?? '?'}</div>
+                      </div>
+                    </div>
+                  {/each}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-
-      <Separator />
-
-      <div class="space-y-3">
-        <h4 class="text-sm font-semibold flex items-center gap-2"><Lock class="h-4 w-4 text-red-400" />Security</h4>
-        <p class="text-xs text-muted-foreground">Set portal passcodes. Leave blank to clear.</p>
-        <div class="space-y-3">
-          <div class="space-y-2">
-            <Label class="text-xs text-muted-foreground">Admin Passcode</Label>
-            <div class="flex gap-2">
-              <Input type="password" bind:value={adminPasscodeInput} placeholder={adminPasscode ? "••••••••" : "Set admin passcode"} class="text-sm" />
-              <Button onclick={onSaveAdminPasscode} variant="secondary" size="sm">
-                <KeyRound class="mr-2 h-4 w-4" /> Save
-              </Button>
-            </div>
-            <p class="text-[10px] text-muted-foreground">Status: {adminPasscode ? 'Set' : 'Not set'}</p>
-          </div>
-          <div class="space-y-2">
-            <Label class="text-xs text-muted-foreground">Courtkeeper Passcode</Label>
-            <div class="flex gap-2">
-              <Input type="password" bind:value={courtkeeperPasscodeInput} placeholder={courtkeeperPasscode ? "••••••••" : "Set courtkeeper passcode"} class="text-sm" />
-              <Button onclick={onSaveCourtkeeperPasscode} variant="secondary" size="sm">
-                <KeyRound class="mr-2 h-4 w-4" /> Save
-              </Button>
-            </div>
-            <p class="text-[10px] text-muted-foreground">Status: {courtkeeperPasscode ? 'Set' : 'Not set'}</p>
-          </div>
-          <Button onclick={onLockAdmin} variant="outline" size="sm" class="w-full">
-            <Lock class="mr-2 h-4 w-4" /> Lock Admin
-          </Button>
-        </div>
-
-        <Separator />
-
-        <div class="space-y-3">
-          <h4 class="text-sm font-semibold flex items-center gap-2"><RefreshCw class="h-4 w-4 text-muted-foreground" /> Actions</h4>
-          <div class="space-y-2">
-            <Button onclick={onRefreshParticipants} variant="outline" size="sm" class="w-full justify-start">
-              <RefreshCw class="mr-2 h-4 w-4" /> Update Participants
-            </Button>
-            <Button onclick={onResetTournament} variant="outline" size="sm" class="w-full justify-start border-amber-700/60 text-amber-400 hover:bg-amber-900/20">
-              <RotateCcw class="mr-2 h-4 w-4" /> Reset All Scores
-            </Button>
-            <Button onclick={onDeleteTournament} variant="outline" size="sm" class="w-full justify-start border-red-700/60 text-red-400 hover:bg-red-900/20">
-              <Trash2 class="mr-2 h-4 w-4" /> Delete Tournament
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
     </Sheet.Content>
   </Sheet.Portal>
 </Sheet.Root>
+
