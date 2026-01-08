@@ -54,7 +54,6 @@ import {
     root.dataset.theme = 'sumi';
     accessUnlocked = localStorage.getItem('shiaijo_admin_unlocked') === 'true';
     accessChecked = true;
-    ensureSenseiGroup();
   });
   onDestroy(() => {
     const root = document.documentElement;
@@ -598,10 +597,6 @@ function selectAllFiltered() {
 
     function getTieKey(row: StandingRow): string {
       return `${row.points}-${row.wins}-${row.ippons}-${row.suddenDeathWins}`;
-    }
-
-    async function ensureSenseiGroup() {
-      try { await client.mutation(api.groups.ensureSensei, {}); } catch {}
     }
 
     $effect(() => {
