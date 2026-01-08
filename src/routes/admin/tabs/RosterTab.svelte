@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import autoAnimate from '@formkit/auto-animate';
   import { cn } from '$lib/utils';
   import { IsMobile } from '$lib/hooks/is-mobile.svelte';
   
@@ -61,12 +60,26 @@
   const isMobile = new IsMobile();
   let listContainer: HTMLElement;
   let addMenuOpen = false;
+  let addMenuRef: HTMLElement;
   let selectedGroupIdForFilter: string | null = null;
   let mobileTab = 'members';
   let groupsEditMode = false;
   let showMobileFilters = false;
   
-  $: listContainer && autoAnimate(listContainer);
+  // Close add menu when clicking outside
+  function handleClickOutside(event: MouseEvent) {
+    if (addMenuOpen && addMenuRef && !addMenuRef.contains(event.target as Node)) {
+      addMenuOpen = false;
+    }
+  }
+  
+  onMount(() => {
+    console.debug('[admin] RosterTab mounted', { membersCount: members.length, groupsCount: groups.length });
+    document.addEventListener('click', handleClickOutside);
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  });
   
   // Pagination state
   let currentPage = 1;
@@ -131,10 +144,6 @@
   function getGroupMemberCount(groupId: string): number {
     return membersByGroupId.get(groupId)?.length || 0;
   }
-  
-  onMount(() => {
-    console.debug('[admin] RosterTab mounted', { membersCount: members.length, groupsCount: groups.length });
-  });
 </script>
 
 {#if !isMobile.current}
@@ -172,7 +181,7 @@
             <Select.Item value="unregistered">Unregistered</Select.Item>
           </Select.Content>
         </Select.Root>
-        <Button variant="outline" size="sm" onclick={onResetFilters}>
+        <Button variant="ghost" size="sm" class="text-muted-foreground hover:text-foreground" onclick={onResetFilters}>
           <RefreshCw class="w-3.5 h-3.5 mr-1" />
           Reset
         </Button>
@@ -302,7 +311,7 @@
             </span>
           {/if}
         </div>
-        <div class="relative">
+        <div class="relative" bind:this={addMenuRef}>
           <Button variant="default" size="sm" onclick={() => addMenuOpen = !addMenuOpen}>
             <Plus class="w-3.5 h-3.5 mr-1" />
             Add
@@ -721,6 +730,7 @@
     border-collapse: collapse;
   }
 </style>
+
 
 
 
