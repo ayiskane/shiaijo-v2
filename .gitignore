@@ -6,3 +6,4 @@ build
 .env.*
 !.env.example
 convo_claude_app.md
+design*
