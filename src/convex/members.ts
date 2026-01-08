@@ -42,6 +42,7 @@ export const update = mutation({
     firstName: v.optional(v.string()),
     lastName: v.optional(v.string()),
     groupId: v.optional(v.string()),
+    archived: v.optional(v.boolean()),
   },
   handler: async (ctx, { id, ...updates }) => {
     const nextUpdates: Record<string, unknown> = { ...updates };
@@ -104,3 +105,4 @@ export const bulkUpdate = mutation({
     return { updatedCount: members.length };
   },
 });
+
