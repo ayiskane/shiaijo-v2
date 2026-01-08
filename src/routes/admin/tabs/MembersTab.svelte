@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import autoAnimate from '@formkit/auto-animate';
   import { Button } from '$lib/components/ui/button';
+  import * as Select from '$lib/components/ui/select';
   import { Input } from '$lib/components/ui/input';
   import { cn } from '$lib/utils';
   import { Check, Plus, UserPlus, X, ChevronDown, ChevronLeft, ChevronRight, Trash2, Pencil, Users, Search, Filter, RefreshCw } from '@lucide/svelte';
