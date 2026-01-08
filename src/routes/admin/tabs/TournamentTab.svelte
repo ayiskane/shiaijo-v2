@@ -153,27 +153,16 @@
     buildScoreTimeline?: (match: any) => any[];
   } = $props();
 
-  // Local state for sheet - synced with prop
-  let localSheetOpen = $state(false);
-  
-  // Sync local state with prop
-  $effect(() => {
-    localSheetOpen = settingsSheetOpen;
-  });
-  
   // Callback when sheet closes
   function handleSheetOpenChange(open: boolean) {
-    localSheetOpen = open;
-    if (!open && settingsSheetOpen) {
-      onCloseSettings?.();
-    }
+    settingsSheetOpen = open;
   }
 
-  const BUILD_TAG = 'tournament-settings-optim-v5'; // helps verify deploy on Vercel
+  const BUILD_TAG = 'tournament-settings-optim-v6'; // helps verify deploy on Vercel
 
   function openSettings() {
     console.debug('[admin][tournament] settings gear clicked', { selectedTournamentId, status: selectedTournament?.status, build: BUILD_TAG });
-    onOpenSettings();
+    settingsSheetOpen = true;
   }
 
   let listEl: HTMLElement | undefined = $state(undefined);
@@ -183,7 +172,7 @@
   });
   
   $effect(() => {
-    console.debug('[admin][tournament] localSheetOpen', localSheetOpen, 'settingsSheetOpen prop', settingsSheetOpen, 'tournament', selectedTournamentId);
+    console.debug('[admin][tournament] settingsSheetOpen', settingsSheetOpen, 'tournament', selectedTournamentId);
   });
   
   // mark externally-provided props as used to satisfy runes a11y checks
@@ -553,7 +542,7 @@
   {/if}
 {/if}
 
-<Sheet.Root open={localSheetOpen} onOpenChange={handleSheetOpenChange}>
+<Sheet.Root open={settingsSheetOpen} onOpenChange={handleSheetOpenChange}>
   <Sheet.Portal>
     <Sheet.Overlay class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[120]" />
     <Sheet.Content
@@ -839,6 +828,7 @@
     </Sheet.Content>
   </Sheet.Portal>
 </Sheet.Root>
+
 
 
 
