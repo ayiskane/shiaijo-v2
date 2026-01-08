@@ -290,7 +290,7 @@
               </div>
             {:else}
               {#if group.hantei}
-                <Badge variant="outline" class="text-[10px] px-1.5 py-0 text-[var(--accent-fire)] border-[var(--accent-fire)]/30 shrink-0">H</Badge>
+                <Badge variant="outline" class="text-[12px] px-1.5 py-0 text-[var(--accent-fire)] border-[var(--accent-fire)]/30 shrink-0">H</Badge>
               {/if}
               <span class="group-item-count">{getGroupMemberCount(group.groupId)}</span>
             {/if}
@@ -363,10 +363,17 @@
       
       <!-- Table -->
       <div class="flex-1 overflow-auto">
-        <table class="w-full text-sm">
+        <table class="w-full table-fixed">
+          <colgroup>
+            <col class="w-12" />
+            <col class="w-auto" />
+            <col class="w-44" />
+            <col class="w-28" />
+            <col class="w-36" />
+          </colgroup>
           <thead class="sticky top-0 bg-muted/50 backdrop-blur-sm">
             <tr class="border-b">
-              <th class="w-10 px-3 py-2">
+              <th class="px-3 py-2.5">
                 <input 
                   type="checkbox" 
                   checked={pageSelected}
@@ -381,16 +388,16 @@
                   class="rounded border-input"
                 />
               </th>
-              <th class="px-3 py-2 text-left font-medium">Name</th>
-              <th class="px-3 py-2 text-left font-medium">Group</th>
-              <th class="px-3 py-2 text-center font-medium w-24">Status</th>
-              <th class="px-3 py-2 text-right font-medium w-28">Actions</th>
+              <th class="px-3 py-2.5 text-left font-medium">Name</th>
+              <th class="px-3 py-2.5 text-left font-medium">Group</th>
+              <th class="px-3 py-2.5 text-center font-medium">Status</th>
+              <th class="px-3 py-2.5 text-right font-medium">Actions</th>
             </tr>
           </thead>
           <tbody bind:this={listContainer}>
             {#each paginatedMembers as member (member._id)}
               <tr class={cn("border-b hover:bg-muted/30 transition-colors", member.archived && "opacity-50")}>
-                <td class="px-3 py-2">
+                <td class="px-3 py-2.5">
                   <input 
                     type="checkbox" 
                     checked={selectedMemberIds.has(member._id)}
@@ -398,7 +405,7 @@
                     class="rounded border-input"
                   />
                 </td>
-                <td class="px-3 py-2">
+                <td class="px-3 py-2.5">
                   <div class="flex items-center gap-2">
                     <div class="cell-avatar-gradient">
                       {getInitials(member.firstName, member.lastName)}
@@ -413,7 +420,7 @@
                     </div>
                   </div>
                 </td>
-                <td class="px-3 py-2">
+                <td class="px-3 py-2.5">
                   <div class="flex items-center gap-1.5">
                     <Badge variant="outline" class="text-xs">
                       {getGroupName(member.groupId)}
@@ -423,7 +430,7 @@
                     {/if}
                   </div>
                 </td>
-                <td class="px-3 py-2 text-center">
+                <td class="px-3 py-2.5 text-center">
                   {#if member.archived}
                     <Badge variant="secondary" class="text-xs text-muted-foreground">Archived</Badge>
                   {:else if selectedTournament && registeredMemberIds.has(member._id)}
@@ -435,7 +442,7 @@
                     <span class="text-xs text-muted-foreground">—</span>
                   {/if}
                 </td>
-                <td class="px-3 py-2">
+                <td class="px-3 py-2.5">
                   <div class="flex items-center justify-end gap-1">
                     {#if selectedTournament && !member.archived}
                       <Button 
@@ -660,14 +667,14 @@
                   <div class="flex-1 min-w-0">
                     <div class="font-medium text-sm leading-tight">{member.firstName} {member.lastName}</div>
                     <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                      <Badge variant="outline" class="text-[10px] px-1.5 py-0">{getGroupName(member.groupId)}</Badge>
+                      <Badge variant="outline" class="text-[12px] px-1.5 py-0">{getGroupName(member.groupId)}</Badge>
                       {#if isNonBogu}
-                        <Badge variant="outline" class="text-[10px] px-1.5 py-0 text-amber-500 border-amber-500">Non-bogu</Badge>
+                        <Badge variant="outline" class="text-[12px] px-1.5 py-0 text-amber-500 border-amber-500">Non-bogu</Badge>
                       {/if}
                       {#if member.archived}
-                        <Badge variant="secondary" class="text-[10px] px-1.5 py-0">Archived</Badge>
+                        <Badge variant="secondary" class="text-[12px] px-1.5 py-0">Archived</Badge>
                       {:else if selectedTournament && isRegistered}
-                        <Badge variant="default" class="text-[10px] px-1.5 py-0 bg-green-600">Registered</Badge>
+                        <Badge variant="default" class="text-[12px] px-1.5 py-0 bg-green-600">Registered</Badge>
                       {/if}
                     </div>
                   </div>
@@ -756,8 +763,10 @@
 <style>
   table {
     border-collapse: collapse;
+    table-layout: fixed;
   }
 </style>
+
 
 
 
