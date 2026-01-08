@@ -217,12 +217,12 @@
             tabindex="0"
             class={cn(
               "group-item",
-              selectedGroupIdForFilter === group._id && "active",
+              selectedGroupIdForFilter === group.groupId && "active",
               group.hantei && "hantei",
               groupsEditMode && "editing"
             )}
-            onclick={() => !groupsEditMode && selectGroup(group._id)}
-            onkeydown={(e) => e.key === 'Enter' && !groupsEditMode && selectGroup(group._id)}
+            onclick={() => !groupsEditMode && selectGroup(group.groupId)}
+            onkeydown={(e) => e.key === 'Enter' && !groupsEditMode && selectGroup(group.groupId)}
           >
             <div class="group-item-icon">
               <FolderOpen class="w-4 h-4" />
@@ -231,7 +231,7 @@
               <div class="group-item-name" title={group.name}>{group.name}</div>
               {#if groupsEditMode}
                 <div class="group-item-meta">
-                  {getGroupMemberCount(group._id)} members
+                  {getGroupMemberCount(group.groupId)} members
                   {#if group.hantei}
                     <span class="text-[var(--accent-fire)] ml-1">• Hantei</span>
                   {/if}
@@ -258,7 +258,7 @@
                 </Button>
               </div>
             {:else}
-              <span class="group-item-count">{getGroupMemberCount(group._id)}</span>
+              <span class="group-item-count">{getGroupMemberCount(group.groupId)}</span>
             {/if}
           </div>
         {/each}
