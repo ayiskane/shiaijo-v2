@@ -139,7 +139,7 @@
   {/if}
   <div class="top-bar-right">
     {#if selectedTournament}
-      <button class="btn-sm ghost" onclick={() => settingsSheetOpen = true}>⚙ Settings</button>
+      <button class="btn-sm ghost" onclick={openSettings}>⚙ Settings</button>
     {/if}
     <button class="btn-sm primary" onclick={onOpenCreateTournament}>+ New Tournament</button>
   </div>

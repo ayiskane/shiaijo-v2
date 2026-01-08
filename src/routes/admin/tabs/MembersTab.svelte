@@ -72,6 +72,9 @@
     return pages;
   })();
 
+  // Page-level selection helper (only current page rows)
+  $: pageSelected = paginatedMembers.length > 0 && paginatedMembers.every((m) => selectedMemberIds.has(m._id));
+
   // Get initials from name
   function getInitials(firstName: string, lastName: string): string {
     return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
@@ -275,12 +278,14 @@
             <th style="width: 40px;">
               <input
                 type="checkbox"
-                checked={allFilteredSelected}
+                checked={pageSelected}
                 onchange={() => {
-                  if (allFilteredSelected) {
-                    onClearSelection();
+                  if (pageSelected) {
+                    paginatedMembers.forEach((m) => {
+                      if (selectedMemberIds.has(m._id)) onToggleMemberSelection(m._id);
+                    });
                   } else {
-                    filteredMembers.forEach((m) => {
+                    paginatedMembers.forEach((m) => {
                       if (!selectedMemberIds.has(m._id)) onToggleMemberSelection(m._id);
                     });
                   }
