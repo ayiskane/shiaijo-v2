@@ -10,18 +10,20 @@
   import { toast } from 'svelte-sonner';
   import { SvelteMap, SvelteSet } from 'svelte/reactivity';
   import autoAnimate from '@formkit/auto-animate';
-  import { 
-    LayoutDashboard, Users, FolderOpen, Trophy, ClipboardList, 
-    ChevronLeft, ChevronDown, ChevronRight, Swords, Eye, Menu, Plus, Trash2, Pencil,
-    Play, Settings, RefreshCw, RotateCcw, Archive, GripVertical, Timer, 
-    Check, X, AlertTriangle, History, UserPlus, Home, Lock, KeyRound, UserCheck
-  } from '@lucide/svelte';
+import { 
+  LayoutDashboard, Users, FolderOpen, Trophy, ClipboardList, 
+  ChevronLeft, ChevronDown, ChevronRight, Swords, Eye, Menu, Plus, Trash2, Pencil,
+  Play, Settings, RefreshCw, RotateCcw, Archive, GripVertical, Timer, 
+  Check, X, AlertTriangle, History, UserPlus, Home, Lock, KeyRound, UserCheck
+} from '@lucide/svelte';
+  import { parseDate } from '@internationalized/date';
   
   // shadcn-svelte components
   import * as Dialog from '$lib/components/ui/dialog';
   import * as Collapsible from '$lib/components/ui/collapsible';
   import * as Select from '$lib/components/ui/select';
   import * as Sheet from '$lib/components/ui/sheet';
+  import * as Calendar from '$lib/components/ui/calendar';
   import * as ToggleGroup from '$lib/components/ui/toggle-group';
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
@@ -109,6 +111,7 @@
   let newMember = $state({ firstName: '', lastName: '', groupId: '' });
   let csvText = $state('');
   let newTournament = $state({ name: '', date: '', month: '', year: new Date().getFullYear() });
+  let tournamentDateValue = $state(null as import('@internationalized/date').DateValue | null);
   let selectedTournamentId = $state<string | null>(null);
   
   // Tournament-specific queries
@@ -1691,7 +1694,17 @@
         </div>
       </div>
       <div class="space-y-2"><Label for="tournament-name" class="text-xs">Name <span class="text-muted-foreground">(optional)</span></Label><Input id="tournament-name" bind:value={newTournament.name} placeholder={generateTournamentName()} class="text-sm" /></div>
-      <div class="space-y-2"><Label for="tournament-date" class="text-xs">Date</Label><Input id="tournament-date" type="date" bind:value={newTournament.date} class="text-sm" /></div>
+      <div class="space-y-2">
+        <Label for="tournament-date" class="text-xs">Date</Label>
+        <div class="rounded-lg border border-input bg-background p-3">
+          <Calendar.Calendar
+            bind:value={tournamentDateValue}
+            captionLayout="dropdown"
+            locale="en-US"
+            on:change={() => { newTournament.date = tournamentDateValue ? tournamentDateValue.toString() : ''; }}
+          />
+        </div>
+      </div>
     </div>
     <Dialog.Footer class="flex-col sm:flex-row gap-2"><Button variant="secondary" onclick={() => showCreateTournament = false} class="w-full sm:w-auto">Cancel</Button><Button onclick={createTournament} class="w-full sm:w-auto">Create</Button></Dialog.Footer>
   </Dialog.Content>
@@ -1724,3 +1737,7 @@
 
 
 
+  $effect(() => {
+    // keep calendar value in sync when dialog resets
+    tournamentDateValue = newTournament.date ? parseDate(newTournament.date) : null;
+  });
