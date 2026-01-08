@@ -563,19 +563,26 @@
             <Label class="text-xs text-muted-foreground">Round 1 (2 waza)</Label>
             <div class="grid grid-cols-2 gap-2">
               {#each [0, 1] as i}
-                <select
+                <Select.Root
                   value={hanteiRound1[i] || ''}
-                  onchange={(e) => {
+                  onValueChange={(v) => {
                     const newVal = [...hanteiRound1];
-                    newVal[i] = (e.target as HTMLSelectElement).value;
+                    newVal[i] = v;
                     hanteiRound1 = newVal;
                   }}
-                  class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
                 >
-                  {#each KIHON_WAZA_OPTIONS as opt}
-                    <option value={opt.id}>{opt.short}</option>
-                  {/each}
-                </select>
+                  <Select.Trigger class="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm">
+                    <Select.Value placeholder="Select" />
+                    <Select.Icon class="ml-auto">
+                      <ChevronDown class="h-4 w-4 text-muted-foreground" />
+                    </Select.Icon>
+                  </Select.Trigger>
+                  <Select.Content class="z-40">
+                    {#each KIHON_WAZA_OPTIONS as opt}
+                      <Select.Item value={opt.id}>{opt.short}</Select.Item>
+                    {/each}
+                  </Select.Content>
+                </Select.Root>
               {/each}
             </div>
           </div>
@@ -583,19 +590,26 @@
             <Label class="text-xs text-muted-foreground">Round 2 (3 waza)</Label>
             <div class="grid grid-cols-3 gap-2">
               {#each [0, 1, 2] as i}
-                <select
+                <Select.Root
                   value={hanteiRound2[i] || ''}
-                  onchange={(e) => {
+                  onValueChange={(v) => {
                     const newVal = [...hanteiRound2];
-                    newVal[i] = (e.target as HTMLSelectElement).value;
+                    newVal[i] = v;
                     hanteiRound2 = newVal;
                   }}
-                  class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
                 >
-                  {#each KIHON_WAZA_OPTIONS as opt}
-                    <option value={opt.id}>{opt.short}</option>
-                  {/each}
-                </select>
+                  <Select.Trigger class="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm">
+                    <Select.Value placeholder="Select" />
+                    <Select.Icon class="ml-auto">
+                      <ChevronDown class="h-4 w-4 text-muted-foreground" />
+                    </Select.Icon>
+                  </Select.Trigger>
+                  <Select.Content class="z-40">
+                    {#each KIHON_WAZA_OPTIONS as opt}
+                      <Select.Item value={opt.id}>{opt.short}</Select.Item>
+                    {/each}
+                  </Select.Content>
+                </Select.Root>
               {/each}
             </div>
           </div>

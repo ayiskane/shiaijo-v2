@@ -6,6 +6,7 @@
   import { cn } from '$lib/utils';
   import { toast } from 'svelte-sonner';
   import { Button } from '$lib/components/ui/button';
+  import * as Select from '$lib/components/ui/select';
   import { Input } from '$lib/components/ui/input';
   import { Label } from '$lib/components/ui/label';
   import * as Dialog from '$lib/components/ui/dialog';
@@ -363,12 +364,18 @@
         <div class="space-y-2">
           <Label class="text-xs text-muted-foreground">Sensei Quick Access</Label>
           <div class="flex gap-2">
-            <select bind:value={selectedSenseiId} class="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm">
-              <option value="">Select Sensei</option>
-              {#each senseiMembers as m}
-                <option value={m._id}>{m.firstName} {m.lastName}</option>
-              {/each}
-            </select>
+            <Select.Root value={selectedSenseiId} onValueChange={(v) => selectedSenseiId = v}>
+              <Select.Trigger class="flex-1 text-sm h-10 rounded-lg border border-input bg-background px-3">
+                <Select.Value placeholder="Select Sensei" />
+                <Select.Icon class="ml-auto"><ChevronDown class="h-4 w-4" /></Select.Icon>
+              </Select.Trigger>
+              <Select.Content class="z-40">
+                <Select.Item value="">Select Sensei</Select.Item>
+                {#each senseiMembers as m}
+                  <Select.Item value={m._id}>{m.firstName} {m.lastName}</Select.Item>
+                {/each}
+              </Select.Content>
+            </Select.Root>
             <Button variant="outline" onclick={unlockAsSensei} class="shrink-0"><UserCheck class="mr-2 h-4 w-4" /> Sensei</Button>
           </div>
           {#if senseiMembers.length === 0}

@@ -1137,12 +1137,18 @@
         <div class="space-y-2">
           <Label class="text-xs text-muted-foreground">Sensei Quick Access</Label>
           <div class="flex gap-2">
-            <select bind:value={selectedSenseiId} class="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm">
-              <option value="">Select Sensei</option>
-              {#each senseiMembers as m}
-                <option value={m._id}>{m.firstName} {m.lastName}</option>
-              {/each}
-            </select>
+            <Select.Root value={selectedSenseiId} onValueChange={(v) => selectedSenseiId = v}>
+              <Select.Trigger class="flex-1 text-sm h-10 rounded-lg border border-input bg-background px-3">
+                <Select.Value placeholder="Select Sensei" />
+                <Select.Icon class="ml-auto"><ChevronDown class="h-4 w-4" /></Select.Icon>
+              </Select.Trigger>
+              <Select.Content class="z-40">
+                <Select.Item value="">Select Sensei</Select.Item>
+                {#each senseiMembers as m}
+                  <Select.Item value={m._id}>{m.firstName} {m.lastName}</Select.Item>
+                {/each}
+              </Select.Content>
+            </Select.Root>
             <Button variant="outline" onclick={unlockAsSensei} class="shrink-0"><UserCheck class="mr-2 h-4 w-4" /> Sensei</Button>
           </div>
           {#if senseiMembers.length === 0}
@@ -1508,7 +1514,21 @@
     <div class="space-y-4 py-4">
       <div class="space-y-2"><Label for="member-first">First Name</Label><Input id="member-first" bind:value={newMember.firstName} placeholder="John" /></div>
       <div class="space-y-2"><Label for="member-last">Last Name</Label><Input id="member-last" bind:value={newMember.lastName} placeholder="Doe" /></div>
-      <div class="space-y-2"><Label for="member-group">Group</Label><select id="member-group" bind:value={newMember.groupId} class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"><option value="">Select Group</option>{#each groups as g}<option value={g.groupId}>{g.name}</option>{/each}</select></div>
+      <div class="space-y-2">
+        <Label for="member-group">Group</Label>
+        <Select.Root value={newMember.groupId} onValueChange={(v) => newMember.groupId = v}>
+          <Select.Trigger class="w-full h-10 text-sm rounded-lg border border-input bg-background px-3">
+            <Select.Value placeholder="Select Group" />
+            <Select.Icon class="ml-auto"><ChevronDown class="h-4 w-4" /></Select.Icon>
+          </Select.Trigger>
+          <Select.Content class="z-40">
+            <Select.Item value="">Select Group</Select.Item>
+            {#each groups as g}
+              <Select.Item value={g.groupId}>{g.name}</Select.Item>
+            {/each}
+          </Select.Content>
+        </Select.Root>
+      </div>
     </div>
     <Dialog.Footer class="flex-col sm:flex-row gap-2"><Button variant="secondary" onclick={() => showAddMember = false} class="w-full sm:w-auto">Cancel</Button><Button onclick={createMember} class="w-full sm:w-auto">Add</Button></Dialog.Footer>
   </Dialog.Content>
@@ -1529,10 +1549,18 @@
         </div>
         <div class="space-y-2">
           <Label for="edit-member-group">Group</Label>
-          <select id="edit-member-group" bind:value={editingMember.groupId} class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-            <option value="">Select Group</option>
-            {#each groups as g}<option value={g.groupId}>{g.name}</option>{/each}
-          </select>
+          <Select.Root value={editingMember.groupId} onValueChange={(v) => editingMember.groupId = v}>
+            <Select.Trigger class="w-full h-10 text-sm rounded-lg border border-input bg-background px-3">
+              <Select.Value placeholder="Select Group" />
+              <Select.Icon class="ml-auto"><ChevronDown class="h-4 w-4" /></Select.Icon>
+            </Select.Trigger>
+            <Select.Content class="z-40">
+              <Select.Item value="">Select Group</Select.Item>
+              {#each groups as g}
+                <Select.Item value={g.groupId}>{g.name}</Select.Item>
+              {/each}
+            </Select.Content>
+          </Select.Root>
         </div>
         <div class="space-y-2">
         </div>
@@ -1555,7 +1583,18 @@
           <div class="grid grid-cols-[1fr_1fr_100px_32px] gap-2">
             <Input bind:value={member.firstName} placeholder="First" class="text-sm" />
             <Input bind:value={member.lastName} placeholder="Last" class="text-sm" />
-            <select bind:value={member.groupId} class="rounded-lg border border-input bg-background px-2 py-2 text-xs"><option value="">-</option>{#each groups as g}<option value={g.groupId}>{g.groupId}</option>{/each}</select>
+            <Select.Root value={member.groupId} onValueChange={(v) => member.groupId = v}>
+              <Select.Trigger class="rounded-lg border border-input bg-background px-2 py-2 text-xs h-9 w-full">
+                <Select.Value placeholder="-" />
+                <Select.Icon class="ml-auto"><ChevronDown class="h-3 w-3" /></Select.Icon>
+              </Select.Trigger>
+              <Select.Content class="z-40">
+                <Select.Item value="">-</Select.Item>
+                {#each groups as g}
+                  <Select.Item value={g.groupId}>{g.groupId}</Select.Item>
+                {/each}
+              </Select.Content>
+            </Select.Root>
             <button onclick={() => massMembers = massMembers.filter((_, idx) => idx !== i)} class="flex items-center justify-center text-muted-foreground hover:text-destructive"><Trash2 class="h-4 w-4" /></button>
           </div>
         {/each}
@@ -1583,10 +1622,18 @@
             <div class="grid grid-cols-[1fr_1fr_140px] gap-2">
               <Input bind:value={member.firstName} placeholder="First" class="text-sm" />
               <Input bind:value={member.lastName} placeholder="Last" class="text-sm" />
-              <select bind:value={member.groupId} class="rounded-lg border border-input bg-background px-2 py-2 text-xs">
-                <option value="">-</option>
-                {#each groups as g}<option value={g.groupId}>{g.groupId}</option>{/each}
-              </select>
+              <Select.Root value={member.groupId} onValueChange={(v) => member.groupId = v}>
+                <Select.Trigger class="rounded-lg border border-input bg-background px-2 py-2 text-xs h-9 w-full">
+                  <Select.Value placeholder="-" />
+                  <Select.Icon class="ml-auto"><ChevronDown class="h-3 w-3" /></Select.Icon>
+                </Select.Trigger>
+                <Select.Content class="z-40">
+                  <Select.Item value="">-</Select.Item>
+                  {#each groups as g}
+                    <Select.Item value={g.groupId}>{g.groupId}</Select.Item>
+                  {/each}
+                </Select.Content>
+              </Select.Root>
             </div>
           {:else}
             <p class="text-sm text-muted-foreground text-center py-6">No members to edit.</p>
@@ -1613,8 +1660,35 @@
     <Dialog.Header><Dialog.Title>Create Tournament</Dialog.Title></Dialog.Header>
     <div class="space-y-4 py-4">
       <div class="grid grid-cols-2 gap-3">
-        <div class="space-y-2"><Label for="tournament-month" class="text-xs">Month</Label><select id="tournament-month" bind:value={newTournament.month} class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"><option value="">Select</option>{#each MONTHS as month}<option value={month}>{month}</option>{/each}</select></div>
-        <div class="space-y-2"><Label for="tournament-year" class="text-xs">Year</Label><select id="tournament-year" bind:value={newTournament.year} class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">{#each [2024, 2025, 2026, 2027] as year}<option value={year}>{year}</option>{/each}</select></div>
+        <div class="space-y-2">
+          <Label for="tournament-month" class="text-xs">Month</Label>
+          <Select.Root value={newTournament.month} onValueChange={(v) => newTournament.month = v}>
+            <Select.Trigger class="w-full h-10 text-sm rounded-lg border border-input bg-background px-3">
+              <Select.Value placeholder="Select" />
+              <Select.Icon class="ml-auto"><ChevronDown class="h-4 w-4" /></Select.Icon>
+            </Select.Trigger>
+            <Select.Content class="z-40">
+              <Select.Item value="">Select</Select.Item>
+              {#each MONTHS as month}
+                <Select.Item value={month}>{month}</Select.Item>
+              {/each}
+            </Select.Content>
+          </Select.Root>
+        </div>
+        <div class="space-y-2">
+          <Label for="tournament-year" class="text-xs">Year</Label>
+          <Select.Root value={newTournament.year} onValueChange={(v) => newTournament.year = Number(v)}>
+            <Select.Trigger class="w-full h-10 text-sm rounded-lg border border-input bg-background px-3">
+              <Select.Value placeholder="Year" />
+              <Select.Icon class="ml-auto"><ChevronDown class="h-4 w-4" /></Select.Icon>
+            </Select.Trigger>
+            <Select.Content class="z-40">
+              {#each [2024, 2025, 2026, 2027] as year}
+                <Select.Item value={year.toString()}>{year}</Select.Item>
+              {/each}
+            </Select.Content>
+          </Select.Root>
+        </div>
       </div>
       <div class="space-y-2"><Label for="tournament-name" class="text-xs">Name <span class="text-muted-foreground">(optional)</span></Label><Input id="tournament-name" bind:value={newTournament.name} placeholder={generateTournamentName()} class="text-sm" /></div>
       <div class="space-y-2"><Label for="tournament-date" class="text-xs">Date</Label><Input id="tournament-date" type="date" bind:value={newTournament.date} class="text-sm" /></div>
