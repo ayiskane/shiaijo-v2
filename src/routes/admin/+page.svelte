@@ -955,6 +955,53 @@ function selectAllFiltered() {
     } catch (e) { toast.error('Failed to register members'); }
   }
   
+  async function unregisterSelectedMembers() {
+    if (!selectedTournament) return;
+    if (selectedMemberIds.size === 0) { toast.error('No members selected'); return; }
+    try {
+      let count = 0;
+      for (const memberId of selectedMemberIds) {
+        if (registeredMemberIds.has(memberId)) {
+          await client.mutation(api.participants.removeByMember, { 
+            tournamentId: selectedTournament._id, 
+            memberId: memberId as any 
+          });
+          count++;
+        }
+      }
+      toast.success(`Unregistered ${count} members`);
+      selectedMemberIds.clear();
+    } catch (e) { toast.error('Failed to unregister members'); }
+  }
+  
+  async function archiveSelectedMembers() {
+    if (selectedMemberIds.size === 0) { toast.error('No members selected'); return; }
+    if (!confirm(`Archive ${selectedMemberIds.size} selected members?`)) return;
+    try {
+      let count = 0;
+      for (const id of selectedMemberIds) {
+        await client.mutation(api.members.update, { id: id as any, archived: true });
+        count++;
+      }
+      toast.success(`Archived ${count} members`);
+      selectedMemberIds.clear();
+    } catch (e) { toast.error('Failed to archive members'); }
+  }
+  
+  async function deleteSelectedMembers() {
+    if (selectedMemberIds.size === 0) { toast.error('No members selected'); return; }
+    if (!confirm(`Delete ${selectedMemberIds.size} selected members? This cannot be undone.`)) return;
+    try {
+      let count = 0;
+      for (const id of selectedMemberIds) {
+        await client.mutation(api.members.remove, { id: id as any });
+        count++;
+      }
+      toast.success(`Deleted ${count} members`);
+      selectedMemberIds.clear();
+    } catch (e) { toast.error('Failed to delete members'); }
+  }
+  
   async function clearAllParticipants() {
     if (!selectedTournament) return;
     if (!confirm('Remove all participants from this tournament?')) return;
@@ -1412,6 +1459,9 @@ function selectAllFiltered() {
           onAddAllParticipants={addAllParticipants}
           onClearAllParticipants={clearParticipants}
           onRegisterSelectedMembers={registerSelectedMembers}
+          onUnregisterSelectedMembers={unregisterSelectedMembers}
+          onArchiveSelectedMembers={archiveSelectedMembers}
+          onDeleteSelectedMembers={deleteSelectedMembers}
           onRegisterGroupMembers={registerGroupMembers}
           onToggleMemberSelection={toggleMemberSelection}
           onClearSelection={() => selectedMemberIds = new SvelteSet()}
@@ -1874,6 +1924,7 @@ function selectAllFiltered() {
 </Dialog.Root>
 
 {/if}
+
 
 
 
