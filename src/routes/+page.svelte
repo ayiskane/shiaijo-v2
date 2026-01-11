@@ -19,6 +19,11 @@
 
 <svelte:head>
   <title>Shiaijo - Kendo Tournament Management</title>
+  <meta name="description" content="Real-time kendo tournament management system. Live scoring, court management, and spectator views for kendo competitions." />
+  <meta name="keywords" content="kendo, tournament, shiaijo, martial arts, scoring, management" />
+  <meta property="og:title" content="Shiaijo - Kendo Tournament Management" />
+  <meta property="og:description" content="Real-time kendo tournament management system for live scoring and court management." />
+  <meta property="og:type" content="website" />
 </svelte:head>
 
 <div class="landing">
@@ -73,7 +78,7 @@
   <footer class="footer">
     <a href="https://renbudojo.com" target="_blank" rel="noopener noreferrer" class="footer-link">
       <span class="footer-en">RENBU DOJO</span>
-      <img src="/renbu-logo.png" alt="Renbu logo" class="footer-logo" />
+      <img src="/renbu-logo.png" alt="Renbu logo" class="footer-logo" loading="lazy" decoding="async" />
       <span class="footer-jp">練武道場</span>
     </a>
   </footer>
@@ -184,15 +189,6 @@
     gap: 12px;
     /* Width = 3 squares + 2 gaps */
     width: calc(var(--square-size) * 3 + var(--portal-gap) * 2);
-  }
-
-  .section-label {
-    font-size: 10px;
-    letter-spacing: 0.3em;
-    color: var(--text-faint);
-    text-transform: uppercase;
-    margin-left: 2px;
-    margin-bottom: 4px;
   }
 
   /* Portal cards base */
@@ -343,11 +339,6 @@
     font-size: 12px;
     color: var(--text-faint);
     letter-spacing: 0.15em;
-  }
-
-  .footer-dot {
-    color: var(--text-faint);
-    opacity: 0.4;
   }
 
   .footer-logo {
@@ -501,6 +492,20 @@
 
     .portal-staff .portal-label {
       font-size: 8px;
+    }
+  }
+
+  /* Respect user motion preferences */
+  @media (prefers-reduced-motion: reduce) {
+    .portal-card {
+      animation: none;
+      transition: none;
+    }
+    .portal-card:hover {
+      transform: none;
+    }
+    .portal-arrow {
+      transition: none;
     }
   }
 </style>
