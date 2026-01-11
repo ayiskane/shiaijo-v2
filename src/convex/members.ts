@@ -112,4 +112,15 @@ export const bulkUpdate = mutation({
   },
 });
 
+// Debug: Clear all members
+export const clearAll = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const members = await ctx.db.query("members").collect();
+    for (const member of members) {
+      await ctx.db.delete(member._id);
+    }
+    return { deletedCount: members.length };
+  },
+});
 
