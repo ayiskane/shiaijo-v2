@@ -116,6 +116,7 @@
               class="nav-item" 
               class:active={isActive(item.href)}
               class:live={item.live}
+              aria-current={isActive(item.href) ? "page" : undefined}
             >
               <span class="nav-icon"><Icon size={20} /></span>
               <span class="nav-text">{item.label}</span>
