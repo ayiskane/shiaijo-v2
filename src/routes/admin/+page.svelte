@@ -115,7 +115,7 @@ import {
   let registerGuestsToTournament = $state(true);
   let registerGuestsGroupId = $state('');
   let csvText = $state('');
-  let newTournament = $state({ name: '', date: '', month: '', year: new Date().getFullYear() });
+  let newTournament = $state({ name: '', date: '' });
   let tournamentDateValue = $state(null as import('@internationalized/date').DateValue | null);
   let resettingData = $state(false);
 
@@ -679,8 +679,14 @@ function selectAllFiltered() {
     }
   
   function generateTournamentName(): string {
-    const month = newTournament.month || MONTHS[new Date().getMonth()];
-    const year = newTournament.year || new Date().getFullYear();
+    if (tournamentDateValue) {
+      const date = new Date(tournamentDateValue.year, tournamentDateValue.month - 1, tournamentDateValue.day);
+      const month = MONTHS[date.getMonth()];
+      const year = date.getFullYear();
+      return `Renbu Monthly Shiai - ${month} ${year}`;
+    }
+    const month = MONTHS[new Date().getMonth()];
+    const year = new Date().getFullYear();
     return `Renbu Monthly Shiai - ${month} ${year}`;
   }
   
@@ -975,7 +981,8 @@ function selectAllFiltered() {
     if (!newTournament.date) { toast.error('Please select a date'); return; }
     try {
       const id = await client.mutation(api.tournaments.create, { name: newTournament.name || generateTournamentName(), date: newTournament.date });
-      newTournament = { name: '', date: '', month: '', year: new Date().getFullYear() };
+      newTournament = { name: '', date: '' };
+      tournamentDateValue = null;
       showCreateTournament = false;
       selectedTournamentId = id;
       toast.success('Tournament created');
@@ -1663,45 +1670,25 @@ function selectAllFiltered() {
       {:else if activeTab === 'tournament'}
         <TournamentTab
             bind:selectedTournamentId
-            bind:settingsSheetOpen
-            bind:boguTimerDuration
-            bind:boguMatchType
-            bind:timerDisplayMode
-            bind:hanteiRound1
-            bind:hanteiRound2
-            bind:adminPasscodeInput
-            bind:courtkeeperPasscodeInput
-            {adminPasscode}
-            {courtkeeperPasscode}
             {tournaments}
             {selectedTournament}
-            {tournamentSelectorLabel}
-            {setupStep}
             {participants}
             {matches}
             {groupOrder}
             {groups}
             {members}
             {membersByGroupId}
-            {matchesByGroupId}
             {matchStatsByGroup}
-            {collapsedGroups}
             {courtAMatches}
             {courtBMatches}
             {courtACompletedCount}
             {courtBCompletedCount}
             {currentCourtAMatch}
             {currentCourtBMatch}
-            {pendingMatches}
-            {inProgressMatches}
             {completedMatches}
             {progressPercent}
             {isComplete}
             {registeredMemberIds}
-            {KIHON_WAZA_OPTIONS}
-            {TIMER_OPTIONS}
-            {SCORE_LABELS}
-            {buildScoreTimeline}
             onOpenCreateTournament={() => showCreateTournament = true}
             onAddAllParticipants={addAllParticipants}
             onClearAllParticipants={clearAllParticipants}
@@ -1712,29 +1699,16 @@ function selectAllFiltered() {
             onGenerateMatches={generateMatches}
             onStartTournament={startTournament}
             onCompleteTournament={completeTournament}
-            onOpenSettings={() => settingsSheetOpen = true}
-            onCloseSettings={() => settingsSheetOpen = false}
-            onResetTournament={resetTournament}
-            onDeleteTournament={() => { settingsSheetOpen = false; showDeleteConfirm = true; }}
             onSetGroupCourt={setGroupCourt}
-            onToggleGroupCollapse={toggleGroupCollapse}
             onDragStart={handleDragStart}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onDragEnd={handleDragEnd}
-            onApplyBoguSettings={applyBoguSettings}
-            onApplyTimerDisplayMode={applyTimerDisplayMode}
-            onApplyHanteiSettings={applyHanteiSettings}
-            onSaveAdminPasscode={saveAdminPasscode}
-            onSaveCourtkeeperPasscode={saveCourtkeeperPasscode}
-            onLockAdmin={lockAdmin}
             onRefreshParticipants={refreshParticipants}
             {getGroupById}
             {getEffectiveCourt}
             {getMemberById}
-            {getGroupName}
-            {formatTimer}
         />
 
       {:else if activeTab === 'results'}
@@ -2016,58 +1990,44 @@ function selectAllFiltered() {
 
 <Dialog.Root bind:open={showCreateTournament}>
   <Dialog.Content class="sm:max-w-md max-w-[calc(100vw-2rem)]">
-    <Dialog.Header><Dialog.Title>Create Tournament</Dialog.Title></Dialog.Header>
+    <Dialog.Header>
+      <Dialog.Title>Create Tournament</Dialog.Title>
+      <Dialog.Description>Set up a new tournament for your dojo.</Dialog.Description>
+    </Dialog.Header>
     <div class="space-y-4 py-4">
-      <div class="grid grid-cols-2 gap-3">
-        <div class="space-y-2">
-          <Label for="tournament-month" class="text-xs">Month</Label>
-          <Select.Root value={newTournament.month} onValueChange={(v) => newTournament.month = v}>
-            <Select.Trigger class="w-full h-10 text-sm rounded-lg border border-input bg-background px-3">
-              <Select.Value placeholder="Select" />
-              <Select.Icon class="ml-auto"><ChevronDown class="h-4 w-4" /></Select.Icon>
-            </Select.Trigger>
-            <Select.Content class="z-40">
-              <Select.Item value="">Select</Select.Item>
-              {#each MONTHS as month}
-                <Select.Item value={month}>{month}</Select.Item>
-              {/each}
-            </Select.Content>
-          </Select.Root>
-        </div>
-        <div class="space-y-2">
-          <Label for="tournament-year" class="text-xs">Year</Label>
-          <Select.Root value={newTournament.year} onValueChange={(v) => newTournament.year = Number(v)}>
-            <Select.Trigger class="w-full h-10 text-sm rounded-lg border border-input bg-background px-3">
-              <Select.Value placeholder="Year" />
-              <Select.Icon class="ml-auto"><ChevronDown class="h-4 w-4" /></Select.Icon>
-            </Select.Trigger>
-            <Select.Content class="z-40">
-              {#each [2024, 2025, 2026, 2027] as year}
-                <Select.Item value={year.toString()}>{year}</Select.Item>
-              {/each}
-            </Select.Content>
-          </Select.Root>
+      <div class="space-y-2">
+        <Label for="tournament-name" class="text-xs">Tournament Name</Label>
+        <Input 
+          id="tournament-name" 
+          bind:value={newTournament.name} 
+          placeholder={generateTournamentName()} 
+          class="text-sm" 
+        />
+        <p class="text-xs text-muted-foreground">Leave blank to auto-generate based on date</p>
+      </div>
+      <div class="space-y-2">
+        <Label class="text-xs">Select Date</Label>
+        <div class="rounded-lg border border-input bg-background p-3">
+          <Calendar.Calendar
+            bind:value={tournamentDateValue}
+            captionLayout="dropdown"
+            locale="en-US"
+            onValueChange={(v) => {
+              tournamentDateValue = v;
+              newTournament.date = v ? v.toString() : '';
+            }}
+          />
         </div>
       </div>
-      <div class="space-y-2"><Label for="tournament-name" class="text-xs">Name <span class="text-muted-foreground">(optional)</span></Label><Input id="tournament-name" bind:value={newTournament.name} placeholder={generateTournamentName()} class="text-sm" /></div>
-        <div class="space-y-2">
-          <Label for="tournament-date" class="text-xs">Date</Label>
-          <div class="rounded-lg border border-input bg-background p-3">
-            <Calendar.Calendar
-              type="single"
-              bind:value={tournamentDateValue}
-              captionLayout="dropdown"
-              locale="en-US"
-              initialFocus
-              onValueChange={(v) => {
-                tournamentDateValue = v;
-                newTournament.date = v ? v.toString() : '';
-              }}
-            />
-          </div>
-        </div>
     </div>
-    <Dialog.Footer class="flex-col sm:flex-row gap-2"><Button variant="secondary" onclick={() => showCreateTournament = false} class="w-full sm:w-auto">Cancel</Button><Button onclick={createTournament} class="w-full sm:w-auto">Create</Button></Dialog.Footer>
+    <Dialog.Footer class="flex-col sm:flex-row gap-2">
+      <Button variant="secondary" onclick={() => showCreateTournament = false} class="w-full sm:w-auto">
+        Cancel
+      </Button>
+      <Button onclick={createTournament} disabled={!newTournament.date} class="w-full sm:w-auto">
+        Create Tournament
+      </Button>
+    </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>
 
