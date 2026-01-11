@@ -1690,6 +1690,7 @@ function selectAllFiltered() {
             {isComplete}
             {registeredMemberIds}
             onOpenCreateTournament={() => showCreateTournament = true}
+            onDeleteTournament={deleteTournament}
             onAddAllParticipants={addAllParticipants}
             onClearAllParticipants={clearAllParticipants}
             onRegisterMember={registerMember}
