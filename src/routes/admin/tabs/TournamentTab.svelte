@@ -300,19 +300,28 @@
   });
 </script>
 
-<!-- Top Bar -->
-<div class="top-bar">
-  <div class="top-bar-left">
-    <span class="top-bar-breadcrumb">Admin</span>
-    <span class="top-bar-title">
-      Tournament Control
+<!-- Top Bar - matching RosterTab style -->
+<div class="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/50 mb-6">
+  <div class="px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <h2 class="text-lg font-semibold">Tournament</h2>
       {#if selectedTournament?.status === 'in_progress'}
-        <span class="top-bar-badge live">Live</span>
+        <Badge variant="destructive" class="animate-pulse">Live</Badge>
+      {:else if selectedTournament?.status === 'setup'}
+        <Badge variant="secondary">Setup</Badge>
+      {:else if selectedTournament?.status === 'completed'}
+        <Badge variant="outline" class="border-emerald-500 text-emerald-500">Completed</Badge>
       {/if}
-    </span>
-  </div>
-  <div class="top-bar-right">
-    <button class="btn-sm primary" onclick={onOpenCreateTournament}>+ New Tournament</button>
+      {#if participants.length > 0}
+        <Badge variant="outline">{participants.length} participants</Badge>
+      {/if}
+    </div>
+    <div class="flex items-center gap-2">
+      <Button size="sm" onclick={onOpenCreateTournament}>
+        <Plus class="w-4 h-4 mr-1" />
+        New Tournament
+      </Button>
+    </div>
   </div>
 </div>
 
@@ -1086,87 +1095,6 @@
 </Sheet.Root>
 
 <style>
-  /* Top bar styles */
-  .top-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1rem 1.5rem;
-    margin-bottom: 1.5rem;
-    background: hsl(var(--card));
-    border: 1px solid hsl(var(--border));
-    border-radius: 1rem;
-  }
-  
-  .top-bar-left {
-    display: flex;
-    flex-direction: column;
-    gap: 0.125rem;
-  }
-  
-  .top-bar-breadcrumb {
-    font-size: 0.75rem;
-    color: hsl(var(--muted-foreground));
-  }
-  
-  .top-bar-title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  
-  .top-bar-badge {
-    font-size: 0.625rem;
-    font-weight: 600;
-    padding: 0.125rem 0.5rem;
-    border-radius: 9999px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-  
-  .top-bar-badge.live {
-    background: hsl(var(--destructive) / 0.2);
-    color: hsl(var(--destructive));
-    animation: pulse 2s infinite;
-  }
-  
-  .top-bar-right {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  
-  .btn-sm {
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    border-radius: 0.5rem;
-    cursor: pointer;
-    transition: all 0.15s;
-    border: none;
-  }
-  
-  .btn-sm.primary {
-    background: hsl(var(--primary));
-    color: hsl(var(--primary-foreground));
-  }
-  
-  .btn-sm.primary:hover {
-    opacity: 0.9;
-  }
-  
-  .btn-sm.ghost {
-    background: transparent;
-    color: hsl(var(--muted-foreground));
-  }
-  
-  .btn-sm.ghost:hover {
-    background: hsl(var(--muted));
-    color: hsl(var(--foreground));
-  }
-
   @keyframes pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.7; }
