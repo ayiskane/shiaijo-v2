@@ -570,7 +570,7 @@
   }
 
   .groups-header {
-    padding: 16px;
+    padding: 12px;
     border-bottom: 1px solid rgba(92, 99, 112, 0.2);
   }
 
@@ -578,7 +578,6 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 12px;
   }
 
   .groups-title {
@@ -591,20 +590,20 @@
   .groups-list {
     flex: 1;
     overflow-y: auto;
-    padding: 12px;
+    padding: 8px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 2px;
   }
 
   .group-card {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 12px 14px;
+    gap: 10px;
+    padding: 10px 12px;
     background: transparent;
     border: 1px solid transparent;
-    border-radius: 10px;
+    border-radius: 8px;
     cursor: pointer;
     transition: all 0.15s;
     text-align: left;
@@ -629,9 +628,9 @@
   }
 
   .group-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -640,7 +639,7 @@
   }
 
   .group-emoji {
-    font-size: 18px;
+    font-size: 16px;
   }
 
   .group-info {
@@ -655,15 +654,15 @@
   }
 
   .group-name {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 600;
     color: #eaeaec;
   }
 
   .group-meta {
-    font-size: 11px;
-    color: #5c6370;
-    margin-top: 2px;
+    font-size: 13px;
+    color: #71717a;
+    margin-top: 1px;
   }
 
 
@@ -675,11 +674,12 @@
   }
 
   .group-count-box {
-    min-width: 36px;
-    height: 36px;
+    min-width: 32px;
+    height: 28px;
+    padding: 0 8px;
     background: rgba(59, 130, 246, 0.15);
     border: 1px solid rgba(59, 130, 246, 0.3);
-    border-radius: 8px;
+    border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -757,8 +757,8 @@
   }
 
   .breadcrumb {
-    font-size: 11px;
-    color: #5c6370;
+    font-size: 13px;
+    color: #71717a;
   }
 
   .page-title {
@@ -788,10 +788,10 @@
   }
 
   .stat-label {
-    font-size: 9px;
+    font-size: 12px;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: #5c6370;
+    letter-spacing: 0.05em;
+    color: #71717a;
   }
 
   .stat-divider {
@@ -843,7 +843,7 @@
     border: 1px solid rgba(92, 99, 112, 0.2);
     border-radius: 8px;
     padding: 10px 14px 10px 40px;
-    font-size: 13px;
+    font-size: 15px;
     color: #eaeaec;
     font-family: inherit;
     transition: border-color 0.15s;
@@ -868,7 +868,7 @@
 
   .filter-btn {
     padding: 6px 14px;
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 500;
     border-radius: 6px;
     color: #9ca0ad;
@@ -903,11 +903,11 @@
   .data-table th {
     text-align: left;
     padding: 12px 16px;
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: #3d4148;
+    letter-spacing: 0.05em;
+    color: #71717a;
     border-bottom: 1px solid rgba(92, 99, 112, 0.2);
     background: #0f0e0c;
     position: sticky;
@@ -917,7 +917,7 @@
 
   .data-table td {
     padding: 12px 16px;
-    font-size: 13px;
+    font-size: 15px;
     color: #eaeaec;
     border-bottom: 1px solid rgba(92, 99, 112, 0.2);
     vertical-align: middle;
@@ -944,7 +944,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     color: white;
     flex-shrink: 0;
@@ -966,10 +966,10 @@
     align-items: center;
     padding: 4px 10px;
     border-radius: 6px;
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.02em;
   }
 
   .badge-group {
@@ -1003,8 +1003,8 @@
   }
 
   .status-unregistered {
-    color: #5c6370;
-    font-size: 12px;
+    color: #71717a;
+    font-size: 14px;
     cursor: pointer;
     transition: color 0.15s;
   }
@@ -1061,7 +1061,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 12px;
+    font-size: 14px;
     color: #9ca0ad;
   }
 
@@ -1071,7 +1071,7 @@
     border-radius: 6px;
     padding: 4px 8px;
     color: #eaeaec;
-    font-size: 12px;
+    font-size: 14px;
     font-family: inherit;
   }
 
@@ -1093,7 +1093,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
+    font-size: 14px;
     color: #9ca0ad;
     background: transparent;
     border: none;
@@ -1124,7 +1124,7 @@
     gap: 6px;
     padding: 8px 16px;
     border-radius: 8px;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     font-family: inherit;
     cursor: pointer;
@@ -1264,7 +1264,7 @@
 
   .form-label {
     display: block;
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 600;
     color: #9ca0ad;
     margin-bottom: 6px;
@@ -1276,7 +1276,7 @@
     border: 1px solid rgba(92, 99, 112, 0.35);
     border-radius: 8px;
     padding: 12px 14px;
-    font-size: 14px;
+    font-size: 15px;
     color: #eaeaec;
     font-family: inherit;
     transition: border-color 0.15s;
@@ -1291,7 +1291,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    font-size: 14px;
+    font-size: 15px;
     color: #9ca0ad;
     cursor: pointer;
   }
@@ -1315,6 +1315,7 @@
     }
   }
 </style>
+
 
 
 
