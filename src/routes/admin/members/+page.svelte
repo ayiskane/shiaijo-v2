@@ -799,7 +799,7 @@
         <div class="form-group">
           <label class="form-checkbox">
             <input type="checkbox" bind:checked={groupFormIsHantei} />
-            <span>Hantei Group (uses different judging criteria)</span>
+            <span>Hantei</span>
           </label>
         </div>
       </div>
