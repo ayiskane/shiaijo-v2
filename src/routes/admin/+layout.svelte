@@ -67,10 +67,10 @@
   // Group nav items
   function getGroups(items: typeof navItems) {
     const groups: { label: string | null; items: typeof navItems }[] = [];
-    let currentGroup: string | null = null;
+    let currentGroup: string | null | undefined = undefined;
     
     for (const item of items) {
-      if (item.group !== currentGroup) {
+      if (currentGroup === undefined || item.group !== currentGroup) {
         currentGroup = item.group;
         groups.push({ label: currentGroup, items: [] });
       }
@@ -449,5 +449,6 @@
     .edge-toggle { display: none; }
   }
 </style>
+
 
 
