@@ -16,8 +16,10 @@
   import Trash2 from '@lucide/svelte/icons/trash-2';
   import ChevronLeft from '@lucide/svelte/icons/chevron-left';
   import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
   import Users from '@lucide/svelte/icons/users';
   import UserCheck from '@lucide/svelte/icons/user-check';
+  import UserPlus from '@lucide/svelte/icons/user-plus';
   import X from '@lucide/svelte/icons/x';
   import FileSpreadsheet from '@lucide/svelte/icons/file-spreadsheet';
   import ClipboardPaste from '@lucide/svelte/icons/clipboard-paste';
@@ -88,6 +90,15 @@
   let formFirstName = $state('');
   let formLastName = $state('');
   let formGroupId = $state('');
+
+  // Add member dropdown state
+  let showAddDropdown = $state(false);
+  
+  // Bulk add state
+  let showBulkAddModal = $state(false);
+  let bulkRows = $state<Array<{firstName: string; lastName: string; groupId: string}>>([
+    { firstName: '', lastName: '', groupId: '' }
+  ]);
 
   // Get member count by group
   function getMemberCount(groupId: string | null) {
@@ -215,6 +226,47 @@
   async function deleteGroup(id: Id<'groups'>) {
     await client.mutation(api.groups.remove, { id });
     showDeleteGroupConfirm = null;
+  }
+
+  // Bulk add handlers
+  function openBulkAddModal() {
+    bulkRows = [{ firstName: '', lastName: '', groupId: groups[0]?.groupId || '' }];
+    showBulkAddModal = true;
+    showAddDropdown = false;
+  }
+
+  function closeBulkAddModal() {
+    showBulkAddModal = false;
+    bulkRows = [{ firstName: '', lastName: '', groupId: '' }];
+  }
+
+  function addBulkRow() {
+    bulkRows = [...bulkRows, { firstName: '', lastName: '', groupId: groups[0]?.groupId || '' }];
+  }
+
+  function removeBulkRow(index: number) {
+    if (bulkRows.length > 1) {
+      bulkRows = bulkRows.filter((_, i) => i !== index);
+    }
+  }
+
+  function updateBulkRow(index: number, field: 'firstName' | 'lastName' | 'groupId', value: string) {
+    bulkRows = bulkRows.map((row, i) => i === index ? { ...row, [field]: value } : row);
+  }
+
+  async function saveBulkMembers() {
+    const validRows = bulkRows.filter(row => row.firstName.trim() && row.lastName.trim() && row.groupId);
+    if (validRows.length === 0) return;
+
+    await client.mutation(api.members.bulkCreate, {
+      members: validRows.map(row => ({
+        firstName: row.firstName.trim(),
+        lastName: row.lastName.trim(),
+        groupId: row.groupId,
+        isGuest: false,
+      }))
+    });
+    closeBulkAddModal();
   }
 
   // Group modal handlers
@@ -446,15 +498,23 @@
   <title>Members - Admin Portal</title>
 </svelte:head>
 
+<svelte:window onclick={() => showAddDropdown = false} />
+
 <div class="members-page">
   <!-- GROUPS PANEL (Master) -->
-  <aside class="groups-panel">
-    <div class="groups-header">
+  <aside class="groups-panel" class:edit-mode={groupsEditMode}>
+    <div class="groups-header" class:edit-mode={groupsEditMode}>
       <div class="groups-header-top">
-        <h2 class="groups-title">Groups</h2>
+        <h2 class="groups-title">
+          {#if groupsEditMode}
+            <span class="edit-indicator">✎ Editing Groups</span>
+          {:else}
+            Groups
+          {/if}
+        </h2>
         <div class="groups-header-actions">
           {#if groupsEditMode}
-            <button class="btn btn-ghost btn-sm" onclick={() => groupsEditMode = false}>
+            <button class="btn btn-primary btn-sm" onclick={() => groupsEditMode = false}>
               Done
             </button>
           {:else}
@@ -560,10 +620,30 @@
           <Upload size={14} />
           <span>Import CSV</span>
         </button>
-        <button class="btn btn-primary btn-sm" onclick={openAddModal}>
-          <Plus size={14} />
-          <span>Add Member</span>
-        </button>
+        <div class="add-member-dropdown" onclick={(e) => e.stopPropagation()}>
+          <button class="btn btn-primary btn-sm" onclick={openAddModal}>
+            <Plus size={14} />
+            <span>Add Member</span>
+          </button>
+          <button 
+            class="btn btn-primary btn-sm dropdown-toggle" 
+            onclick={() => showAddDropdown = !showAddDropdown}
+          >
+            <ChevronDown size={14} />
+          </button>
+          {#if showAddDropdown}
+            <div class="dropdown-menu">
+              <button class="dropdown-item" onclick={() => { openAddModal(); showAddDropdown = false; }}>
+                <UserPlus size={14} />
+                <span>Add Single Member</span>
+              </button>
+              <button class="dropdown-item" onclick={openBulkAddModal}>
+                <Users size={14} />
+                <span>Add Bulk Members</span>
+              </button>
+            </div>
+          {/if}
+        </div>
       </div>
     </div>
 
@@ -674,6 +754,7 @@
             <option value={10}>10</option>
             <option value={25}>25</option>
             <option value={50}>50</option>
+            <option value={9999}>Show All</option>
           </select>
           <span class="showing">
             Showing {Math.min((currentPage - 1) * rowsPerPage + 1, filteredMembers().length)}-{Math.min(currentPage * rowsPerPage, filteredMembers().length)} of {filteredMembers().length}
@@ -824,6 +905,75 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick={() => showDeleteGroupConfirm = null}>Cancel</button>
         <button class="btn btn-danger" onclick={() => deleteGroup(showDeleteGroupConfirm!)}>Delete</button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Bulk Add Members Modal -->
+{#if showBulkAddModal}
+  <div class="modal-overlay" onclick={closeBulkAddModal}>
+    <div class="modal modal-bulk" onclick={(e) => e.stopPropagation()}>
+      <div class="modal-header">
+        <h3 class="modal-title">Add Multiple Members</h3>
+        <button class="modal-close" onclick={closeBulkAddModal}>
+          <X size={20} />
+        </button>
+      </div>
+      <div class="modal-body bulk-body">
+        <div class="bulk-header-row">
+          <span class="bulk-col-label">First Name</span>
+          <span class="bulk-col-label">Last Name</span>
+          <span class="bulk-col-label">Group</span>
+          <span class="bulk-col-action"></span>
+        </div>
+        <div class="bulk-rows">
+          {#each bulkRows as row, index}
+            <div class="bulk-row">
+              <input 
+                type="text" 
+                class="bulk-input" 
+                placeholder="First"
+                value={row.firstName}
+                oninput={(e) => updateBulkRow(index, 'firstName', e.currentTarget.value)}
+              />
+              <input 
+                type="text" 
+                class="bulk-input" 
+                placeholder="Last"
+                value={row.lastName}
+                oninput={(e) => updateBulkRow(index, 'lastName', e.currentTarget.value)}
+              />
+              <select 
+                class="bulk-select"
+                value={row.groupId}
+                onchange={(e) => updateBulkRow(index, 'groupId', e.currentTarget.value)}
+              >
+                {#each groups as group}
+                  <option value={group.groupId}>{group.name}</option>
+                {/each}
+              </select>
+              <button 
+                class="bulk-remove-btn" 
+                onclick={() => removeBulkRow(index)}
+                disabled={bulkRows.length === 1}
+              >
+                <X size={14} />
+              </button>
+            </div>
+          {/each}
+        </div>
+        <button class="btn btn-ghost add-row-btn" onclick={addBulkRow}>
+          <Plus size={14} />
+          <span>Add Row</span>
+        </button>
+      </div>
+      <div class="modal-footer">
+        <span class="bulk-count">{bulkRows.filter(r => r.firstName && r.lastName).length} members ready</span>
+        <button class="btn btn-secondary" onclick={closeBulkAddModal}>Cancel</button>
+        <button class="btn btn-primary" onclick={saveBulkMembers}>
+          Add Members
+        </button>
       </div>
     </div>
   </div>
@@ -1906,6 +2056,203 @@
     color: #71717a;
     font-style: italic;
     text-align: center;
+  }
+
+  /* ===== EDIT MODE HIGHLIGHT ===== */
+  .groups-panel.edit-mode {
+    background: #12110f;
+  }
+
+  .groups-header.edit-mode {
+    background: rgba(59, 130, 246, 0.1);
+    border-bottom-color: rgba(59, 130, 246, 0.3);
+  }
+
+  .edit-indicator {
+    color: #60a5fa;
+    font-size: 13px;
+  }
+
+  .group-card.editing {
+    opacity: 0.9;
+    border: 1px dashed rgba(59, 130, 246, 0.4);
+  }
+
+  .group-card.editing:hover {
+    border-color: rgba(59, 130, 246, 0.6);
+    background: rgba(59, 130, 246, 0.05);
+  }
+
+  /* ===== ADD MEMBER DROPDOWN ===== */
+  .add-member-dropdown {
+    position: relative;
+    display: flex;
+  }
+
+  .add-member-dropdown .btn:first-child {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  .dropdown-toggle {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    padding: 6px 8px;
+    border-left: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 4px;
+    background: #1a1916;
+    border: 1px solid rgba(92, 99, 112, 0.35);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    z-index: 100;
+    min-width: 180px;
+    overflow: hidden;
+  }
+
+  .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 14px;
+    background: transparent;
+    border: none;
+    color: #eaeaec;
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s;
+    text-align: left;
+  }
+
+  .dropdown-item:hover {
+    background: rgba(59, 130, 246, 0.15);
+  }
+
+  .dropdown-item:first-child {
+    border-bottom: 1px solid rgba(92, 99, 112, 0.2);
+  }
+
+  /* ===== BULK ADD MODAL ===== */
+  .modal-bulk {
+    max-width: 560px;
+  }
+
+  .bulk-body {
+    padding: 16px 24px;
+  }
+
+  .bulk-header-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 120px 32px;
+    gap: 8px;
+    margin-bottom: 8px;
+    padding: 0 4px;
+  }
+
+  .bulk-col-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #71717a;
+  }
+
+  .bulk-col-action {
+    width: 32px;
+  }
+
+  .bulk-rows {
+    max-height: 280px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .bulk-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 120px 32px;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .bulk-input {
+    background: #0c0b09;
+    border: 1px solid rgba(92, 99, 112, 0.35);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 14px;
+    color: #eaeaec;
+    font-family: inherit;
+  }
+
+  .bulk-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+  }
+
+  .bulk-select {
+    background: #0c0b09;
+    border: 1px solid rgba(92, 99, 112, 0.35);
+    border-radius: 6px;
+    padding: 8px 6px;
+    font-size: 13px;
+    color: #eaeaec;
+    font-family: inherit;
+  }
+
+  .bulk-select:focus {
+    outline: none;
+    border-color: #3b82f6;
+  }
+
+  .bulk-remove-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: transparent;
+    border: none;
+    color: #71717a;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+
+  .bulk-remove-btn:hover:not(:disabled) {
+    background: rgba(248, 113, 113, 0.15);
+    color: #f87171;
+  }
+
+  .bulk-remove-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  .add-row-btn {
+    margin-top: 8px;
+    width: 100%;
+    justify-content: center;
+    border: 1px dashed rgba(92, 99, 112, 0.35);
+  }
+
+  .add-row-btn:hover {
+    border-color: rgba(59, 130, 246, 0.5);
+    background: rgba(59, 130, 246, 0.05);
+  }
+
+  .bulk-count {
+    font-size: 13px;
+    color: #71717a;
+    margin-right: auto;
   }
 
   /* ===== RESPONSIVE ===== */
