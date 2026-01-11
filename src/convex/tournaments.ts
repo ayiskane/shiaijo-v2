@@ -382,3 +382,40 @@ export const reset = mutation({
     return { resetCount, deletedSuddenDeath };
   },
 });
+
+// Debug: Clear all tournaments, matches, and participants
+export const clearAll = mutation({
+  args: {},
+  handler: async (ctx) => {
+    // Delete matches first (references tournaments)
+    const matches = await ctx.db.query("matches").collect();
+    for (const match of matches) {
+      await ctx.db.delete(match._id);
+    }
+
+    // Delete participants (references tournaments)
+    const participants = await ctx.db.query("participants").collect();
+    for (const participant of participants) {
+      await ctx.db.delete(participant._id);
+    }
+
+    // Delete court state (references tournaments)
+    const courtStates = await ctx.db.query("courtState").collect();
+    for (const state of courtStates) {
+      await ctx.db.delete(state._id);
+    }
+
+    // Finally delete tournaments
+    const tournaments = await ctx.db.query("tournaments").collect();
+    for (const tournament of tournaments) {
+      await ctx.db.delete(tournament._id);
+    }
+
+    return { 
+      deletedTournaments: tournaments.length,
+      deletedMatches: matches.length,
+      deletedParticipants: participants.length,
+      deletedCourtStates: courtStates.length,
+    };
+  },
+});
