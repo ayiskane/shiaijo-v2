@@ -25,6 +25,8 @@
   import ClipboardPaste from '@lucide/svelte/icons/clipboard-paste';
   import AlertCircle from '@lucide/svelte/icons/alert-circle';
   import Check from '@lucide/svelte/icons/check';
+  import Archive from '@lucide/svelte/icons/archive';
+  import ArchiveRestore from '@lucide/svelte/icons/archive-restore';
 
   const client = useConvexClient();
 
@@ -99,6 +101,11 @@
   let bulkRows = $state<Array<{firstName: string; lastName: string; groupId: string}>>([
     { firstName: '', lastName: '', groupId: '' }
   ]);
+
+  // Archive state
+  let showArchiveConfirm = $state<Doc<'members'> | null>(null);
+  let showUnarchivePrompt = $state<Doc<'members'> | null>(null);
+  let pendingRegistration = $state<Doc<'members'> | null>(null);
 
   // Get member count by group
   function getMemberCount(groupId: string | null) {
@@ -221,6 +228,55 @@
   async function deleteMember(id: Id<'members'>) {
     await client.mutation(api.members.remove, { id });
     showDeleteConfirm = null;
+  }
+
+  // Archive handlers
+  async function archiveMember(member: Doc<'members'>) {
+    await client.mutation(api.members.update, { id: member._id, archived: true });
+    showArchiveConfirm = null;
+  }
+
+  async function unarchiveMember(member: Doc<'members'>) {
+    await client.mutation(api.members.update, { id: member._id, archived: false });
+    showUnarchivePrompt = null;
+    // If there was a pending registration, register the member now
+    if (pendingRegistration && pendingRegistration._id === member._id && activeTournament) {
+      await client.mutation(api.participants.add, {
+        tournamentId: activeTournament._id,
+        memberId: member._id,
+        groupId: member.groupId,
+      });
+      pendingRegistration = null;
+    }
+  }
+
+  // Register member handler
+  async function handleRegisterClick(member: Doc<'members'>) {
+    if (!activeTournament) return;
+    
+    // Check if member is archived
+    if (member.archived) {
+      pendingRegistration = member;
+      showUnarchivePrompt = member;
+      return;
+    }
+    
+    // Register the member
+    await client.mutation(api.participants.add, {
+      tournamentId: activeTournament._id,
+      memberId: member._id,
+      groupId: member.groupId,
+    });
+  }
+
+  // Register all group members
+  async function registerAllGroupMembers() {
+    if (!activeTournament || !selectedGroupId) return;
+    
+    await client.mutation(api.participants.registerGroupMembers, {
+      tournamentId: activeTournament._id,
+      groupId: selectedGroupId,
+    });
   }
 
   async function deleteGroup(id: Id<'groups'>) {
@@ -616,6 +672,12 @@
         </div>
       </div>
       <div class="top-bar-actions">
+        {#if selectedGroupId && activeTournament}
+          <button class="btn btn-success btn-sm" onclick={registerAllGroupMembers}>
+            <UserCheck size={14} />
+            <span>Register All</span>
+          </button>
+        {/if}
         <button class="btn btn-secondary btn-sm" onclick={openImportModal}>
           <Upload size={14} />
           <span>Import CSV</span>
@@ -697,12 +759,17 @@
           </thead>
           <tbody>
             {#each paginatedMembers() as member}
-              <tr>
+              <tr class:archived={member.archived}>
                 <td>
                   <input type="checkbox" class="checkbox" />
                 </td>
                 <td>
-                  <span class="member-name">{member.firstName} {member.lastName}</span>
+                  <div class="member-cell">
+                    <span class="member-name">{member.firstName} {member.lastName}</span>
+                    {#if member.archived}
+                      <span class="badge-archived">Archived</span>
+                    {/if}
+                  </div>
                 </td>
                 <td>
                   {#if getGroup(member.groupId)}
@@ -715,12 +782,14 @@
                   {/if}
                 </td>
                 <td>
-                  {#if !activeTournament}
+                  {#if member.archived}
+                    <span class="status-archived">Archived</span>
+                  {:else if !activeTournament}
                     <span class="status-no-shiai">No Shiai</span>
                   {:else if isRegistered(member._id)}
                     <span class="badge badge-registered">✓ Registered</span>
                   {:else}
-                    <span class="status-unregistered">+ Register</span>
+                    <button class="status-unregistered" onclick={() => handleRegisterClick(member)}>+ Register</button>
                   {/if}
                 </td>
                 <td>
@@ -728,6 +797,15 @@
                     <button class="action-btn" onclick={() => openEditModal(member)}>
                       <Pencil size={12} />
                     </button>
+                    {#if member.archived}
+                      <button class="action-btn restore" onclick={() => unarchiveMember(member)} title="Unarchive">
+                        <ArchiveRestore size={12} />
+                      </button>
+                    {:else}
+                      <button class="action-btn archive" onclick={() => showArchiveConfirm = member} title="Archive">
+                        <Archive size={12} />
+                      </button>
+                    {/if}
                     <button class="action-btn danger" onclick={() => showDeleteConfirm = member._id}>
                       <Trash2 size={12} />
                     </button>
@@ -869,6 +947,44 @@
         <button class="btn btn-primary" onclick={saveGroup}>
           {editingGroup ? 'Save Changes' : 'Add Group'}
         </button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Archive Member Confirmation -->
+{#if showArchiveConfirm}
+  <div class="modal-overlay" onclick={() => showArchiveConfirm = null}>
+    <div class="modal modal-sm" onclick={(e) => e.stopPropagation()}>
+      <div class="modal-header">
+        <h3 class="modal-title">Archive Member</h3>
+      </div>
+      <div class="modal-body">
+        <p>Archive <strong>{showArchiveConfirm.firstName} {showArchiveConfirm.lastName}</strong>?</p>
+        <p class="modal-hint">Archived members cannot be registered for tournaments. You can unarchive them later.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick={() => showArchiveConfirm = null}>Cancel</button>
+        <button class="btn btn-warning" onclick={() => archiveMember(showArchiveConfirm!)}>Archive</button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Unarchive Prompt (when trying to register archived member) -->
+{#if showUnarchivePrompt}
+  <div class="modal-overlay" onclick={() => { showUnarchivePrompt = null; pendingRegistration = null; }}>
+    <div class="modal modal-sm" onclick={(e) => e.stopPropagation()}>
+      <div class="modal-header">
+        <h3 class="modal-title">Member is Archived</h3>
+      </div>
+      <div class="modal-body">
+        <p><strong>{showUnarchivePrompt.firstName} {showUnarchivePrompt.lastName}</strong> is currently archived and cannot be registered.</p>
+        <p class="modal-hint">Would you like to unarchive this member and register them for the tournament?</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick={() => { showUnarchivePrompt = null; pendingRegistration = null; }}>Cancel</button>
+        <button class="btn btn-primary" onclick={() => unarchiveMember(showUnarchivePrompt!)}>Unarchive & Register</button>
       </div>
     </div>
   </div>
@@ -1545,21 +1661,58 @@
     color: #4ade80;
   }
 
+  .status-no-shiai {
+    color: #71717a;
+    font-size: 14px;
+    font-style: italic;
+  }
+
+  .status-archived {
+    color: #71717a;
+    font-size: 14px;
+    font-style: italic;
+  }
+
   .status-unregistered {
+    background: none;
+    border: none;
     color: #71717a;
     font-size: 14px;
     cursor: pointer;
     transition: color 0.15s;
+    font-family: inherit;
+    padding: 0;
   }
 
   .status-unregistered:hover {
     color: #60a5fa;
   }
 
-  .status-no-shiai {
+  /* Member cell with archived badge */
+  .member-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .badge-archived {
+    font-size: 10px;
+    font-weight: 600;
     color: #71717a;
-    font-size: 14px;
-    font-style: italic;
+    background: rgba(113, 113, 122, 0.15);
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  /* Archived row styling */
+  tr.archived {
+    opacity: 0.6;
+  }
+
+  tr.archived .member-name {
+    color: #71717a;
   }
 
   .text-muted {
@@ -1594,6 +1747,16 @@
   .action-btn.danger:hover {
     background: rgba(248, 113, 113, 0.1);
     color: #f87171;
+  }
+
+  .action-btn.archive:hover {
+    background: rgba(251, 191, 36, 0.1);
+    color: #fbbf24;
+  }
+
+  .action-btn.restore:hover {
+    background: rgba(74, 222, 128, 0.1);
+    color: #4ade80;
   }
 
   /* ===== TABLE FOOTER ===== */
@@ -1727,6 +1890,24 @@
     background: #ef4444;
   }
 
+  .btn-success {
+    background: #22c55e;
+    color: white;
+  }
+
+  .btn-success:hover {
+    background: #16a34a;
+  }
+
+  .btn-warning {
+    background: #f59e0b;
+    color: white;
+  }
+
+  .btn-warning:hover {
+    background: #d97706;
+  }
+
   /* ===== MODAL ===== */
   .modal-overlay {
     position: fixed;
@@ -1794,6 +1975,15 @@
     color: #9ca0ad;
     line-height: 1.5;
     margin: 0;
+  }
+
+  .modal-body p + p {
+    margin-top: 12px;
+  }
+
+  .modal-hint {
+    font-size: 13px;
+    color: #71717a;
   }
 
   .modal-footer {
