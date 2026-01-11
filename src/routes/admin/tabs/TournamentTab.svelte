@@ -9,20 +9,16 @@
   import * as Card from '$lib/components/ui/card';
   import * as Select from '$lib/components/ui/select';
   import * as ToggleGroup from '$lib/components/ui/toggle-group';
-  import * as Sheet from '$lib/components/ui/sheet';
   import * as Collapsible from '$lib/components/ui/collapsible';
   import * as ScrollArea from '$lib/components/ui/scroll-area';
   import { Progress } from '$lib/components/ui/progress';
-  import { Separator } from '$lib/components/ui/separator';
   import { Badge } from '$lib/components/ui/badge';
-  import { Label } from '$lib/components/ui/label';
   import { Input } from '$lib/components/ui/input';
-  import { Skeleton } from '$lib/components/ui/skeleton';
   
   import {
-    Trophy, Users, Swords, Play, Settings, Archive, ChevronDown, GripVertical,
-    Check, Timer, Lock, RotateCcw, Trash2, UserPlus, KeyRound, RefreshCw, Plus,
-    Search, X, ChevronRight, CheckCircle2, Circle, ArrowRight, Sparkles, FolderOpen
+    Trophy, Users, Swords, Play, Archive, ChevronDown, GripVertical,
+    Check, RefreshCw, Plus, Search, X, ChevronRight, CheckCircle2, 
+    Sparkles, FolderOpen, Settings
   } from '@lucide/svelte';
   
   const isMobile = new IsMobile();
@@ -32,41 +28,22 @@
     tournaments = [],
     selectedTournamentId = $bindable(null),
     selectedTournament,
-    tournamentSelectorLabel = 'Select tournament',
-    setupStep = 1,
     participants = [],
     matches = [],
     groupOrder = [],
     groups = [],
     members = [],
     membersByGroupId = new Map(),
-    matchesByGroupId = new Map(),
     matchStatsByGroup = new Map(),
-    collapsedGroups = new Set(),
     courtAMatches = [],
     courtBMatches = [],
     courtACompletedCount = 0,
     courtBCompletedCount = 0,
     currentCourtAMatch = null,
     currentCourtBMatch = null,
-    pendingMatches = [],
-    inProgressMatches = [],
     completedMatches = [],
     progressPercent = 0,
     isComplete = false,
-    boguTimerDuration = $bindable(180),
-    boguMatchType = $bindable<'sanbon' | 'ippon'>('sanbon'),
-    timerDisplayMode = $bindable<'up' | 'down'>('up'),
-    hanteiRound1 = $bindable(['K', 'M']),
-    hanteiRound2 = $bindable(['M', 'K', 'D']),
-    KIHON_WAZA_OPTIONS = [],
-    TIMER_OPTIONS = [],
-    SCORE_LABELS = {},
-    settingsSheetOpen = $bindable(false),
-    adminPasscodeInput = $bindable(''),
-    courtkeeperPasscodeInput = $bindable(''),
-    adminPasscode = null,
-    courtkeeperPasscode = null,
     registeredMemberIds = new Set<string>(),
     onOpenCreateTournament,
     onAddAllParticipants,
@@ -78,69 +55,36 @@
     onGenerateMatches,
     onStartTournament,
     onCompleteTournament,
-    onOpenSettings,
-    onCloseSettings = undefined,
-    onResetTournament,
-    onDeleteTournament,
     onSetGroupCourt,
-    onToggleGroupCollapse,
     onDragStart,
     onDragOver,
     onDragLeave,
     onDrop,
     onDragEnd,
-    onApplyBoguSettings,
-    onApplyTimerDisplayMode,
-    onApplyHanteiSettings,
-    onSaveAdminPasscode,
-    onSaveCourtkeeperPasscode,
-    onLockAdmin,
     onRefreshParticipants,
     getGroupById,
     getEffectiveCourt,
     getMemberById,
-    getGroupName,
-    formatTimer,
-    buildScoreTimeline
   }: {
     tournaments?: any[];
     selectedTournamentId?: string | null;
     selectedTournament?: any;
-    tournamentSelectorLabel?: string;
-    setupStep?: number;
     participants?: any[];
     matches?: any[];
     groupOrder?: string[];
     groups?: any[];
     members?: any[];
     membersByGroupId?: Map<string, any[]>;
-    matchesByGroupId?: Map<string, any[]>;
     matchStatsByGroup?: Map<string, any>;
-    collapsedGroups?: Set<string>;
     courtAMatches?: any[];
     courtBMatches?: any[];
     courtACompletedCount?: number;
     courtBCompletedCount?: number;
     currentCourtAMatch?: any;
     currentCourtBMatch?: any;
-    pendingMatches?: any[];
-    inProgressMatches?: any[];
     completedMatches?: any[];
     progressPercent?: number;
     isComplete?: boolean;
-    boguTimerDuration?: number;
-    boguMatchType?: 'sanbon' | 'ippon';
-    timerDisplayMode?: 'up' | 'down';
-    hanteiRound1?: string[];
-    hanteiRound2?: string[];
-    KIHON_WAZA_OPTIONS?: { id: string; short: string }[];
-    TIMER_OPTIONS?: number[];
-    SCORE_LABELS?: Record<number, string>;
-    settingsSheetOpen?: boolean;
-    adminPasscodeInput?: string;
-    courtkeeperPasscodeInput?: string;
-    adminPasscode?: string | null;
-    courtkeeperPasscode?: string | null;
     registeredMemberIds?: Set<string>;
     onOpenCreateTournament: () => void;
     onAddAllParticipants: () => void;
@@ -152,53 +96,25 @@
     onGenerateMatches: () => void;
     onStartTournament: () => void;
     onCompleteTournament: () => void;
-    onOpenSettings: () => void;
-    onCloseSettings?: () => void;
-    onResetTournament: () => void;
-    onDeleteTournament: () => void;
     onSetGroupCourt: (groupId: string, court: 'A' | 'B' | 'A+B') => void;
-    onToggleGroupCollapse: (groupId: string) => void;
     onDragStart: (e: DragEvent, groupId: string) => void;
     onDragOver: (e: DragEvent, groupId: string) => void;
     onDragLeave: (e: DragEvent) => void;
     onDrop: (e: DragEvent, groupId: string) => void;
     onDragEnd: () => void;
-    onApplyBoguSettings: () => void;
-    onApplyTimerDisplayMode: () => void;
-    onApplyHanteiSettings: () => void;
-    onSaveAdminPasscode: () => void;
-    onSaveCourtkeeperPasscode: () => void;
-    onLockAdmin: () => void;
     onRefreshParticipants: () => void;
     getGroupById: (groupId: string) => any;
     getEffectiveCourt: (groupId: string) => 'A' | 'B' | 'A+B';
     getMemberById: (id: string) => any;
-    getGroupName?: (groupId: string) => string;
-    formatTimer: (secs: number) => string;
-    buildScoreTimeline?: (match: any) => any[];
   } = $props();
 
   // Local state
-  let registeredSearchQuery = $state('');
   let availableSearchQuery = $state('');
   let guestSearchQuery = $state('');
   let membersCollapsibleOpen = $state(true);
   let guestsCollapsibleOpen = $state(false);
   let registeredListEl: HTMLElement | null = $state(null);
   let availableListEl: HTMLElement | null = $state(null);
-
-  // Sheet handlers
-  function handleSheetOpenChange(open: boolean) {
-    if (!open && onCloseSettings) {
-      onCloseSettings();
-    }
-    settingsSheetOpen = open;
-  }
-
-  function openSettings() {
-    settingsSheetOpen = true;
-    if (onOpenSettings) onOpenSettings();
-  }
 
   // Auto-animate lists
   $effect(() => {
@@ -222,12 +138,7 @@
 
   // Compute registered and available members (non-guests)
   let registeredMembers = $derived(
-    regularMembers
-      .filter(m => registeredMemberIds.has(m._id))
-      .filter(m => {
-        if (!registeredSearchQuery) return true;
-        return `${m.firstName} ${m.lastName}`.toLowerCase().includes(registeredSearchQuery.toLowerCase());
-      })
+    regularMembers.filter(m => registeredMemberIds.has(m._id))
   );
   
   let availableMembers = $derived(
@@ -262,7 +173,6 @@
       arr.push(m);
       map.set(m.groupId, arr);
     }
-    // Add registered guests under a special "Guests" key
     if (registeredGuests.length > 0) {
       map.set('__guests__', registeredGuests);
     }
@@ -477,11 +387,6 @@
               <span class="font-semibold">{Math.round((currentStep - 1) / 3 * 100)}%</span>
             </div>
             <Progress value={(currentStep - 1) / 3 * 100} class="h-1.5" />
-            
-            <Button variant="ghost" size="sm" class="w-full mt-4 justify-start text-muted-foreground" onclick={openSettings}>
-              <Settings class="w-4 h-4 mr-2" />
-              Settings
-            </Button>
           </div>
         </div>
         
@@ -999,18 +904,12 @@
         </div>
 
         <!-- Actions -->
-        <div class="flex gap-3">
-          <Button variant="outline" onclick={openSettings} class="flex-1">
-            <Settings class="w-4 h-4 mr-2" />
-            Settings
+        {#if isComplete}
+          <Button onclick={onCompleteTournament} class="w-full bg-emerald-600 hover:bg-emerald-700">
+            <Archive class="w-4 h-4 mr-2" />
+            Complete Tournament
           </Button>
-          {#if isComplete}
-            <Button onclick={onCompleteTournament} class="flex-1 bg-emerald-600 hover:bg-emerald-700">
-              <Archive class="w-4 h-4 mr-2" />
-              Complete Tournament
-            </Button>
-          {/if}
-        </div>
+        {/if}
       </div>
 
     {:else}
@@ -1028,131 +927,3 @@
     {/if}
   {/if}
 {/if}
-
-<!-- Settings Sheet -->
-<Sheet.Root bind:open={settingsSheetOpen} onOpenChange={handleSheetOpenChange}>
-  <Sheet.Portal>
-    <Sheet.Overlay />
-    <Sheet.Content side="right" class="w-full sm:max-w-2xl overflow-y-auto">
-      <Sheet.Header>
-        <Sheet.Title>Tournament Settings</Sheet.Title>
-        <Sheet.Description>Configure match settings and passcodes</Sheet.Description>
-      </Sheet.Header>
-      
-      <div class="py-6 space-y-6">
-        <!-- Timer Settings -->
-        <div class="space-y-3">
-          <h4 class="text-sm font-semibold flex items-center gap-2">
-            <Timer class="h-4 w-4" />
-            Timer Settings
-          </h4>
-          <div class="space-y-2">
-            <Label class="text-xs text-muted-foreground">Match Duration</Label>
-            <ToggleGroup.Root
-              type="single"
-              value={boguTimerDuration.toString()}
-              onValueChange={(val) => { if (val) boguTimerDuration = parseInt(val); }}
-              class="justify-start"
-            >
-              {#each TIMER_OPTIONS as duration}
-                <ToggleGroup.Item value={duration.toString()} class="px-4">{duration / 60}m</ToggleGroup.Item>
-              {/each}
-            </ToggleGroup.Root>
-          </div>
-          <div class="space-y-2">
-            <Label class="text-xs text-muted-foreground">Timer Display</Label>
-            <ToggleGroup.Root
-              type="single"
-              value={timerDisplayMode}
-              onValueChange={(val) => { if (val) timerDisplayMode = val as 'up' | 'down'; }}
-              class="justify-start"
-            >
-              <ToggleGroup.Item value="up" class="px-4">Count Up</ToggleGroup.Item>
-              <ToggleGroup.Item value="down" class="px-4">Count Down</ToggleGroup.Item>
-            </ToggleGroup.Root>
-          </div>
-          <Button onclick={onApplyTimerDisplayMode} variant="secondary" size="sm">
-            <Check class="mr-2 h-4 w-4" /> Apply Timer Settings
-          </Button>
-        </div>
-
-        <Separator />
-
-        <!-- Match Type -->
-        <div class="space-y-3">
-          <h4 class="text-sm font-semibold flex items-center gap-2">
-            <Swords class="h-4 w-4" />
-            Match Type
-          </h4>
-          <ToggleGroup.Root
-            type="single"
-            value={boguMatchType}
-            onValueChange={(val) => { if (val) boguMatchType = val as 'sanbon' | 'ippon'; }}
-            class="justify-start"
-          >
-            <ToggleGroup.Item value="sanbon" class="px-4">Sanbon</ToggleGroup.Item>
-            <ToggleGroup.Item value="ippon" class="px-4">Ippon</ToggleGroup.Item>
-          </ToggleGroup.Root>
-          <Button onclick={onApplyBoguSettings} variant="secondary" size="sm">
-            <Check class="mr-2 h-4 w-4" /> Apply Match Settings
-          </Button>
-        </div>
-
-        <Separator />
-
-        <!-- Security -->
-        <div class="space-y-3">
-          <h4 class="text-sm font-semibold flex items-center gap-2">
-            <Lock class="h-4 w-4 text-red-400" />
-            Security
-          </h4>
-          <div class="space-y-3">
-            <div class="space-y-2">
-              <Label class="text-xs text-muted-foreground">Admin Passcode</Label>
-              <div class="flex gap-2">
-                <Input type="password" bind:value={adminPasscodeInput} placeholder={adminPasscode ? "????????" : "Set passcode"} />
-                <Button onclick={onSaveAdminPasscode} variant="secondary" size="sm">
-                  <KeyRound class="mr-2 h-4 w-4" /> Save
-                </Button>
-              </div>
-            </div>
-            <div class="space-y-2">
-              <Label class="text-xs text-muted-foreground">Courtkeeper Passcode</Label>
-              <div class="flex gap-2">
-                <Input type="password" bind:value={courtkeeperPasscodeInput} placeholder={courtkeeperPasscode ? "????????" : "Set passcode"} />
-                <Button onclick={onSaveCourtkeeperPasscode} variant="secondary" size="sm">
-                  <KeyRound class="mr-2 h-4 w-4" /> Save
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <Separator />
-
-        <!-- Actions -->
-        <div class="space-y-3">
-          <h4 class="text-sm font-semibold flex items-center gap-2">
-            <RefreshCw class="h-4 w-4" />
-            Actions
-          </h4>
-          <div class="space-y-2">
-            <Button onclick={onResetTournament} variant="outline" size="sm" class="w-full justify-start border-amber-700/60 text-amber-400 hover:bg-amber-900/20">
-              <RotateCcw class="mr-2 h-4 w-4" /> Reset All Scores
-            </Button>
-            <Button onclick={onDeleteTournament} variant="outline" size="sm" class="w-full justify-start border-red-700/60 text-red-400 hover:bg-red-900/20">
-              <Trash2 class="mr-2 h-4 w-4" /> Delete Tournament
-            </Button>
-          </div>
-        </div>
-      </div>
-    </Sheet.Content>
-  </Sheet.Portal>
-</Sheet.Root>
-
-<style>
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
-  }
-</style>
