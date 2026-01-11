@@ -1661,6 +1661,7 @@ function selectAllFiltered() {
             progressPercent={progressPercent}
             onSeedDemoData={seedDemoData}
             onClearDemoData={clearDemoData}
+            onNavigateToTab={(tab) => activeTab = tab}
             {seeding}
           />
         {:catch error}
