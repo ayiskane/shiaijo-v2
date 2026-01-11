@@ -93,6 +93,13 @@
       );
     }
     
+    // Registration status filter
+    if (filterStatus === 'registered') {
+      result = result.filter(m => isRegistered(m._id));
+    } else if (filterStatus === 'unregistered') {
+      result = result.filter(m => !isRegistered(m._id));
+    }
+    
     return result;
   });
 
@@ -300,7 +307,6 @@
     <!-- Top Bar -->
     <div class="top-bar">
       <div class="top-bar-left">
-        <div class="breadcrumb">Admin / Members</div>
         <div class="page-title">{selectedGroupId ? getGroup(selectedGroupId)?.name || 'Group' : 'All Members'}</div>
       </div>
       <div class="top-bar-stats">
@@ -310,8 +316,13 @@
         </div>
         <div class="stat-divider"></div>
         <div class="stat">
-          <div class="stat-value registered">{members.filter(m => m.isGuest).length}</div>
-          <div class="stat-label">Guests</div>
+          <div class="stat-value registered">{registeredCount()}</div>
+          <div class="stat-label">Registered</div>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat">
+          <div class="stat-value">{filteredMembers().length - registeredCount()}</div>
+          <div class="stat-label">Not Reg.</div>
         </div>
       </div>
       <div class="top-bar-actions">
@@ -348,12 +359,12 @@
           class="filter-btn"
           class:active={filterStatus === 'registered'}
           onclick={() => filterStatus = 'registered'}
-        >Members</button>
+        >Registered</button>
         <button 
           class="filter-btn"
           class:active={filterStatus === 'unregistered'}
           onclick={() => filterStatus = 'unregistered'}
-        >Guests</button>
+        >Not Registered</button>
       </div>
 
       <div class="toolbar-spacer"></div>
@@ -1317,6 +1328,7 @@
     }
   }
 </style>
+
 
 
 
