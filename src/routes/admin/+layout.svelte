@@ -18,6 +18,9 @@
   import Eye from '@lucide/svelte/icons/eye';
   import Heart from '@lucide/svelte/icons/heart';
 
+  // Slot content (runes mode prefers explicit render)
+  let { children } = $props();
+
   // State
   let sidebarCollapsed = $state(false);
 
@@ -105,7 +108,7 @@
               class:active={isActive(item.href)}
               class:live={item.live}
             >
-              <span class="nav-icon"><svelte:component this={item.icon} size={20} /></span>
+              <span class="nav-icon"><item.icon size={20} /></span>
               <span class="nav-text">{item.label}</span>
               {#if item.live}
                 <span class="live-dot"></span>
@@ -120,7 +123,7 @@
       <div class="nav-label">Portals</div>
       {#each portalLinks as portal}
         <a href={portal.href} class="portal-link {portal.accent}">
-          <span class="nav-icon"><svelte:component this={portal.icon} size={20} /></span>
+          <span class="nav-icon"><portal.icon size={20} /></span>
           <span class="nav-text">{portal.label}</span>
         </a>
       {/each}
@@ -152,7 +155,7 @@
     </header>
 
     <div class="content">
-      <slot />
+      {@render children?.()}
     </div>
   </main>
 </div>
