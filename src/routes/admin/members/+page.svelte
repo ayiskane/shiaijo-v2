@@ -554,7 +554,12 @@
     <!-- Top Bar -->
     <div class="top-bar">
       <div class="top-bar-left">
-        <div class="page-title">{selectedGroupId ? getGroup(selectedGroupId)?.name || 'Group' : 'All Members'}</div>
+        <div class="page-title-row">
+          <span class="page-title">{selectedGroupId ? getGroup(selectedGroupId)?.name || 'Group' : 'All Members'}</span>
+          {#if selectedGroupId}
+            <span class="page-id-tag">ID: {selectedGroupId}</span>
+          {/if}
+        </div>
       </div>
       <div class="top-bar-stats">
         <div class="stat">
@@ -1182,10 +1187,27 @@
     gap: 2px;
   }
 
+  .page-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
   .page-title {
     font-size: 18px;
     font-weight: 700;
     color: #eaeaec;
+  }
+
+  .page-id-tag {
+    font-size: 11px;
+    font-weight: 600;
+    color: #9ca0ad;
+    background: #3f444e;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
   }
 
   .top-bar-stats {
