@@ -215,9 +215,12 @@
   .collapsed .sidebar { width: var(--sidebar-collapsed); }
 
   .sidebar-header {
-    padding: 12px;
+    height: var(--header-h);
+    padding: 0 12px;
     flex-shrink: 0;
     border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
   }
 
   .sidebar-logo {
@@ -449,6 +452,7 @@
     .edge-toggle { display: none; }
   }
 </style>
+
 
 
 
