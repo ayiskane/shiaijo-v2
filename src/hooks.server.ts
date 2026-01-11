@@ -1,16 +1,23 @@
 import type { Handle } from '@sveltejs/kit';
 
 /**
- * Server hook to enable font preloading in SvelteKit
- * By default, SvelteKit only preloads js and css files.
- * Adding 'font' to the preload filter ensures woff2 fonts are preloaded
- * via Link: rel=preload headers, reducing FOIT/FOUT.
+ * Server hook for performance optimizations:
+ * 1. Font preloading - reduces FOIT/FOUT
+ * 2. Static asset caching - improves repeat visits
  */
 export const handle: Handle = async ({ event, resolve }) => {
-	return resolve(event, {
-		preload: ({ type }) => {
-			// Preload fonts, js, and css for optimal loading
-			return type === 'font' || type === 'js' || type === 'css';
-		}
-	});
+  const response = await resolve(event, {
+    // Preload fonts, js, and css for optimal loading
+    preload: ({ type }) => type === 'font' || type === 'js' || type === 'css'
+  });
+
+  // Add long-term caching for static assets
+  const path = event.url.pathname;
+  if (path.startsWith('/fonts/') || 
+      path.endsWith('.png') || 
+      path.endsWith('.woff2')) {
+    response.headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+  }
+
+  return response;
 };
