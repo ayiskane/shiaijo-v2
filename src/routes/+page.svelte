@@ -62,7 +62,7 @@
           <span class="portal-label">{spectator.label}</span>
           <span class="portal-desc">{hasLiveTournament ? spectator.desc : 'No active tournaments'}</span>
         </div>
-        <span class="portal-arrow" aria-hidden="true">→</span>
+        <span class="portal-arrow" aria-hidden="true">{hasLiveTournament ? "→" : "🔒"}</span>
       </a>
 
       <!-- Staff portals - 3 square buttons -->
@@ -587,3 +587,4 @@
     /* Users can still zoom - we support up to 5x */
   }
 </style>
+
