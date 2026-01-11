@@ -143,28 +143,6 @@
     currentPage = 1;
   });
 
-  // Avatar initials
-  function getInitials(firstName: string, lastName: string) {
-    return `${firstName[0] || ''}${lastName[0] || ''}`.toUpperCase();
-  }
-
-  // Avatar color based on name
-  function getAvatarColor(name: string) {
-    const colors = [
-      'linear-gradient(135deg, #3b82f6, #60a5fa)',
-      'linear-gradient(135deg, #ec4899, #f472b6)',
-      'linear-gradient(135deg, #10b981, #34d399)',
-      'linear-gradient(135deg, #f59e0b, #fbbf24)',
-      'linear-gradient(135deg, #8b5cf6, #a78bfa)',
-      'linear-gradient(135deg, #f97316, #fb923c)',
-    ];
-    let hash = 0;
-    for (let i = 0; i < name.length; i++) {
-      hash = name.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    return colors[Math.abs(hash) % colors.length];
-  }
-
   // Group icon/emoji based on name
   function getGroupIcon(group: Doc<'groups'>) {
     const name = group.name.toLowerCase();
@@ -644,12 +622,7 @@
                   <input type="checkbox" class="checkbox" />
                 </td>
                 <td>
-                  <div class="cell-member">
-                    <div class="avatar" style="background: {getAvatarColor(member.lastName + member.firstName)};">
-                      {getInitials(member.firstName, member.lastName)}
-                    </div>
-                    <span class="member-name">{member.lastName}, {member.firstName}</span>
-                  </div>
+                  <span class="member-name">{member.firstName} {member.lastName}</span>
                 </td>
                 <td>
                   {#if getGroup(member.groupId)}
@@ -662,7 +635,9 @@
                   {/if}
                 </td>
                 <td>
-                  {#if isRegistered(member._id)}
+                  {#if !activeTournament}
+                    <span class="status-no-shiai">No Shiai</span>
+                  {:else if isRegistered(member._id)}
                     <span class="badge badge-registered">✓ Registered</span>
                   {:else}
                     <span class="status-unregistered">+ Register</span>
@@ -1383,25 +1358,6 @@
     accent-color: #3b82f6;
   }
 
-  .cell-member {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    font-weight: 600;
-    color: white;
-    flex-shrink: 0;
-  }
-
   .member-name {
     font-weight: 500;
   }
@@ -1448,6 +1404,12 @@
 
   .status-unregistered:hover {
     color: #60a5fa;
+  }
+
+  .status-no-shiai {
+    color: #71717a;
+    font-size: 14px;
+    font-style: italic;
   }
 
   .text-muted {
