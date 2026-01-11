@@ -1124,6 +1124,48 @@ function selectAllFiltered() {
       toast.success(`Registered ${result.addedCount} members from ${getGroupName(groupId)}`);
     } catch (e) { toast.error('Failed to register group'); }
   }
+
+  async function unregisterGroupMembers(groupId: string) {
+    if (!selectedTournament) return;
+    const groupMembers = membersByGroupId.get(groupId) ?? [];
+    const registeredIds = groupMembers.filter(m => registeredMemberIds.has(m._id)).map(m => m._id);
+    if (registeredIds.length === 0) { toast.info('No members in this group are registered'); return; }
+    try {
+      let count = 0;
+      for (const memberId of registeredIds) {
+        await client.mutation(api.participants.removeByMember, { 
+          tournamentId: selectedTournament._id, 
+          memberId: memberId as any 
+        });
+        count++;
+      }
+      toast.success(`Unregistered ${count} members from ${getGroupName(groupId)}`);
+    } catch (e) { toast.error('Failed to unregister group'); }
+  }
+
+  async function registerMember(memberId: string) {
+    if (!selectedTournament) return;
+    if (registeredMemberIds.has(memberId)) { return; }
+    try {
+      await client.mutation(api.participants.addMembers, { 
+        tournamentId: selectedTournament._id, 
+        memberIds: [memberId] as any[] 
+      });
+      toast.success('Registered');
+    } catch (e) { toast.error('Failed to register member'); }
+  }
+
+  async function unregisterMember(memberId: string) {
+    if (!selectedTournament) return;
+    if (!registeredMemberIds.has(memberId)) { return; }
+    try {
+      await client.mutation(api.participants.removeByMember, { 
+        tournamentId: selectedTournament._id, 
+        memberId: memberId as any 
+      });
+      toast.success('Unregistered');
+    } catch (e) { toast.error('Failed to unregister member'); }
+  }
   
   async function generateMatches() {
     if (!selectedTournament) return;
@@ -1639,6 +1681,7 @@ function selectAllFiltered() {
             {matches}
             {groupOrder}
             {groups}
+            {members}
             {membersByGroupId}
             {matchesByGroupId}
             {matchStatsByGroup}
@@ -1654,12 +1697,18 @@ function selectAllFiltered() {
             {completedMatches}
             {progressPercent}
             {isComplete}
+            {registeredMemberIds}
             {KIHON_WAZA_OPTIONS}
             {TIMER_OPTIONS}
             {SCORE_LABELS}
             {buildScoreTimeline}
             onOpenCreateTournament={() => showCreateTournament = true}
             onAddAllParticipants={addAllParticipants}
+            onClearAllParticipants={clearAllParticipants}
+            onRegisterMember={registerMember}
+            onUnregisterMember={unregisterMember}
+            onRegisterGroupMembers={registerGroupMembers}
+            onUnregisterGroupMembers={unregisterGroupMembers}
             onGenerateMatches={generateMatches}
             onStartTournament={startTournament}
             onCompleteTournament={completeTournament}
@@ -1684,6 +1733,7 @@ function selectAllFiltered() {
             {getGroupById}
             {getEffectiveCourt}
             {getMemberById}
+            {getGroupName}
             {formatTimer}
         />
 
