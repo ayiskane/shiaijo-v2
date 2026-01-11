@@ -11,8 +11,8 @@
   import History from '@lucide/svelte/icons/history';
   import Settings from '@lucide/svelte/icons/settings';
   import UserPlus from '@lucide/svelte/icons/user-plus';
-  import PanelLeftClose from '@lucide/svelte/icons/panel-left-close';
-  import PanelLeft from '@lucide/svelte/icons/panel-left';
+  import ChevronLeft from '@lucide/svelte/icons/chevron-left';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
   import LayoutGrid from '@lucide/svelte/icons/layout-grid';
   import Eye from '@lucide/svelte/icons/eye';
   import Heart from '@lucide/svelte/icons/heart';
@@ -55,25 +55,20 @@
 <div class="admin-layout" class:collapsed={sidebarCollapsed}>
   <!-- SIDEBAR -->
   <aside class="sidebar">
+    <!-- Fixed Header -->
     <div class="sidebar-header">
       <a href="/" class="sidebar-logo">
         <img src="/shiaijologo.png" alt="Shiaijo" class="logo-img" />
         <span class="logo-text">試合場</span>
       </a>
-      <button class="fab-collapse" onclick={toggleSidebar} aria-label="Toggle sidebar">
-        {#if sidebarCollapsed}
-          <PanelLeft size={14} />
-        {:else}
-          <PanelLeftClose size={14} />
-        {/if}
-      </button>
     </div>
 
+    <!-- Scrollable Nav -->
     <nav class="sidebar-nav">
       <!-- Dashboard -->
       <div class="nav-group">
         <button class="nav-item" class:active={activeTab === 'dashboard'} onclick={() => activeTab = 'dashboard'}>
-          <LayoutDashboard size={20} />
+          <span class="nav-icon"><LayoutDashboard size={20} /></span>
           <span class="nav-text">Dashboard</span>
         </button>
       </div>
@@ -82,11 +77,11 @@
       <div class="nav-group">
         <div class="nav-label">Roster</div>
         <button class="nav-item" class:active={activeTab === 'members'} onclick={() => activeTab = 'members'}>
-          <Users size={20} />
+          <span class="nav-icon"><Users size={20} /></span>
           <span class="nav-text">Members</span>
         </button>
         <button class="nav-item" class:active={activeTab === 'guests'} onclick={() => activeTab = 'guests'}>
-          <Globe size={20} />
+          <span class="nav-icon"><Globe size={20} /></span>
           <span class="nav-text">Guests</span>
         </button>
       </div>
@@ -95,18 +90,18 @@
       <div class="nav-group">
         <div class="nav-label">Shiai</div>
         <button class="nav-item" class:active={activeTab === 'tournament'} onclick={() => activeTab = 'tournament'}>
-          <Trophy size={20} />
+          <span class="nav-icon"><Trophy size={20} /></span>
           <span class="nav-text">Tournament</span>
         </button>
         {#if activeTournament}
           <button class="nav-item live" class:active={activeTab === 'current-result'} onclick={() => activeTab = 'current-result'}>
-            <Activity size={20} />
+            <span class="nav-icon"><Activity size={20} /></span>
             <span class="nav-text">Current Result</span>
             <span class="live-dot"></span>
           </button>
         {/if}
         <button class="nav-item" class:active={activeTab === 'history'} onclick={() => activeTab = 'history'}>
-          <History size={20} />
+          <span class="nav-icon"><History size={20} /></span>
           <span class="nav-text">History</span>
         </button>
       </div>
@@ -115,11 +110,11 @@
       <div class="nav-group">
         <div class="nav-label">Admin</div>
         <button class="nav-item" class:active={activeTab === 'settings'} onclick={() => activeTab = 'settings'}>
-          <Settings size={20} />
+          <span class="nav-icon"><Settings size={20} /></span>
           <span class="nav-text">Settings</span>
         </button>
         <button class="nav-item" class:active={activeTab === 'volunteers'} onclick={() => activeTab = 'volunteers'}>
-          <UserPlus size={20} />
+          <span class="nav-icon"><UserPlus size={20} /></span>
           <span class="nav-text">Volunteers</span>
         </button>
       </div>
@@ -129,19 +124,28 @@
     <div class="sidebar-footer">
       <div class="nav-label">Portals</div>
       <a href="/courtkeeper" class="portal-link court">
-        <LayoutGrid size={20} />
+        <span class="nav-icon"><LayoutGrid size={20} /></span>
         <span class="nav-text">Court / Scorekeeper</span>
       </a>
       <a href="/spectator" class="portal-link spectator">
-        <Eye size={20} />
+        <span class="nav-icon"><Eye size={20} /></span>
         <span class="nav-text">Spectator</span>
       </a>
       <a href="/volunteer" class="portal-link volunteer">
-        <Heart size={20} />
+        <span class="nav-icon"><Heart size={20} /></span>
         <span class="nav-text">Volunteer</span>
       </a>
     </div>
   </aside>
+
+  <!-- Edge Toggle Button -->
+  <button class="edge-toggle" onclick={toggleSidebar} aria-label="Toggle sidebar">
+    {#if sidebarCollapsed}
+      <ChevronRight size={16} />
+    {:else}
+      <ChevronLeft size={16} />
+    {/if}
+  </button>
 
   <!-- MAIN -->
   <main class="main-area">
@@ -167,7 +171,7 @@
 <style>
   .admin-layout {
     --sidebar-w: 250px;
-    --sidebar-collapsed: 68px;
+    --sidebar-collapsed: 64px;
     --header-h: 64px;
     --bg: #09090b;
     --bg-sidebar: #0a0a0c;
@@ -201,19 +205,18 @@
     height: 100vh;
     display: flex;
     flex-direction: column;
-    padding: 10px;
     transition: width var(--transition);
     z-index: 100;
+    border-right: 1px solid var(--border);
   }
 
   .collapsed .sidebar { width: var(--sidebar-collapsed); }
 
+  /* Fixed Header - doesn't scroll */
   .sidebar-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 6px 6px 6px 8px;
-    margin-bottom: 12px;
+    padding: 12px;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border);
   }
 
   .sidebar-logo {
@@ -221,38 +224,65 @@
     align-items: center;
     gap: 10px;
     text-decoration: none;
+    height: 40px;
   }
 
-  .logo-img { width: 36px; height: 36px; flex-shrink: 0; }
+  .logo-img {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
 
   .logo-text {
     font-family: 'SicYubi-FudeGyosho', serif;
     font-size: 20px;
     color: var(--text);
     letter-spacing: 0.1em;
-    transition: opacity var(--transition);
+    white-space: nowrap;
+    overflow: hidden;
+    transition: opacity var(--transition), width var(--transition);
   }
 
-  .collapsed .logo-text { opacity: 0; width: 0; overflow: hidden; }
+  .collapsed .logo-text { opacity: 0; width: 0; }
 
-  .fab-collapse {
-    width: 30px;
-    height: 30px;
-    background: var(--bg-hover);
+  /* Edge Toggle Button - sits on the border */
+  .edge-toggle {
+    position: fixed;
+    top: 72px;
+    left: var(--sidebar-w);
+    transform: translateX(-50%);
+    width: 24px;
+    height: 24px;
+    background: var(--bg-sidebar);
     border: 1px solid var(--border);
-    border-radius: 6px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     color: var(--text-muted);
-    flex-shrink: 0;
+    z-index: 150;
+    transition: all var(--transition);
   }
 
-  .fab-collapse:hover { background: var(--bg-active); color: var(--text-secondary); }
+  .edge-toggle:hover {
+    background: var(--bg-hover);
+    color: var(--text);
+    border-color: var(--accent);
+  }
 
-  /* Navigation */
-  .sidebar-nav { flex: 1; overflow-y: auto; }
+  .collapsed .edge-toggle {
+    left: var(--sidebar-collapsed);
+  }
+
+  /* Navigation - scrollable */
+  .sidebar-nav {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 8px;
+  }
 
   .nav-group { margin-bottom: 8px; }
 
@@ -262,24 +292,26 @@
     text-transform: uppercase;
     letter-spacing: 1.2px;
     color: var(--text-muted);
-    padding: 6px 12px 4px;
+    padding: 8px 8px 4px;
+    white-space: nowrap;
+    overflow: hidden;
     transition: opacity var(--transition);
   }
 
-  .collapsed .nav-label { opacity: 0; height: 0; padding: 0; overflow: hidden; }
+  .collapsed .nav-label { opacity: 0; height: 0; padding: 0; }
 
   .nav-item, .portal-link {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 10px 12px;
+    padding: 0;
     border-radius: 10px;
     color: var(--text-secondary);
     background: transparent;
     border: none;
     cursor: pointer;
     width: 100%;
-    min-height: 44px;
+    height: 48px;
     font: inherit;
     font-size: 15px;
     text-align: left;
@@ -287,10 +319,23 @@
     transition: all var(--transition);
   }
 
-  .collapsed .nav-item, .collapsed .portal-link {
+  /* Icon wrapper - ensures square in collapsed mode */
+  .nav-icon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
     justify-content: center;
-    padding: 10px;
+    flex-shrink: 0;
   }
+
+  .nav-text {
+    white-space: nowrap;
+    overflow: hidden;
+    transition: opacity var(--transition);
+  }
+
+  .collapsed .nav-text { opacity: 0; width: 0; }
 
   .nav-item:hover, .portal-link:hover { background: var(--bg-hover); color: var(--text); }
 
@@ -298,27 +343,6 @@
     background: var(--accent-glow);
     color: var(--accent);
     box-shadow: inset 0 0 0 1px rgba(129, 140, 248, 0.25);
-  }
-
-  .nav-text { transition: opacity var(--transition); }
-  .collapsed .nav-text { opacity: 0; width: 0; overflow: hidden; }
-
-  .nav-badge {
-    margin-left: auto;
-    background: var(--accent);
-    color: white;
-    font-size: 11px;
-    font-weight: 700;
-    padding: 2px 7px;
-    border-radius: 8px;
-  }
-
-  .collapsed .nav-badge {
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    padding: 1px 5px;
-    font-size: 10px;
   }
 
   /* Live indicator */
@@ -331,8 +355,12 @@
     background: var(--live);
     border-radius: 50%;
     margin-left: auto;
+    margin-right: 12px;
     animation: pulse 2s ease-in-out infinite;
+    flex-shrink: 0;
   }
+
+  .collapsed .live-dot { display: none; }
 
   @keyframes pulse {
     0%, 100% { opacity: 1; }
@@ -341,8 +369,8 @@
 
   /* Footer */
   .sidebar-footer {
-    margin-top: auto;
-    padding-top: 10px;
+    flex-shrink: 0;
+    padding: 8px;
     border-top: 1px solid var(--border);
   }
 
@@ -439,5 +467,6 @@
     .sidebar { transform: translateX(-100%); }
     .main-area { margin-left: 0; }
     .user-name { display: none; }
+    .edge-toggle { display: none; }
   }
 </style>
