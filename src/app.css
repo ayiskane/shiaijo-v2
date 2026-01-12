@@ -1,14 +1,13 @@
 /* =============================================================================
-   SHIAIJO - Main Stylesheet (Clean Slate)
+   SHIAIJO - Main Stylesheet
    =============================================================================
-   This file contains only:
-   - Font definitions
-   - Theme variables (light, dark renbu, dark sumi)
-   - Tailwind integration
-   - Base styles
-   - Utilities & accessibility
+   Color Scheme: INDIGO NIGHT
    
-   Component styles should be added as the portals are rebuilt.
+   Primary: #818cf8 (Indigo)
+   Secondary: #a78bfa (Violet)
+   Highlight: #fbbf24 (Amber)
+   Success: #34d399
+   Danger: #f87171
    ============================================================================= */
 
 /* =============================================================================
@@ -104,185 +103,150 @@
   /* Layout */
   --radius: 0.625rem;
   
-  /* Colors */
+  /* Colors - Light theme uses indigo as well */
   --background: oklch(1 0 0);
   --foreground: oklch(0.129 0.042 264.695);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.129 0.042 264.695);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: oklch(0.208 0.042 265.755);
-  --primary-foreground: oklch(0.984 0.003 247.858);
+  --primary: #818cf8;
+  --primary-foreground: #fafafa;
   --secondary: oklch(0.968 0.007 247.896);
   --secondary-foreground: oklch(0.208 0.042 265.755);
   --muted: oklch(0.968 0.007 247.896);
   --muted-foreground: oklch(0.554 0.046 257.417);
-  --accent: oklch(0.968 0.007 247.896);
+  --accent: #a78bfa;
   --accent-foreground: oklch(0.208 0.042 265.755);
-  --destructive: oklch(0.577 0.245 27.325);
+  --destructive: #f87171;
   --border: oklch(0.929 0.013 255.508);
   --input: oklch(0.929 0.013 255.508);
-  --ring: oklch(0.704 0.04 256.788);
+  --ring: #818cf8;
   
   /* Charts */
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+  --chart-1: #818cf8;
+  --chart-2: #a78bfa;
+  --chart-3: #71717a;
+  --chart-4: #fbbf24;
+  --chart-5: #34d399;
   
   /* Sidebar */
   --sidebar: oklch(0.984 0.003 247.858);
   --sidebar-foreground: oklch(0.129 0.042 264.695);
-  --sidebar-primary: oklch(0.208 0.042 265.755);
+  --sidebar-primary: #818cf8;
   --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
   --sidebar-accent: oklch(0.968 0.007 247.896);
   --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
   --sidebar-border: oklch(0.929 0.013 255.508);
-  --sidebar-ring: oklch(0.704 0.04 256.788);
+  --sidebar-ring: #818cf8;
 }
 
 /* -----------------------------------------------------------------------------
-   3.2 Renbu Theme (dark - landing, spectator, courtkeeper)
+   3.2 Dark Theme (Indigo Night - all dark modes)
    ----------------------------------------------------------------------------- */
 .dark {
-  --background: oklch(0.13 0.01 60);
-  --foreground: oklch(0.95 0.02 85);
-  --card: oklch(0.16 0.01 55);
-  --card-foreground: oklch(0.95 0.02 85);
-  --popover: oklch(0.18 0.01 55);
-  --popover-foreground: oklch(0.95 0.02 85);
-  --primary: oklch(0.70 0.16 70);
-  --primary-foreground: oklch(0.13 0.01 60);
-  --secondary: oklch(0.50 0.02 60);
-  --secondary-foreground: oklch(0.95 0.02 85);
-  --muted: oklch(0.22 0.01 55);
-  --muted-foreground: oklch(0.65 0.02 70);
-  --accent: oklch(0.70 0.16 70);
-  --accent-foreground: oklch(0.13 0.01 60);
-  --destructive: oklch(0.60 0.20 25);
-  --border: oklch(0.70 0.16 70 / 12%);
-  --input: oklch(0.70 0.16 70 / 8%);
-  --ring: oklch(0.70 0.16 70);
-  
-  /* Charts */
-  --chart-1: oklch(0.70 0.16 70);
-  --chart-2: oklch(0.60 0.15 150);
-  --chart-3: oklch(0.70 0.15 60);
-  --chart-4: oklch(0.55 0.20 280);
-  --chart-5: oklch(0.65 0.15 200);
-  
-  /* Sidebar */
-  --sidebar: oklch(0.14 0.01 55);
-  --sidebar-foreground: oklch(0.95 0.02 85);
-  --sidebar-primary: oklch(0.70 0.16 70);
-  --sidebar-primary-foreground: oklch(0.13 0.01 60);
-  --sidebar-accent: oklch(0.20 0.01 55);
-  --sidebar-accent-foreground: oklch(0.95 0.02 85);
-  --sidebar-border: oklch(0.70 0.16 70 / 10%);
-  --sidebar-ring: oklch(0.70 0.16 70);
-  
-  /* Theme-specific */
-  --theme-accent: #d97706;
-  --theme-accent-light: #f59e0b;
-  --theme-glow: rgba(217, 119, 6, 0.3);
-  --aka: #ef4444;
-  --shiro: #d1d5db;
-}
-
-/* -----------------------------------------------------------------------------
-   3.3 Sumi Theme (dark - admin portal)
-   ----------------------------------------------------------------------------- */
-.dark.theme-sumi {
-  /* Background hierarchy */
-  --background: #0C0B09;
-  --background-elevated: #0F0E0C;
-  --surface: #141310;
-  --surface-elevated: #1A1916;
+  /* Background hierarchy - cool blacks */
+  --background: #09090b;
+  --background-elevated: #0a0a0c;
+  --surface: #111113;
+  --surface-elevated: #18181b;
   
   /* Base colors */
-  --foreground: #EAEAEC;
-  --card: #141310;
-  --card-foreground: #EAEAEC;
-  --popover: #1A1916;
-  --popover-foreground: #EAEAEC;
+  --foreground: #fafafa;
+  --card: #111113;
+  --card-foreground: #fafafa;
+  --popover: #18181b;
+  --popover-foreground: #fafafa;
   
   /* Indigo accent system */
-  --primary: #3b82f6;
-  --primary-foreground: #0C0B09;
-  --indigo-deep: #1e3a5f;
-  --indigo-primary: #3b82f6;
-  --indigo-light: #60a5fa;
-  --indigo-glow: rgba(59, 130, 246, 0.15);
+  --primary: #818cf8;
+  --primary-foreground: #09090b;
+  --primary-hover: #6366f1;
+  --accent: #a78bfa;
+  --accent-foreground: #09090b;
+  --accent-bg: rgba(129, 140, 248, 0.15);
+  --accent-glow: rgba(129, 140, 248, 0.12);
   
-  /* Steel neutral system */
-  --steel-dark: #3d4148;
-  --steel-mid: #5c6370;
-  --steel-light: #9ca0ad;
-  --steel-bright: #c8ccd4;
+  /* Neutral system - zinc */
+  --secondary: #27272a;
+  --secondary-foreground: #fafafa;
+  --muted: #18181b;
+  --muted-foreground: #a1a1aa;
   
-  --secondary: #3d4148;
-  --secondary-foreground: #EAEAEC;
-  --muted: #141310;
-  --muted-foreground: #9ca0ad;
-  --accent: #60a5fa;
-  --accent-foreground: #0C0B09;
-  
-  /* Fire accent for highlights */
-  --accent-fire: #E86F3A;
-  --accent-fire-glow: rgba(232, 111, 58, 0.2);
+  /* Highlight: Amber */
+  --highlight: #fbbf24;
+  --highlight-bg: rgba(251, 191, 36, 0.15);
+  --highlight-glow: rgba(251, 191, 36, 0.2);
   
   /* Status colors */
-  --success: #4ade80;
+  --success: #34d399;
+  --success-bg: rgba(52, 211, 153, 0.15);
   --warning: #fbbf24;
+  --warning-bg: rgba(251, 191, 36, 0.15);
   --error: #f87171;
+  --error-bg: rgba(248, 113, 113, 0.15);
   --destructive: #f87171;
   
   /* Text hierarchy */
-  --text-primary: #EAEAEC;
-  --text-secondary: #9ca0ad;
-  --text-muted: #5c6370;
-  --text-faint: #3d4148;
+  --text-primary: #fafafa;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
+  --text-faint: #52525b;
   
-  /* Steel borders */
-  --border: rgba(92, 99, 112, 0.2);
-  --border-subtle: rgba(92, 99, 112, 0.2);
-  --border-default: rgba(92, 99, 112, 0.35);
-  --border-strong: rgba(156, 160, 173, 0.4);
+  /* Borders - zinc based */
+  --border: rgba(82, 82, 91, 0.4);
+  --border-subtle: rgba(82, 82, 91, 0.25);
+  --border-default: rgba(82, 82, 91, 0.5);
+  --border-strong: rgba(113, 113, 122, 0.6);
   
-  --input: rgba(92, 99, 112, 0.12);
-  --ring: #3b82f6;
+  --input: rgba(82, 82, 91, 0.3);
+  --ring: #818cf8;
   
   /* Shadows */
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
-  --shadow-glow-indigo: 0 4px 20px rgba(59, 130, 246, 0.25);
-  --shadow-glow-fire: 0 4px 20px rgba(232, 111, 58, 0.3);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.7);
+  --shadow-glow: 0 4px 20px rgba(129, 140, 248, 0.25);
+  --shadow-glow-highlight: 0 4px 20px rgba(251, 191, 36, 0.3);
   
   /* Charts */
-  --chart-1: #3b82f6;
-  --chart-2: #60a5fa;
-  --chart-3: #5c6370;
-  --chart-4: #E86F3A;
-  --chart-5: #4ade80;
+  --chart-1: #818cf8;
+  --chart-2: #a78bfa;
+  --chart-3: #71717a;
+  --chart-4: #fbbf24;
+  --chart-5: #34d399;
   
   /* Sidebar */
-  --sidebar: #141310;
-  --sidebar-foreground: #EAEAEC;
-  --sidebar-primary: #3b82f6;
-  --sidebar-primary-foreground: #0C0B09;
-  --sidebar-accent: rgba(59, 130, 246, 0.15);
-  --sidebar-accent-foreground: #EAEAEC;
-  --sidebar-border: rgba(92, 99, 112, 0.2);
-  --sidebar-ring: #3b82f6;
+  --sidebar: #0a0a0c;
+  --sidebar-foreground: #fafafa;
+  --sidebar-primary: #818cf8;
+  --sidebar-primary-foreground: #09090b;
+  --sidebar-accent: rgba(129, 140, 248, 0.15);
+  --sidebar-accent-foreground: #fafafa;
+  --sidebar-border: rgba(82, 82, 91, 0.4);
+  --sidebar-ring: #818cf8;
   
   /* Theme-specific */
-  --theme-accent: #3b82f6;
-  --theme-accent-light: #60a5fa;
-  --theme-glow: rgba(59, 130, 246, 0.25);
-  --aka: #E86F3A;
-  --shiro: #c8ccd4;
+  --theme-accent: #818cf8;
+  --theme-accent-light: #a78bfa;
+  --theme-glow: rgba(129, 140, 248, 0.25);
+  
+  /* Kendo colors */
+  --aka: #f87171;
+  --shiro: #e4e4e7;
+  
+  /* Live indicator */
+  --live: #22c55e;
+  --live-bg: rgba(34, 197, 94, 0.15);
+}
+
+/* -----------------------------------------------------------------------------
+   3.3 Theme Sumi (admin portal - extends dark)
+   Uses same Indigo Night colors, kept for backwards compatibility
+   ----------------------------------------------------------------------------- */
+.dark.theme-sumi {
+  /* Inherits all .dark variables */
+  /* Can add admin-specific overrides here if needed */
 }
 
 /* =============================================================================
@@ -350,7 +314,7 @@
     line-height: 1.6;
   }
   
-  /* Font size overrides for readability */
+  /* Font size overrides for readability (45+ users) */
   .text-sm {
     font-size: 1rem !important;
   }
@@ -369,8 +333,7 @@
 }
 
 /* Paper texture overlay for dark themes */
-.dark::before,
-.theme-sumi::before {
+.dark::before {
   content: '';
   position: fixed;
   inset: 0;
@@ -380,8 +343,7 @@
   z-index: 0;
 }
 
-.dark > *,
-.theme-sumi > * {
+.dark > * {
   position: relative;
   z-index: 1;
 }
@@ -431,6 +393,6 @@
   }
   
   .dark {
-    --border: oklch(1 0 0 / 25%);
+    --border: rgba(113, 113, 122, 0.7);
   }
 }
