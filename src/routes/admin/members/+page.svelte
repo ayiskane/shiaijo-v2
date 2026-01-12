@@ -306,7 +306,7 @@
 
     <AdminToolbar bind:searchValue={searchQuery} searchPlaceholder="Search members...">
       {#snippet filters()}
-        <ToggleGroup.Root type="single" value={filterStatus} onValueChange={(v) => { if (v) filterStatus = v as typeof filterStatus; }}>
+        <ToggleGroup.Root type="single" value={filterStatus} spacing={0} class="inline-flex shadow-sm" onValueChange={(v) => { if (v) filterStatus = v as typeof filterStatus; }}>
           <ToggleGroup.Item value="all">All</ToggleGroup.Item>
           <ToggleGroup.Item value="registered">Registered</ToggleGroup.Item>
           <ToggleGroup.Item value="unregistered">Not Reg.</ToggleGroup.Item>
