@@ -264,7 +264,7 @@
   async function registerGuest() {
     if (!registeringGuest || !selectedGroupId || !activeTournament) return;
     
-    await client.mutation(api.participants.register, {
+    await client.mutation(api.participants.add, {
       tournamentId: activeTournament._id,
       memberId: registeringGuest._id,
       groupId: selectedGroupId,
@@ -282,7 +282,7 @@
     );
     
     if (participant) {
-      await client.mutation(api.participants.unregister, { id: participant._id });
+      await client.mutation(api.participants.remove, { id: participant._id });
     }
   }
 
@@ -293,7 +293,7 @@
     const dojoGuests = guests.filter(g => g.dojo === selectedDojoId && !isRegistered(g._id));
     
     for (const guest of dojoGuests) {
-      await client.mutation(api.participants.register, {
+      await client.mutation(api.participants.add, {
         tournamentId: activeTournament._id,
         memberId: guest._id,
         groupId: selectedGroupId,
@@ -1389,3 +1389,4 @@
     background: #16a34a !important;
   }
 </style>
+
