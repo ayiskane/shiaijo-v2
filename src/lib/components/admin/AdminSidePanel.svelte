@@ -81,6 +81,7 @@
         class:selected={selectedId === item.id}
         class:editing={editMode}
         onclick={() => { if (!editMode) onSelect(item.id); }}
+        onkeydown={(e) => { if (!editMode && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onSelect(item.id); } }}
         role="button"
         tabindex="0"
       >

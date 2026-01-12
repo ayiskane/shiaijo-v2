@@ -76,7 +76,7 @@
   let selectedGroupId = $state<string>('');
 
   // Dojo panel items
-  let dojoPanelItems = $derived(dojos.map(d => ({
+  let dojoPanelItems = $derived(dojos.map((d: Doc<'dojos'>) => ({
     id: d._id as string,
     name: d.name,
     subtitle: d.location,
@@ -95,7 +95,7 @@
 
   function getDojo(dojoId: Id<'dojos'> | undefined) {
     if (!dojoId) return null;
-    return dojos.find(d => d._id === dojoId);
+    return dojos.find((d: Doc<'dojos'>) => d._id === dojoId);
   }
 
   let filteredGuests = $derived(() => {
@@ -119,12 +119,12 @@
 
   let selectedDojoName = $derived(() => {
     if (!selectedDojoId) return 'All Guests';
-    return dojos.find(d => d._id === selectedDojoId)?.name || 'All Guests';
+    return dojos.find((d: Doc<'dojos'>) => d._id === selectedDojoId)?.name || 'All Guests';
   });
 
   let selectedDojoLocation = $derived(() => {
     if (!selectedDojoId) return '';
-    return dojos.find(d => d._id === selectedDojoId)?.location || '';
+    return dojos.find((d: Doc<'dojos'>) => d._id === selectedDojoId)?.location || '';
   });
 
   // Modal handlers
@@ -138,7 +138,7 @@
     dojoFormName = ''; dojoFormLocation = ''; editingDojo = null; showDojoModal = true;
   }
   function openEditDojoModal(item: { id: string | null }) {
-    const dojo = dojos.find(d => d._id === item.id);
+    const dojo = dojos.find((d: Doc<'dojos'>) => d._id === item.id);
     if (dojo) { dojoFormName = dojo.name; dojoFormLocation = dojo.location || ''; editingDojo = dojo; showDojoModal = true; }
   }
   function openRegisterModal(guest: Doc<'members'>) {
@@ -176,7 +176,7 @@
   }
   async function registerGuest() {
     if (!registeringGuest || !activeTournament || !selectedGroupId) return;
-    await client.mutation(api.participants.register, { tournamentId: activeTournament._id, memberId: registeringGuest._id, groupId: selectedGroupId });
+    await client.mutation(api.participants.add, { tournamentId: activeTournament._id, memberId: registeringGuest._id, groupId: selectedGroupId });
     showRegisterModal = false; registeringGuest = null;
   }
 </script>
@@ -246,7 +246,7 @@
 </div>
 
 <!-- MODALS -->
-<Dialog.Root bind:open={showAddGuestModal}><Dialog.Content><Dialog.Header><Dialog.Title>{editingGuest ? 'Edit Guest' : 'Add Guest'}</Dialog.Title></Dialog.Header><div class="form-grid"><div class="form-group"><Label for="firstName">First Name</Label><Input id="firstName" bind:value={formFirstName} placeholder="First name" /></div><div class="form-group"><Label for="lastName">Last Name</Label><Input id="lastName" bind:value={formLastName} placeholder="Last name" /></div><div class="form-group full-width"><Label for="dojo">Dojo</Label><Select.Root type="single" value={formDojoId} onValueChange={(v) => formDojoId = v as Id<'dojos'>}><Select.Trigger>{formDojoId ? dojos.find(d => d._id === formDojoId)?.name : 'Select dojo...'}</Select.Trigger><Select.Content>{#each dojos as dojo}<Select.Item value={dojo._id}>{dojo.name}</Select.Item>{/each}</Select.Content></Select.Root></div></div><Dialog.Footer><Button variant="ghost" onclick={() => showAddGuestModal = false}>Cancel</Button><Button onclick={saveGuest} disabled={!formFirstName.trim() || !formLastName.trim()}>{editingGuest ? 'Save' : 'Add Guest'}</Button></Dialog.Footer></Dialog.Content></Dialog.Root>
+<Dialog.Root bind:open={showAddGuestModal}><Dialog.Content><Dialog.Header><Dialog.Title>{editingGuest ? 'Edit Guest' : 'Add Guest'}</Dialog.Title></Dialog.Header><div class="form-grid"><div class="form-group"><Label for="firstName">First Name</Label><Input id="firstName" bind:value={formFirstName} placeholder="First name" /></div><div class="form-group"><Label for="lastName">Last Name</Label><Input id="lastName" bind:value={formLastName} placeholder="Last name" /></div><div class="form-group full-width"><Label for="dojo">Dojo</Label><Select.Root type="single" value={formDojoId} onValueChange={(v) => formDojoId = v as Id<'dojos'>}><Select.Trigger>{formDojoId ? dojos.find((d: Doc<'dojos'>) => d._id === formDojoId)?.name : 'Select dojo...'}</Select.Trigger><Select.Content>{#each dojos as dojo}<Select.Item value={dojo._id}>{dojo.name}</Select.Item>{/each}</Select.Content></Select.Root></div></div><Dialog.Footer><Button variant="ghost" onclick={() => showAddGuestModal = false}>Cancel</Button><Button onclick={saveGuest} disabled={!formFirstName.trim() || !formLastName.trim()}>{editingGuest ? 'Save' : 'Add Guest'}</Button></Dialog.Footer></Dialog.Content></Dialog.Root>
 
 <Dialog.Root bind:open={showDojoModal}><Dialog.Content><Dialog.Header><Dialog.Title>{editingDojo ? 'Edit Dojo' : 'Add Dojo'}</Dialog.Title></Dialog.Header><div class="form-stack"><div class="form-group"><Label for="dojoName">Dojo Name</Label><Input id="dojoName" bind:value={dojoFormName} placeholder="e.g. Seattle Kendo Kai" /></div><div class="form-group"><Label for="dojoLocation">Location (optional)</Label><Input id="dojoLocation" bind:value={dojoFormLocation} placeholder="e.g. Seattle, WA" /></div></div><Dialog.Footer><Button variant="ghost" onclick={() => showDojoModal = false}>Cancel</Button><Button onclick={saveDojo} disabled={!dojoFormName.trim()}>{editingDojo ? 'Save' : 'Add Dojo'}</Button></Dialog.Footer></Dialog.Content></Dialog.Root>
 

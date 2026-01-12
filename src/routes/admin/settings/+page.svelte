@@ -1,6 +1,10 @@
 <script lang="ts">
   import { useConvexClient } from 'convex-svelte';
   import { api } from '../../../convex/_generated/api';
+  import { Button } from '$lib/components/ui/button';
+  import { Input } from '$lib/components/ui/input';
+  import { Label } from '$lib/components/ui/label';
+  import * as Dialog from '$lib/components/ui/dialog';
   
   const client = useConvexClient();
 
@@ -8,7 +12,10 @@
   let adminPassword = $state('');
   let courtkeeperPassword = $state('');
   let saving = $state<string | null>(null);
-  let confirmClear = $state<string | null>(null);
+
+  // Confirm modals
+  let showClearTournaments = $state(false);
+  let showClearMembers = $state(false);
 
   async function saveAdminPassword() {
     if (!adminPassword.trim()) return;
@@ -35,33 +42,23 @@
   }
 
   async function handleClearTournaments() {
-    if (confirmClear !== 'tournaments') {
-      confirmClear = 'tournaments';
-      return;
-    }
     try {
       await client.mutation(api.tournaments.clearAll, {});
-      confirmClear = null;
     } catch (e) {
       console.error('Failed to clear tournaments:', e);
+    } finally {
+      showClearTournaments = false;
     }
   }
 
   async function handleClearMembers() {
-    if (confirmClear !== 'members') {
-      confirmClear = 'members';
-      return;
-    }
     try {
       await client.mutation(api.members.clearAll, {});
-      confirmClear = null;
     } catch (e) {
       console.error('Failed to clear members:', e);
+    } finally {
+      showClearMembers = false;
     }
-  }
-
-  function cancelConfirm() {
-    confirmClear = null;
   }
 </script>
 
@@ -69,287 +66,111 @@
   <title>Settings - Admin Portal</title>
 </svelte:head>
 
-<div class="settings-page">
-  <h1 class="page-title">Settings</h1>
+<div class="max-w-3xl space-y-8">
+  <div class="space-y-2">
+    <h1 class="text-2xl font-bold tracking-tight">Settings</h1>
+    <p class="text-muted-foreground">Manage portal credentials and maintenance tasks.</p>
+  </div>
 
-  <!-- PASSWORDS SECTION -->
-  <section class="section">
-    <h2 class="section-title">Passwords</h2>
-    
-    <div class="setting-row">
-      <div class="setting-info">
-        <div class="setting-label">Admin Password</div>
-        <div class="setting-desc">Password for admin portal access</div>
-      </div>
-      <div class="setting-action">
-        <input 
-          type="password" 
-          class="form-input" 
-          placeholder="New password"
-          bind:value={adminPassword}
-          disabled={saving === 'admin'}
-        >
-        <button 
-          class="btn btn-primary" 
-          onclick={saveAdminPassword}
-          disabled={!adminPassword.trim() || saving === 'admin'}
-        >
-          {saving === 'admin' ? 'Saving...' : 'Save'}
-        </button>
-      </div>
+  <!-- Passwords -->
+  <section class="rounded-xl border border-border/60 bg-card/60 shadow-sm">
+    <div class="border-b border-border/60 px-6 py-4">
+      <h2 class="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Passwords</h2>
     </div>
 
-    <div class="setting-row">
-      <div class="setting-info">
-        <div class="setting-label">Courtkeeper Password</div>
-        <div class="setting-desc">Password for courtkeeper portal</div>
+    <div class="divide-y divide-border/60">
+      <div class="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="space-y-1">
+          <div class="text-sm font-semibold">Admin Password</div>
+          <div class="text-xs text-muted-foreground">Used for admin portal access.</div>
+        </div>
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div class="flex flex-col gap-1">
+            <Label for="admin-pass" class="text-xs text-muted-foreground">New password</Label>
+            <Input id="admin-pass" type="password" class="w-64" bind:value={adminPassword} disabled={saving === 'admin'} />
+          </div>
+          <Button onclick={saveAdminPassword} disabled={!adminPassword.trim() || saving === 'admin'}>
+            {saving === 'admin' ? 'Saving...' : 'Save'}
+          </Button>
+        </div>
       </div>
-      <div class="setting-action">
-        <input 
-          type="password" 
-          class="form-input" 
-          placeholder="New password"
-          bind:value={courtkeeperPassword}
-          disabled={saving === 'courtkeeper'}
-        >
-        <button 
-          class="btn btn-primary" 
-          onclick={saveCourtkeeperPassword}
-          disabled={!courtkeeperPassword.trim() || saving === 'courtkeeper'}
-        >
-          {saving === 'courtkeeper' ? 'Saving...' : 'Save'}
-        </button>
+
+      <div class="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="space-y-1">
+          <div class="text-sm font-semibold">Courtkeeper Password</div>
+          <div class="text-xs text-muted-foreground">Used for courtkeeper portal access.</div>
+        </div>
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div class="flex flex-col gap-1">
+            <Label for="ck-pass" class="text-xs text-muted-foreground">New password</Label>
+            <Input id="ck-pass" type="password" class="w-64" bind:value={courtkeeperPassword} disabled={saving === 'courtkeeper'} />
+          </div>
+          <Button onclick={saveCourtkeeperPassword} disabled={!courtkeeperPassword.trim() || saving === 'courtkeeper'}>
+            {saving === 'courtkeeper' ? 'Saving...' : 'Save'}
+          </Button>
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- DEBUG SECTION -->
-  <section class="section danger">
-    <h2 class="section-title">⚠️ Debug Actions</h2>
-    
-    <div class="danger-row">
-      <div class="setting-row">
-        <div class="setting-info">
-          <div class="setting-label">Clear All Tournaments</div>
-          <div class="setting-desc">Delete all tournaments, matches, and results</div>
-        </div>
-        <div class="setting-action">
-          {#if confirmClear === 'tournaments'}
-            <button class="btn btn-ghost" onclick={cancelConfirm}>Cancel</button>
-            <button class="btn btn-danger-solid" onclick={handleClearTournaments}>Confirm</button>
-          {:else}
-            <button class="btn btn-danger" onclick={handleClearTournaments}>Clear</button>
-          {/if}
-        </div>
+  <!-- Danger zone -->
+  <section class="rounded-xl border border-destructive/30 bg-destructive/5 shadow-sm">
+    <div class="border-b border-destructive/30 px-6 py-4 flex items-center justify-between">
+      <div>
+        <h2 class="text-xs font-semibold uppercase tracking-[0.2em] text-destructive">Danger Zone</h2>
+        <p class="text-xs text-muted-foreground mt-1">Destructive actions cannot be undone.</p>
       </div>
     </div>
 
-    <div class="danger-row">
-      <div class="setting-row">
-        <div class="setting-info">
-          <div class="setting-label">Clear All Members</div>
-          <div class="setting-desc">Delete all member records from roster</div>
+    <div class="divide-y divide-destructive/20">
+      <div class="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="space-y-1">
+          <div class="text-sm font-semibold">Clear All Tournaments</div>
+          <div class="text-xs text-muted-foreground">Deletes tournaments, matches, and results.</div>
         </div>
-        <div class="setting-action">
-          {#if confirmClear === 'members'}
-            <button class="btn btn-ghost" onclick={cancelConfirm}>Cancel</button>
-            <button class="btn btn-danger-solid" onclick={handleClearMembers}>Confirm</button>
-          {:else}
-            <button class="btn btn-danger" onclick={handleClearMembers}>Clear</button>
-          {/if}
+        <Dialog.Root bind:open={showClearTournaments}>
+          <Dialog.Trigger>
+            <Button variant="destructive">Clear</Button>
+          </Dialog.Trigger>
+          <Dialog.Content class="sm:max-w-[420px]">
+            <Dialog.Header>
+              <Dialog.Title>Confirm clearing tournaments</Dialog.Title>
+              <Dialog.Description>
+                This will remove all tournaments, matches, and results. This action cannot be undone.
+              </Dialog.Description>
+            </Dialog.Header>
+            <div class="flex justify-end gap-2">
+              <Button variant="outline" onclick={() => showClearTournaments = false}>Cancel</Button>
+              <Button variant="destructive" onclick={handleClearTournaments}>Confirm</Button>
+            </div>
+          </Dialog.Content>
+        </Dialog.Root>
+      </div>
+
+      <div class="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="space-y-1">
+          <div class="text-sm font-semibold">Clear All Members</div>
+          <div class="text-xs text-muted-foreground">Deletes all member records from roster.</div>
         </div>
+        <Dialog.Root bind:open={showClearMembers}>
+          <Dialog.Trigger>
+            <Button variant="destructive">Clear</Button>
+          </Dialog.Trigger>
+          <Dialog.Content class="sm:max-w-[420px]">
+            <Dialog.Header>
+              <Dialog.Title>Confirm clearing members</Dialog.Title>
+              <Dialog.Description>
+                This will remove all members from the roster. This action cannot be undone.
+              </Dialog.Description>
+            </Dialog.Header>
+            <div class="flex justify-end gap-2">
+              <Button variant="outline" onclick={() => showClearMembers = false}>Cancel</Button>
+              <Button variant="destructive" onclick={handleClearMembers}>Confirm</Button>
+            </div>
+          </Dialog.Content>
+        </Dialog.Root>
       </div>
     </div>
   </section>
 </div>
-
-<style>
-  .settings-page {
-    max-width: 700px;
-  }
-
-  .page-title {
-    font-size: 24px;
-    font-weight: 700;
-    margin-bottom: 32px;
-  }
-
-  .section {
-    margin-bottom: 40px;
-  }
-
-  .section-title {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    color: #71717a;
-    margin-bottom: 16px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #27272a;
-  }
-
-  .setting-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 16px 0;
-    border-bottom: 1px solid #27272a;
-  }
-
-  .setting-row:last-child {
-    border-bottom: none;
-  }
-
-  .setting-info {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .setting-label {
-    font-size: 15px;
-    font-weight: 600;
-    margin-bottom: 2px;
-    color: #fafafa;
-  }
-
-  .setting-desc {
-    font-size: 13px;
-    color: #71717a;
-  }
-
-  .setting-action {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    flex-shrink: 0;
-  }
-
-  .form-input {
-    width: 200px;
-    padding: 12px 14px;
-    background: #18181b;
-    border: 1px solid #27272a;
-    border-radius: 8px;
-    color: #fafafa;
-    font-size: 14px;
-    font-family: inherit;
-    transition: all 0.2s;
-  }
-
-  .form-input:focus {
-    outline: none;
-    border-color: #818cf8;
-    box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.15);
-  }
-
-  .form-input::placeholder {
-    color: #52525b;
-  }
-
-  .form-input:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .btn {
-    padding: 12px 20px;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 600;
-    font-family: inherit;
-    cursor: pointer;
-    transition: all 0.2s;
-    border: none;
-    white-space: nowrap;
-  }
-
-  .btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .btn-primary {
-    background: #818cf8;
-    color: white;
-  }
-
-  .btn-primary:hover:not(:disabled) {
-    background: #6366f1;
-  }
-
-  .btn-ghost {
-    background: transparent;
-    color: #a1a1aa;
-    border: 1px solid #27272a;
-  }
-
-  .btn-ghost:hover:not(:disabled) {
-    background: #18181b;
-    color: #fafafa;
-  }
-
-  .btn-danger {
-    background: transparent;
-    color: #ef4444;
-    border: 1px solid transparent;
-  }
-
-  .btn-danger:hover:not(:disabled) {
-    background: rgba(239, 68, 68, 0.1);
-  }
-
-  .btn-danger-solid {
-    background: #ef4444;
-    color: white;
-  }
-
-  .btn-danger-solid:hover:not(:disabled) {
-    background: #dc2626;
-  }
-
-  .section.danger .section-title {
-    color: #ef4444;
-  }
-
-  .danger-row {
-    background: rgba(239, 68, 68, 0.05);
-    border: 1px solid rgba(239, 68, 68, 0.2);
-    border-radius: 10px;
-    padding: 4px 16px;
-    margin-bottom: 12px;
-  }
-
-  .danger-row:last-child {
-    margin-bottom: 0;
-  }
-
-  .danger-row .setting-row {
-    padding: 12px 0;
-    border: none;
-  }
-
-  .btn:focus-visible, .form-input:focus-visible {
-    outline: 3px solid #818cf8;
-    outline-offset: 2px;
-  }
-
-  @media (max-width: 640px) {
-    .setting-row {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 12px;
-    }
-
-    .setting-action {
-      justify-content: flex-end;
-    }
-
-    .form-input {
-      width: 100%;
-      flex: 1;
-    }
-  }
-</style>
 

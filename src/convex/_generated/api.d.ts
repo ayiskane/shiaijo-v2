@@ -9,6 +9,7 @@
  */
 
 import type * as courtState from "../courtState.js";
+import type * as dojos from "../dojos.js";
 import type * as groups from "../groups.js";
 import type * as matches from "../matches.js";
 import type * as members from "../members.js";
@@ -25,6 +26,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   courtState: typeof courtState;
+  dojos: typeof dojos;
   groups: typeof groups;
   matches: typeof matches;
   members: typeof members;

@@ -359,7 +359,7 @@
 <!-- CSV IMPORT MODAL -->
 <Dialog.Root bind:open={showImportModal}><Dialog.Content class="sm:max-w-[520px]"><Dialog.Header><Dialog.Title>Import Members</Dialog.Title><Dialog.Description>Upload CSV or paste data. Required: First Name, Last Name. Optional: Group.</Dialog.Description></Dialog.Header>
 <Tabs.Root bind:value={importTab}><Tabs.List><Tabs.Trigger value="upload"><FileSpreadsheet size={16} />Upload</Tabs.Trigger><Tabs.Trigger value="paste"><ClipboardPaste size={16} />Paste</Tabs.Trigger></Tabs.List>
-<Tabs.Content value="upload"><div class="dropzone" class:dragging={isDragging} ondragover={(e) => { e.preventDefault(); isDragging = true; }} ondragleave={() => isDragging = false} ondrop={handleFileDrop}><input type="file" accept=".csv" class="file-input" onchange={handleFileSelect} /><FileSpreadsheet size={32} /><p>Drop CSV here or click to browse</p></div></Tabs.Content>
+<Tabs.Content value="upload"><div class="dropzone" class:dragging={isDragging} role="group" ondragover={(e) => { e.preventDefault(); isDragging = true; }} ondragleave={() => isDragging = false} ondrop={handleFileDrop}><input type="file" accept=".csv" class="file-input" onchange={handleFileSelect} /><FileSpreadsheet size={32} /><p>Drop CSV here or click to browse</p></div></Tabs.Content>
 <Tabs.Content value="paste"><Textarea placeholder="Paste CSV data here..." bind:value={csvText} oninput={() => csvText && parseCSV(csvText)} rows={6} /></Tabs.Content></Tabs.Root>
 {#if parseError}<p class="error">{parseError}</p>{/if}
 {#if parsedData.length > 0}<p class="success">{parsedData.length} members ready to import</p>{/if}
@@ -407,9 +407,6 @@
   /* Top bar split button */
   .add-split { display: flex; }
   .add-split :global(button:first-child) { border-top-right-radius: 0; border-bottom-right-radius: 0; }
-  .dropdown-toggle { display: flex; align-items: center; justify-content: center; width: 32px; background: var(--primary); color: var(--primary-foreground); border: none; border-left: 1px solid rgba(0,0,0,0.2); border-top-right-radius: 6px; border-bottom-right-radius: 6px; cursor: pointer; }
-  .btn-success { background: #059669 !important; }
-  .btn-success:hover { background: #047857 !important; }
   
   /* Forms */
   .form-stack { display: flex; flex-direction: column; gap: 16px; }
