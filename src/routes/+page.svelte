@@ -104,23 +104,23 @@
 
   /* Theme variables */
   .landing {
-    --bg: #0c0b09;
-    --text: #e0e7ff;
-    --text-muted: #a1afc4; /* Improved contrast from #94a3b8 */
-    --text-faint: #6b7a8f; /* Improved contrast from #475569 */
-    --card-bg: rgba(59, 130, 246, 0.06);
-    --card-bg-hover: rgba(59, 130, 246, 0.12);
-    --border: rgba(59, 130, 246, 0.12);
-    --border-hover: rgba(59, 130, 246, 0.20);
-    --divider: rgba(59, 130, 246, 0.08);
+    --bg: #09090b;
+    --text: #fafafa;
+    --text-muted: #a1a1aa; /* Improved contrast from #94a3b8 */
+    --text-faint: #71717a; /* Improved contrast from #475569 */
+    --card-bg: rgba(129, 140, 248, 0.06);
+    --card-bg-hover: rgba(129, 140, 248, 0.12);
+    --border: rgba(129, 140, 248, 0.12);
+    --border-hover: rgba(129, 140, 248, 0.20);
+    --divider: rgba(129, 140, 248, 0.08);
     --shadow: 0 20px 50px rgba(0,0,0,0.35);
-    --glow: rgba(59, 130, 246, 0.3);
+    --glow: rgba(129, 140, 248, 0.3);
     
     /* Spectator highlight color - brighter blue */
-    --spectator-bg: rgba(59, 130, 246, 0.15);
-    --spectator-bg-hover: rgba(59, 130, 246, 0.25);
-    --spectator-border: rgba(96, 165, 250, 0.3);
-    --spectator-border-hover: rgba(96, 165, 250, 0.5);
+    --spectator-bg: rgba(129, 140, 248, 0.15);
+    --spectator-bg-hover: rgba(129, 140, 248, 0.25);
+    --spectator-border: rgba(167, 139, 250, 0.3);
+    --spectator-border-hover: rgba(167, 139, 250, 0.5);
     
     /* Square button size - INCREASED for 45+ users */
     --square-size: 110px;
@@ -228,7 +228,7 @@
   }
 
   .portal-card:focus-visible {
-    outline: 3px solid #60a5fa;
+    outline: 3px solid #a78bfa;
     outline-offset: 2px;
   }
 
@@ -250,7 +250,7 @@
     color: var(--text);
     line-height: 1;
     flex-shrink: 0;
-    filter: drop-shadow(0 0 12px rgba(59, 130, 246, 0.12));
+    filter: drop-shadow(0 0 12px rgba(129, 140, 248, 0.12));
   }
 
   .portal-label {
@@ -281,18 +281,18 @@
     width: calc(var(--square-size) * 3 + var(--portal-gap) * 2);
     background: var(--spectator-bg);
     border-color: var(--spectator-border);
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.1), inset 0 1px 0 rgba(255,255,255,0.05);
+    box-shadow: 0 0 20px rgba(129, 140, 248, 0.1), inset 0 1px 0 rgba(255,255,255,0.05);
   }
 
   .portal-spectator:hover {
     background: var(--spectator-bg-hover);
     border-color: var(--spectator-border-hover);
-    box-shadow: 0 8px 32px rgba(59, 130, 246, 0.2), inset 0 1px 0 rgba(255,255,255,0.08);
+    box-shadow: 0 8px 32px rgba(129, 140, 248, 0.2), inset 0 1px 0 rgba(255,255,255,0.08);
   }
 
   .portal-spectator .portal-kanji {
     font-size: 44px; /* Increased from 40px */
-    filter: drop-shadow(0 0 16px rgba(96, 165, 250, 0.25));
+    filter: drop-shadow(0 0 16px rgba(167, 139, 250, 0.25));
   }
 
   .portal-spectator .portal-text {
@@ -303,7 +303,7 @@
 
   .portal-spectator .portal-label {
     font-size: 17px; /* Increased from 15px */
-    color: #93c5fd;
+    color: #c4b5fd;
   }
 
   .portal-spectator .portal-desc {
@@ -313,7 +313,7 @@
 
   .portal-spectator .portal-arrow {
     font-size: 20px; /* Increased from 18px */
-    color: #93c5fd;
+    color: #c4b5fd;
   }
 
   /* Staff row - 3 square buttons */
@@ -366,7 +366,7 @@
   }
 
   .footer-link:focus-visible {
-    outline: 2px solid #60a5fa;
+    outline: 2px solid #a78bfa;
     outline-offset: 2px;
   }
 
@@ -576,9 +576,9 @@
   @media (prefers-contrast: high) {
     .landing {
       --text: #ffffff;
-      --text-muted: #c0c8d4;
-      --text-faint: #8a99ad;
-      --border: rgba(96, 165, 250, 0.3);
+      --text-muted: #d4d4d8;
+      --text-faint: #a1a1aa;
+      --border: rgba(167, 139, 250, 0.3);
     }
   }
 
@@ -587,4 +587,5 @@
     /* Users can still zoom - we support up to 5x */
   }
 </style>
+
 
