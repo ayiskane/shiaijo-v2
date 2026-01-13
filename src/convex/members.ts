@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { paginationOptsValidator } from "convex/server";
 
 const SENSEI_GROUP_ID = "SEN";
 
@@ -10,6 +11,50 @@ export const list = query({
       .query("members")
       .withIndex("by_lastName")
       .collect();
+  },
+});
+
+// Paginated list for large datasets - use this for admin tables
+export const listPaginated = query({
+  args: {
+    paginationOpts: paginationOptsValidator,
+    groupId: v.optional(v.string()),
+    isGuest: v.optional(v.boolean()),
+    includeArchived: v.optional(v.boolean()),
+  },
+  handler: async (ctx, { paginationOpts, groupId, isGuest, includeArchived }) => {
+    // Build query based on filters
+    if (groupId) {
+      // Use index when filtering by group
+      let q = ctx.db
+        .query("members")
+        .withIndex("by_groupId", (q) => q.eq("groupId", groupId));
+      
+      // Apply additional filters
+      if (isGuest !== undefined) {
+        q = q.filter((q) => q.eq(q.field("isGuest"), isGuest));
+      }
+      if (!includeArchived) {
+        q = q.filter((q) => q.neq(q.field("archived"), true));
+      }
+      
+      return await q.paginate(paginationOpts);
+    } else {
+      // No group filter - use lastName index for sorting
+      let q = ctx.db
+        .query("members")
+        .withIndex("by_lastName");
+      
+      // Apply additional filters
+      if (isGuest !== undefined) {
+        q = q.filter((q) => q.eq(q.field("isGuest"), isGuest));
+      }
+      if (!includeArchived) {
+        q = q.filter((q) => q.neq(q.field("archived"), true));
+      }
+      
+      return await q.paginate(paginationOpts);
+    }
   },
 });
 
