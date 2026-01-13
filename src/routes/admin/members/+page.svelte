@@ -326,22 +326,32 @@
   :global(.btn-success:hover) { background: #4ade80 !important; }
   
   /* Split button (Add Member with dropdown) */
-  .add-split { display: flex; }
-  .add-split :global(button:first-child) { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+  .add-split { 
+    display: inline-flex; 
+    border-radius: 6px; 
+    overflow: hidden; 
+  }
+  .add-split :global(button:first-child) { 
+    border-top-right-radius: 0; 
+    border-bottom-right-radius: 0; 
+  }
   .add-split :global(.dropdown-toggle) { 
     height: 36px; 
-    width: 32px; 
+    width: 36px; 
     padding: 0; 
-    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    border-left: 1px solid rgba(255, 255, 255, 0.2);
     border-top-left-radius: 0; 
     border-bottom-left-radius: 0; 
-    display: flex; 
+    display: inline-flex; 
     align-items: center; 
     justify-content: center;
-    background: var(--primary, #818cf8);
+    background: hsl(var(--primary) / 0.85);
     color: var(--primary-foreground, #fafafa);
+    transition: background 0.15s;
   }
-  .add-split :global(.dropdown-toggle:hover) { background: #a78bfa; }
+  .add-split :global(.dropdown-toggle:hover) { 
+    background: hsl(var(--primary) / 0.7); 
+  }
   
   /* Forms */
   .form-stack { display: flex; flex-direction: column; gap: 16px; }
