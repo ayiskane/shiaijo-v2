@@ -339,18 +339,20 @@
     height: 36px; 
     width: 36px; 
     padding: 0; 
+    border: none;
     border-left: 1px solid rgba(255, 255, 255, 0.2);
     border-top-left-radius: 0; 
     border-bottom-left-radius: 0; 
     display: inline-flex; 
     align-items: center; 
     justify-content: center;
-    background: hsl(var(--primary) / 0.85);
-    color: var(--primary-foreground, #fafafa);
+    background: #6366f1;
+    color: #fafafa;
     transition: background 0.15s;
+    cursor: pointer;
   }
   .add-split :global(.dropdown-toggle:hover) { 
-    background: hsl(var(--primary) / 0.7); 
+    background: #4f46e5; 
   }
   
   /* Forms */
