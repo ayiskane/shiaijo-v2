@@ -328,31 +328,29 @@
   /* Split button (Add Member with dropdown) */
   .add-split { 
     display: inline-flex; 
-    border-radius: 6px; 
-    overflow: hidden; 
+    align-items: stretch;
   }
   .add-split :global(button:first-child) { 
-    border-top-right-radius: 0; 
-    border-bottom-right-radius: 0; 
+    border-top-right-radius: 0 !important; 
+    border-bottom-right-radius: 0 !important; 
   }
   .add-split :global(.dropdown-toggle) { 
-    height: 36px; 
-    width: 36px; 
+    height: 32px;
+    width: 32px; 
     padding: 0; 
     border: none;
-    border-left: 1px solid rgba(255, 255, 255, 0.2);
-    border-top-left-radius: 0; 
-    border-bottom-left-radius: 0; 
+    border-left: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 0 6px 6px 0;
     display: inline-flex; 
     align-items: center; 
     justify-content: center;
-    background: #6366f1;
-    color: #fafafa;
-    transition: background 0.15s;
+    background: var(--primary);
+    color: var(--primary-foreground);
     cursor: pointer;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   }
   .add-split :global(.dropdown-toggle:hover) { 
-    background: #4f46e5; 
+    filter: brightness(0.9);
   }
   
   /* Forms */
